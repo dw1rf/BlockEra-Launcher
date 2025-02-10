@@ -67,10 +67,10 @@ async function PyroFetch<T>(path: string, options: PyroFetchOptions = {}): Promi
     });
     return response;
   } catch (error) {
-    console.error("[PYROSERVERS]:", error);
+    console.error("[PyroServers/PyroFetch]:", error);
     if (error instanceof FetchError) {
       const statusCode = error.response?.status;
-      const statusText = error.response?.statusText || "Unknown error";
+      const statusText = error.response?.statusText || "[no status text available]";
       const errorMessages: { [key: number]: string } = {
         400: "Bad Request",
         401: "Unauthorized",
@@ -80,15 +80,16 @@ async function PyroFetch<T>(path: string, options: PyroFetchOptions = {}): Promi
         429: "Too Many Requests",
         500: "Internal Server Error",
         502: "Bad Gateway",
+        503: "Service Unavailable",
       };
       const message =
         statusCode && statusCode in errorMessages
           ? errorMessages[statusCode]
-          : `HTTP Error: ${statusCode || "unknown"} ${statusText}`;
-      throw new PyroFetchError(`[PYROSERVERS][PYRO] ${message}`, statusCode, error);
+          : `HTTP Error: ${statusCode || "[unhandled status code]"} ${statusText}`;
+      throw new PyroFetchError(`[PyroServers/PyroFetch] ${message}`, statusCode, error);
     }
     throw new PyroFetchError(
-      "[PYROSERVERS][PYRO] An unexpected error occurred during the fetch operation.",
+      "[PyroServers/PyroFetch] An unexpected error occurred during the fetch operation.",
       undefined,
       error as Error,
     );
@@ -168,7 +169,15 @@ interface General {
   backup_quota: number;
   used_backup_quota: number;
   status: string;
-  suspension_reason: string;
+  suspension_reason:
+    | "moderated"
+    | "paymentfailed"
+    | "cancelled"
+    | "other"
+    | "transferring"
+    | "upgrading"
+    | "support"
+    | (string & {});
   loader: string;
   loader_version: string;
   mc_version: string;
@@ -198,14 +207,16 @@ interface Startup {
   jdk_build: "corretto" | "temurin" | "graal";
 }
 
-interface Mod {
+export interface Mod {
   filename: string;
-  project_id: string;
-  version_id: string;
-  name: string;
-  version_number: string;
-  icon_url: string;
+  project_id: string | undefined;
+  version_id: string | undefined;
+  name: string | undefined;
+  version_number: string | undefined;
+  icon_url: string | undefined;
+  owner: string | undefined;
   disabled: boolean;
+  installing: boolean;
 }
 
 interface Backup {
@@ -241,7 +252,7 @@ export interface DirectoryResponse {
   current?: number;
 }
 
-type ContentType = "Mod" | "Plugin";
+type ContentType = "mod" | "plugin";
 
 const constructServerProperties = (properties: any): string => {
   let fileContent = `#Minecraft server properties\n#${new Date().toUTCString()}\n`;
@@ -508,8 +519,8 @@ const installContent = async (contentType: ContentType, projectId: string, versi
     await PyroFetch(`servers/${internalServerRefrence.value.serverId}/mods`, {
       method: "POST",
       body: {
-        install_as: contentType,
         rinth_ids: { project_id: projectId, version_id: versionId },
+        install_as: contentType,
       },
     });
   } catch (error) {
@@ -518,13 +529,12 @@ const installContent = async (contentType: ContentType, projectId: string, versi
   }
 };
 
-const removeContent = async (contentType: ContentType, contentId: string) => {
+const removeContent = async (path: string) => {
   try {
     await PyroFetch(`servers/${internalServerRefrence.value.serverId}/deleteMod`, {
       method: "POST",
       body: {
-        install_as: contentType,
-        path: contentId,
+        path,
       },
     });
   } catch (error) {
@@ -533,15 +543,11 @@ const removeContent = async (contentType: ContentType, contentId: string) => {
   }
 };
 
-const reinstallContent = async (
-  contentType: ContentType,
-  contentId: string,
-  newContentId: string,
-) => {
+const reinstallContent = async (replace: string, projectId: string, versionId: string) => {
   try {
-    await PyroFetch(`servers/${internalServerRefrence.value.serverId}/mods/${contentId}`, {
-      method: "PUT",
-      body: { install_as: contentType, version_id: newContentId },
+    await PyroFetch(`servers/${internalServerRefrence.value.serverId}/mods/update`, {
+      method: "POST",
+      body: { replace, project_id: projectId, version_id: versionId },
     });
   } catch (error) {
     console.error("Error reinstalling mod:", error);
@@ -1149,18 +1155,17 @@ type ContentFunctions = {
 
   /**
    * Removes a mod from a server.
-   * @param contentType - The type of content to remove.
-   * @param contentId - The ID of the content.
+   * @param path - The path of the mod file.
    */
-  remove: (contentType: ContentType, contentId: string) => Promise<void>;
+  remove: (path: string) => Promise<void>;
 
   /**
    * Reinstalls a mod to a server.
-   * @param contentType - The type of content to reinstall.
-   * @param contentId - The ID of the content.
-   * @param newContentId - The ID of the new version.
+   * @param replace - The path of the mod to replace.
+   * @param projectId - The ID of the content.
+   * @param versionId - The ID of the new version.
    */
-  reinstall: (contentType: ContentType, contentId: string, newContentId: string) => Promise<void>;
+  reinstall: (replace: string, projectId: string, versionId: string) => Promise<void>;
 };
 
 type BackupFunctions = {
@@ -1364,7 +1369,7 @@ type ContentModule = { data: Mod[] } & ContentFunctions;
 type BackupsModule = { data: Backup[] } & BackupFunctions;
 type NetworkModule = { allocations: Allocation[] } & NetworkFunctions;
 type StartupModule = Startup & StartupFunctions;
-type FSModule = { auth: JWTAuth } & FSFunctions;
+export type FSModule = { auth: JWTAuth } & FSFunctions;
 
 type ModulesMap = {
   general: GeneralModule;

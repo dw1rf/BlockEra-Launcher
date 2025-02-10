@@ -72,6 +72,8 @@
                   :class="{
                     'bg-brand font-bold text-brand-inverted': selectedValue === item.option,
                     'bg-bg-raised': focusedOptionIndex === item.index,
+                    'rounded-b-xl': item.index === props.options.length - 1 && !isRenderingUp,
+                    'rounded-t-xl': item.index === 0 && isRenderingUp,
                   }"
                   :aria-selected="selectedValue === item.option"
                   @click="selectOption(item.option, item.index)"
@@ -225,7 +227,7 @@ const radioValue = computed<OptionValue>({
 });
 
 const triggerClasses = computed(() => ({
-  "cursor-not-allowed opacity-50 grayscale": props.disabled,
+  "!cursor-not-allowed opacity-50 grayscale": props.disabled,
   "rounded-b-none": dropdownVisible.value && !isRenderingUp.value && !props.disabled,
   "rounded-t-none": dropdownVisible.value && isRenderingUp.value && !props.disabled,
 }));
