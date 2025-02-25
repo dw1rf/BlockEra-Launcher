@@ -456,9 +456,10 @@
                 Where are Modrinth Servers located? Can I choose a region?
               </summary>
               <p class="m-0 !leading-[190%]">
-                Currently, Modrinth Servers are located in New York, Los Angeles, Seattle, and
-                Miami. More regions are coming soon! Your server's location is currently chosen
-                algorithmically, but you will be able to choose a region in the future.
+                Currently, Modrinth Servers are located throughout the United States in New York,
+                Los Angelas, Dallas, Miami, and Spokane. More regions are coming soon! Your server's
+                location is currently chosen algorithmically, but you will be able to choose a
+                region in the future.
               </p>
             </details>
 
@@ -539,9 +540,9 @@
                 <p
                   class="relative m-0 max-w-xl text-base font-normal leading-[155%] text-secondary md:text-[18px]"
                 >
-                  With strategically placed servers in New York, Los Angeles, Seattle, and Miami, we
-                  ensure low latency connections for players across North America. Each location is
-                  equipped with high-performance hardware and DDoS protection.
+                  With strategically placed servers in New York, California, Texas, Florida, and
+                  Washington, we ensure low latency connections for players across North America.
+                  Each location is equipped with high-performance hardware and DDoS protection.
                 </p>
               </div>
 
@@ -640,15 +641,15 @@
                 </h2>
               </div>
               <ButtonStyled color="blue" size="large">
-                <NuxtLink
+                <a
                   v-if="!loggedOut && isSmallAtCapacity"
-                  :to="outOfStockUrl"
+                  :href="outOfStockUrl"
                   target="_blank"
                   class="flex items-center gap-2 !bg-highlight-blue !font-medium !text-blue"
                 >
                   Out of Stock
                   <ExternalIcon class="!min-h-4 !min-w-4 !text-blue" />
-                </NuxtLink>
+                </a>
                 <button
                   v-else
                   class="!bg-highlight-blue !font-medium !text-blue"
@@ -703,15 +704,15 @@
                 </h2>
               </div>
               <ButtonStyled color="brand" size="large">
-                <NuxtLink
+                <a
                   v-if="!loggedOut && isMediumAtCapacity"
-                  :to="outOfStockUrl"
+                  :href="outOfStockUrl"
                   target="_blank"
                   class="flex items-center gap-2 !bg-highlight-green !font-medium !text-green"
                 >
                   Out of Stock
                   <ExternalIcon class="!min-h-4 !min-w-4 !text-green" />
-                </NuxtLink>
+                </a>
                 <button
                   v-else
                   class="!bg-highlight-green !font-medium !text-green"
@@ -757,15 +758,15 @@
                 </h2>
               </div>
               <ButtonStyled color="brand" size="large">
-                <NuxtLink
+                <a
                   v-if="!loggedOut && isLargeAtCapacity"
-                  :to="outOfStockUrl"
+                  :href="outOfStockUrl"
                   target="_blank"
                   class="flex items-center gap-2 !bg-highlight-purple !font-medium !text-purple"
                 >
                   Out of Stock
                   <ExternalIcon class="!min-h-4 !min-w-4 !text-purple" />
-                </NuxtLink>
+                </a>
                 <button
                   v-else
                   class="!bg-highlight-purple !font-medium !text-purple"
@@ -871,7 +872,7 @@ const deletingSpeed = 25;
 const pauseTime = 2000;
 
 const loggedOut = computed(() => !auth.value.user);
-const outOfStockUrl = "https://support.modrinth.com";
+const outOfStockUrl = "https://discord.modrinth.com";
 
 const { data: hasServers } = await useAsyncData("ServerListCountCheck", async () => {
   try {

@@ -30,17 +30,8 @@ watch(
         option, you opt out and ads will no longer be shown based on your interests.
       </p>
     </div>
-    <Toggle
-      id="personalized-ads"
-      :model-value="settings.personalized_ads"
-      :checked="settings.personalized_ads"
-      :disabled="!settings.personalized_ads"
-      @update:model-value="
-        (e) => {
-          settings.personalized_ads = e
-        }
-      "
-    />
+    <!-- AstralRinth disabled element by default -->
+    <Toggle id="personalized-ads" v-model="settings.personalized_ads" :disabled="!settings.personalized_ads" />
   </div>
 
   <div class="mt-4 flex items-center justify-between gap-4">
@@ -52,17 +43,8 @@ watch(
         longer be collected.
       </p>
     </div>
-    <Toggle
-      id="opt-out-analytics"
-      :model-value="settings.telemetry"
-      :checked="settings.telemetry"
-      :disabled="!settings.telemetry"
-      @update:model-value="
-        (e) => {
-          settings.telemetry = e
-        }
-      "
-    />
+    <!-- AstralRinth disabled element by default -->
+    <Toggle id="opt-out-analytics" v-model="settings.telemetry" :disabled="!settings.telemetry"  />
   </div>
 
   <div class="mt-4 flex items-center justify-between gap-4">
@@ -77,10 +59,6 @@ watch(
         as those added by mods. (app restart required to take effect)
       </p>
     </div>
-    <Toggle
-      id="disable-discord-rpc"
-      v-model="settings.discord_rpc"
-      :checked="settings.discord_rpc"
-    />
+    <Toggle id="disable-discord-rpc" v-model="settings.discord_rpc" />
   </div>
 </template>
