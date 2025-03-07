@@ -44,7 +44,7 @@
     ]
   },
   "productName": "AstralRinth App",
-  "version": "0.9.302",
+  "version": "0.9.303",
   "mainBinaryName": "AstralRinth App",
   "identifier": "AstralRinthApp",
   "plugins": {
