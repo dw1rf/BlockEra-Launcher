@@ -297,7 +297,7 @@ pub fn app_setup(
     }
 
     let ip_salt = Pepper {
-        pepper: models::ids::Base62Id(models::ids::random_base62(11))
+        pepper: ariadne::ids::Base62Id(ariadne::ids::random_base62(11))
             .to_string(),
     };
 
@@ -473,6 +473,7 @@ pub fn check_env_vars() -> bool {
         failed |= true;
     }
 
+    failed |= check_var::<bool>("CLICKHOUSE_REPLICATED");
     failed |= check_var::<String>("CLICKHOUSE_URL");
     failed |= check_var::<String>("CLICKHOUSE_USER");
     failed |= check_var::<String>("CLICKHOUSE_PASSWORD");

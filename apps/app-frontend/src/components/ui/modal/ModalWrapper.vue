@@ -39,10 +39,10 @@ defineExpose({
 })
 
 function onModalHide() {
-  // if (props.showAdOnClose) {
-  //   show_ads_window()
-  // }
-  props.onHide()
+//   if (props.showAdOnClose) {
+//     show_ads_window()
+//   }
+  props.onHide?.()
 }
 </script>
 
