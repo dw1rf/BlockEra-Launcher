@@ -4,7 +4,6 @@
 - [Getting started](#getting-started)
 - [Disclaimer](#disclaimer)
 - [Donate](#support-our-project-crypto-wallets)
-- [App logo](#logo)
 
 # About Project
 
@@ -59,7 +58,7 @@ Dive into the extraordinary world of AstralRinth, a fork of the original project
 
 # Getting Started
 To begin your AstralRinth adventure, follow these steps:
-1. **Download Your OS Version**: Head over to our [releases page](https://github.com/DIDIRUS4/AstralRinth/releases/latest) to find the right file for your operating system.
+1. **Download Your OS Version**: Head over to our [releases page](https://git.astralium.su/didirus/AstralRinth/releases/) to find the right file for your operating system.
    - **Choosing the Correct File**: Ensure you select the file that matches your OS requirements.
    - [**How select file**](#downloadable-file-extensions)
    - [**How select release**](#installation-subjects)
@@ -75,6 +74,3 @@ To begin your AstralRinth adventure, follow these steps:
 - BTC (Telegram): 14g6asNYzcUoaQtB8B2QGKabgEvn55wfLj
 - USDT TRC20 (Telegram): TMSmv1D5Fdf4fipUpwBCdh16WevrV45vGr
 - TONCOIN (Telegram): UQAqUJ2_hVBI6k_gPyfp_jd-1K0OS61nIFPZuJWN9BwGAvKe
-
-# Logo
-![ar_logo](https://github.com/DIDIRUS4/AstralRinth/assets/77334306/43d4acb0-546c-4dff-834d-83fb2ba6ad6f)
