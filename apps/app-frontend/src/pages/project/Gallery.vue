@@ -31,10 +31,10 @@
             : 'https://cdn.modrinth.com/placeholder-banner.svg'
         "
         :alt="expandedGalleryItem.title ? expandedGalleryItem.title : 'gallery-image'"
-        @click.stop=""
+        @click.stop="() => {}"
       />
 
-      <div class="floating" @click.stop="">
+      <div class="floating" @click.stop="() => {}">
         <div class="text">
           <h2 v-if="expandedGalleryItem.title">
             {{ expandedGalleryItem.title }}
@@ -98,7 +98,7 @@ import { trackEvent } from '@/helpers/analytics'
 const props = defineProps({
   project: {
     type: Object,
-    default: () => {},
+    default: () => ({}),
   },
 })
 
