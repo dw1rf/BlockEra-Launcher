@@ -44,7 +44,7 @@
     ]
   },
   "productName": "AstralRinth App",
-  "version": "0.9.305",
+  "version": "0.9.306",
   "mainBinaryName": "AstralRinth App",
   "identifier": "AstralRinthApp",
   "plugins": {
@@ -82,7 +82,7 @@
       "capabilities": ["core", "plugins"],
       "csp": {
         "default-src": "'self' customprotocol: asset:",
-        "connect-src": "https://api.github.com ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.posthog.com https://*.sentry.io https://api.mclo.gs",
+        "connect-src": "https://git.astralium.su ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.posthog.com https://*.sentry.io https://api.mclo.gs",
         "font-src": ["https://cdn-raw.modrinth.com/fonts/inter/"],
         "img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost blob: data:",
         "style-src": "'unsafe-inline' 'self'",

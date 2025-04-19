@@ -11,10 +11,8 @@ export const latestBetaCommitLink = ref('')
 export const launcherUrl = 'https://www.astralium.su/get/ar'
 
 const os = ref('')
-const releaseLink = `https://api.github.com/repos/DIDIRUS4/AstralRinth/releases/latest`
-const branchesLink = `https://api.github.com/repos/DIDIRUS4/AstralRinth/branches`
+const releaseLink = `https://git.astralium.su/api/v1/repos/didirus/AstralRinth/releases/latest`
 const failedFetch = [`Failed to fetch remote releases:`, `Failed to fetch remote commits:`]
-const betaBranch = `beta` // Github repository beta branch
 const osNames = ['macos', 'windows', 'linux']
 const macExtension = `.dmg` // MacOS file type for download
 const windowsExtension = `.msi` // Windows file type for download
@@ -27,45 +25,6 @@ const blacklistedBuilds = [
   `dirty_dev`,
   `dirty_nightly`,
 ] // This is blacklisted builds for download. For example, file.startsWith('dev') is not allowed.
-
-/**
- * Asynchronously fetches branches and their latest commit information from the specified URLs.
- *
- * @return {Promise<void>} This function does not return anything directly but updates the latestBetaCommitTruncatedSha and latestBetaCommitLink values.
- */
-export async function getBranches() {
-  fetch(branchesLink)
-    .then(async (response) => {
-      if (response.ok) {
-        response.json().then((data) => {
-          const branches = data.map((branch) => branch)
-          branches.forEach((branch) => {
-            fetch(branch.commit.url).then(async (data) => {
-              if (data.ok) {
-                data.json().then((data) => {
-                  const truncatedSha = data.sha.slice(0, 7)
-                  const commitLink = data.html_url
-                  if (branch.name.toLowerCase() == betaBranch) {
-                    latestBetaCommitTruncatedSha.value = truncatedSha
-                    latestBetaCommitLink.value = commitLink
-                  }
-                })
-              } else {
-                throw new Error(data.status)
-              }
-            })
-          })
-        })
-      } else {
-        throw new Error(response.status)
-      }
-    })
-    .catch((error) => {
-      latestBetaCommitTruncatedSha.value = error.message
-      latestBetaCommitLink.value = undefined
-      console.error(failedFetch[1], error)
-    })
-}
 
 /**
  * Asynchronous function to get remote data and handle updates and downloads.

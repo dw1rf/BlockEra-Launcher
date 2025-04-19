@@ -50,13 +50,14 @@
         <div class="markdown-body">
           <p>The new version of the AstralRinth launcher is available.</p>
           <p>Your version is outdated. We recommend that you update to the latest version.</p>
-          <p>Warning:</p>
+          <p><strong>⚠️ Warning ⚠️</strong></p>
           <p>
             Before updating, make sure that you have saved all running instances and made a backup copy of the instances
             that are valuable to you. Remember that the authors of the product are not responsible for the breakdown of
             your files, so you should always make copies of them and keep them in a safe place.
           </p>
         </div>
+        <span>Source • Git Astralium</span>
         <span>Version on remote server • <p id="releaseData" class="cosmic inline-fix"></p></span>
         <span>Version on local device •
           <p class="cosmic inline-fix">v{{ version }}</p>
