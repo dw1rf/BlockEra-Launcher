@@ -1,4 +1,4 @@
-name: 'AstralRinth App build'
+name: 'AstralRinth App Build'
 on:
   push:
     branches:
