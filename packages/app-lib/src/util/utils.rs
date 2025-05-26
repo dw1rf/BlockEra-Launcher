@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tokio::io;
 
+/*
+AstralRinth Utils
+*/
 const PACKAGE_JSON_CONTENT: &str =
     // include_str!("../../../../apps/app-frontend/package.json");
     include_str!("../../../../apps/app/tauri.conf.json");

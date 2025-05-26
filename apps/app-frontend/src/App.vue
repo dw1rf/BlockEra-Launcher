@@ -16,14 +16,22 @@ import {
   RestoreIcon,
   RightArrowIcon,
   SettingsIcon,
+  WorldIcon,
   XIcon,
 } from '@modrinth/assets'
-import { Avatar, Button, ButtonStyled, Notifications, OverflowMenu } from '@modrinth/ui'
+import {
+  Avatar,
+  Button,
+  ButtonStyled,
+  Notifications,
+  OverflowMenu,
+  useRelativeTime,
+} from '@modrinth/ui'
 import { useLoading, useTheming } from '@/store/state'
 // import ModrinthAppLogo from '@/assets/modrinth_app.svg?component'
 import AccountsCard from '@/components/ui/AccountsCard.vue'
 import InstanceCreationModal from '@/components/ui/InstanceCreationModal.vue'
-import { get, set } from '@/helpers/settings'
+import { get, set } from '@/helpers/settings.ts'
 import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
 import RunningAppBar from '@/components/ui/RunningAppBar.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
@@ -60,6 +68,8 @@ import dayjs from 'dayjs'
 import FriendsList from '@/components/ui/friends/FriendsList.vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
+
+const formatRelativeTime = useRelativeTime()
 
 const themeStore = useTheming()
 
@@ -177,15 +187,21 @@ async function setupApp() {
     }),
   )
 
-  // useFetch(
-  //   `https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
-  //   'criticalAnnouncements',
-  //   true,
-  // ).then((res) => {
-  //   if (res && res.header && res.body) {
-  //     criticalErrorMessage.value = res
-  //   }
-  // })
+  //useFetch(
+  //  `https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
+  //  'criticalAnnouncements',
+  //  true,
+  //)
+  //  .then((res) => {
+  //    if (res && res.header && res.body) {
+  //      criticalErrorMessage.value = res
+  //    }
+  //  })
+  //  .catch(() => {
+  //    console.log(
+  //      `No critical announcement found at https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
+  //    )
+  //  })
 
   useFetch(`https://modrinth.com/blog/news.json`, 'news', true).then((res) => {
     if (res && res.articles) {
@@ -374,7 +390,7 @@ function handleAuxClick(e) {
 <template>
   <SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
   <div id="teleports"></div>
-  <div v-if="stateInitialized" class="app-grid-layout relative">
+  <div v-if="stateInitialized" class="app-grid-layout experimental-styles-within relative">
     <Suspense>
       <AppSettingsModal ref="settingsModal" />
     </Suspense>
@@ -386,6 +402,9 @@ function handleAuxClick(e) {
     >
       <NavButton v-tooltip.right="'Home'" to="/">
         <HomeIcon />
+      </NavButton>
+      <NavButton v-if="themeStore.featureFlags.worlds_tab" v-tooltip.right="'Worlds'" to="/worlds">
+        <WorldIcon />
       </NavButton>
       <NavButton
         v-tooltip.right="'Discover content'"
@@ -488,7 +507,7 @@ function handleAuxClick(e) {
             <RunningAppBar />
           </Suspense>
         </div>
-        <section v-if="!nativeDecorations" class="window-controls">
+        <section v-if="!nativeDecorations" class="window-controls" data-tauri-drag-region-exclude>
           <Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
             <MinimizeIcon />
           </Button>
@@ -595,7 +614,7 @@ function handleAuxClick(e) {
                 </h4>
                 <p class="my-1 text-sm text-secondary leading-tight">{{ item.summary }}</p>
                 <p class="text-right text-sm text-secondary opacity-60 leading-tight m-0">
-                  {{ dayjs(item.date).fromNow() }}
+                  {{ formatRelativeTime(dayjs(item.date).toISOString()) }}
                 </p>
               </a>
               <hr
@@ -717,6 +736,14 @@ function handleAuxClick(e) {
 
 .app-grid-statusbar {
   grid-area: status;
+}
+
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-tauri-drag-region-exclude] {
+  -webkit-app-region: no-drag;
 }
 
 .app-contents {

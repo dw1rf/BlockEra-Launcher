@@ -42,6 +42,13 @@ export async function restartApp() {
   return await invoke('restart_app')
 }
 
+/**
+ * @deprecated This method is no longer needed, and just returns its parameter
+ */
+export function sanitizePotentialFileUrl(url) {
+  return url
+}
+
 export const releaseColor = (releaseType) => {
   switch (releaseType) {
     case 'release':
@@ -53,4 +60,8 @@ export const releaseColor = (releaseType) => {
     default:
       return ''
   }
+}
+
+export async function copyToClipboard(text) {
+  await navigator.clipboard.writeText(text)
 }

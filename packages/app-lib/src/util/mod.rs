@@ -3,7 +3,8 @@ pub mod fetch;
 pub mod io;
 pub mod jre;
 pub mod platform;
-pub mod utils;
+pub mod utils; // AstralRinth
+pub mod server_ping;
 
 /// Wrap a builder which uses a mut reference into one which outputs an owned value
 macro_rules! wrap_ref_builder {
