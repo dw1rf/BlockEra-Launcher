@@ -12,7 +12,8 @@ use crate::models::ids::{ImageId, OrganizationId, ProjectId, VersionId};
 use crate::models::images::{Image, ImageContext};
 use crate::models::pats::Scopes;
 use crate::models::projects::{
-    License, Link, MonetizationStatus, ProjectStatus, VersionStatus,
+    License, Link, MonetizationStatus, ProjectStatus,
+    SideTypesMigrationReviewStatus, VersionStatus,
 };
 use crate::models::teams::{OrganizationPermissions, ProjectPermissions};
 use crate::models::threads::ThreadType;
@@ -342,7 +343,7 @@ async fn project_create_inner(
         pool,
         redis,
         session_queue,
-        Some(&[Scopes::PROJECT_CREATE]),
+        Scopes::PROJECT_CREATE,
     )
     .await?
     .1;
@@ -360,15 +361,14 @@ async fn project_create_inner(
         // The first multipart field must be named "data" and contain a
         // JSON `ProjectCreateData` object.
 
-        let mut field = payload
-            .next()
-            .await
-            .map(|m| m.map_err(CreateError::MultipartError))
-            .unwrap_or_else(|| {
+        let mut field = payload.next().await.map_or_else(
+            || {
                 Err(CreateError::MissingValueError(String::from(
                     "No `data` field in multipart upload",
                 )))
-            })?;
+            },
+            |m| m.map_err(CreateError::MultipartError),
+        )?;
 
         let name = field.name().ok_or_else(|| {
             CreateError::MissingValueError(String::from("Missing content name"))
@@ -550,8 +550,8 @@ async fn project_create_inner(
                 )));
             };
             // `index` is always valid for these lists
-            let created_version = versions.get_mut(index).unwrap();
-            let version_data = project_create_data.initial_versions.get(index).unwrap();
+            let created_version = &mut versions[index];
+            let version_data = &project_create_data.initial_versions[index];
             // TODO: maybe redundant is this calculation done elsewhere?
 
             let existing_file_names = created_version
@@ -670,10 +670,9 @@ async fn project_create_inner(
                 &team_member,
             );
 
-            if !perms
-                .map(|x| x.contains(OrganizationPermissions::ADD_PROJECT))
-                .unwrap_or(false)
-            {
+            if !perms.is_some_and(|x| {
+                x.contains(OrganizationPermissions::ADD_PROJECT)
+            }) {
                 return Err(CreateError::CustomAuthenticationError(
                     "You do not have the permissions to create projects in this organization!"
                         .to_string(),
@@ -903,6 +902,9 @@ async fn project_create_inner(
             color: project_builder.color,
             thread_id: thread_id.into(),
             monetization_status: MonetizationStatus::Monetized,
+            // New projects are considered reviewed with respect to side types migrations
+            side_types_migration_review_status:
+                SideTypesMigrationReviewStatus::Reviewed,
             fields: HashMap::new(), // Fields instantiate to empty
         };
 

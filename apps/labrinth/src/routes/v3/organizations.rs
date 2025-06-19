@@ -63,7 +63,7 @@ pub async fn organization_projects_get(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_READ, Scopes::PROJECT_READ]),
+        Scopes::ORGANIZATION_READ | Scopes::PROJECT_READ,
     )
     .await
     .map(|x| x.1)
@@ -127,7 +127,7 @@ pub async fn organization_create(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_CREATE]),
+        Scopes::ORGANIZATION_CREATE,
     )
     .await?
     .1;
@@ -224,7 +224,7 @@ pub async fn organization_get(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_READ]),
+        Scopes::ORGANIZATION_READ,
     )
     .await
     .map(|x| x.1)
@@ -256,13 +256,11 @@ pub async fn organization_get(
             .filter(|x| {
                 logged_in
                     || x.accepted
-                    || user_id
-                        .map(|y: crate::database::models::DBUserId| {
-                            y == x.user_id
-                        })
-                        .unwrap_or(false)
+                    || user_id.is_some_and(
+                        |y: crate::database::models::DBUserId| y == x.user_id,
+                    )
             })
-            .flat_map(|data| {
+            .filter_map(|data| {
                 users.iter().find(|x| x.id == data.user_id).map(|user| {
                     crate::models::teams::TeamMember::from(
                         data,
@@ -315,7 +313,7 @@ pub async fn organizations_get(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_READ]),
+        Scopes::ORGANIZATION_READ,
     )
     .await
     .map(|x| x.1)
@@ -345,13 +343,11 @@ pub async fn organizations_get(
             .filter(|x| {
                 logged_in
                     || x.accepted
-                    || user_id
-                        .map(|y: crate::database::models::DBUserId| {
-                            y == x.user_id
-                        })
-                        .unwrap_or(false)
+                    || user_id.is_some_and(
+                        |y: crate::database::models::DBUserId| y == x.user_id,
+                    )
             })
-            .flat_map(|data| {
+            .filter_map(|data| {
                 users.iter().find(|x| x.id == data.user_id).map(|user| {
                     crate::models::teams::TeamMember::from(
                         data,
@@ -396,7 +392,7 @@ pub async fn organizations_edit(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_WRITE]),
+        Scopes::ORGANIZATION_WRITE,
     )
     .await?
     .1;
@@ -559,7 +555,7 @@ pub async fn organization_delete(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_DELETE]),
+        Scopes::ORGANIZATION_DELETE,
     )
     .await?
     .1;
@@ -635,7 +631,7 @@ pub async fn organization_delete(
     .try_collect::<Vec<_>>()
     .await?;
 
-    for organization_project_team in organization_project_teams.iter() {
+    for organization_project_team in &organization_project_teams {
         let new_id = crate::database::models::ids::generate_team_member_id(
             &mut transaction,
         )
@@ -700,7 +696,7 @@ pub async fn organization_projects_add(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::PROJECT_WRITE, Scopes::ORGANIZATION_WRITE]),
+        Scopes::PROJECT_WRITE | Scopes::ORGANIZATION_WRITE,
     )
     .await?
     .1;
@@ -863,7 +859,7 @@ pub async fn organization_projects_remove(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::PROJECT_WRITE, Scopes::ORGANIZATION_WRITE]),
+        Scopes::PROJECT_WRITE | Scopes::ORGANIZATION_WRITE,
     )
     .await?
     .1;
@@ -1051,7 +1047,7 @@ pub async fn organization_icon_edit(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_WRITE]),
+        Scopes::ORGANIZATION_WRITE,
     )
     .await?
     .1;
@@ -1154,7 +1150,7 @@ pub async fn delete_organization_icon(
         &**pool,
         &redis,
         &session_queue,
-        Some(&[Scopes::ORGANIZATION_WRITE]),
+        Scopes::ORGANIZATION_WRITE,
     )
     .await?
     .1;
