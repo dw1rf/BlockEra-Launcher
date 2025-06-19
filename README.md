@@ -17,7 +17,7 @@ Introducing AstralRinth, a specialized variant of Theseus dedicated to implement
 Dive into the extraordinary world of AstralRinth, a fork of the original project with a unique focus on providing a free trial experience for Minecraft, all without the need for a license. Currently boasting:
 
 # Install instructions
-- To install our application, you need to download a file for your operating system from our available releases or development builds • [Download variants here](https://github.com/DIDIRUS4/AstralRinth/releases)
+- To install our application, you need to download a file for your operating system from our available releases or development builds • [Download variants here](https://git.astralium.su/didirus/AstralRinth/releases)
 - After you have downloaded the required executable file or archive, then open it
 
 ### Downloadable file extensions
@@ -45,7 +45,7 @@ Dive into the extraordinary world of AstralRinth, a fork of the original project
 - Using the launcher is intuitive, any user can figure it out.
 
 ### Update notifies
-- We have implemented notifications about the release of new updates on our Github. The launcher can also download them for you and try to install them.
+- We have implemented notifications about the release of new updates on our Git. The launcher can also download them for you and try to install them.
 
 ### Enhancements
 - Custom .SVG vectors for a personalized touch.
