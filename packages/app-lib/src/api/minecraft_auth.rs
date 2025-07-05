@@ -31,8 +31,8 @@ pub async fn offline_auth(
 #[tracing::instrument]
 pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
     let state = State::get().await?;
-    let users = Credentials::get_active(&state.pool).await?;
-    Ok(users.map(|x| x.id))
+    let user = Credentials::get_active(&state.pool).await?;
+    Ok(user.map(|user| user.offline_profile.id))
 }
 
 #[tracing::instrument]

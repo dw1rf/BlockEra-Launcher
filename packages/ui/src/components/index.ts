@@ -58,6 +58,8 @@ export { default as CompactChart } from './chart/CompactChart.vue'
 
 // Content
 export { default as ContentListPanel } from './content/ContentListPanel.vue'
+export { default as NewsArticleCard } from './content/NewsArticleCard.vue'
+export type { Article as NewsArticle } from './content/NewsArticleCard.vue'
 
 // Modals
 export { default as NewModal } from './modal/NewModal.vue'
@@ -100,6 +102,13 @@ export { default as PurchaseModal } from './billing/PurchaseModal.vue'
 export { default as AddPaymentMethodModal } from './billing/AddPaymentMethodModal.vue'
 export { default as ModrinthServersPurchaseModal } from './billing/ModrinthServersPurchaseModal.vue'
 
+// Skins
+export { default as SkinPreviewRenderer } from './skin/SkinPreviewRenderer.vue'
+export { default as CapeButton } from './skin/CapeButton.vue'
+export { default as CapeLikeTextButton } from './skin/CapeLikeTextButton.vue'
+export { default as SkinButton } from './skin/SkinButton.vue'
+export { default as SkinLikeTextButton } from './skin/SkinLikeTextButton.vue'
+
 // Version
 export { default as VersionChannelIndicator } from './version/VersionChannelIndicator.vue'
 export { default as VersionFilterControl } from './version/VersionFilterControl.vue'
@@ -109,5 +118,6 @@ export { default as VersionSummary } from './version/VersionSummary.vue'
 export { default as ThemeSelector } from './settings/ThemeSelector.vue'
 
 // Servers
+export { default as ServersPromo } from './servers/ServersPromo.vue'
 export { default as BackupWarning } from './servers/backups/BackupWarning.vue'
 export { default as ServersSpecs } from './billing/ServersSpecs.vue'
