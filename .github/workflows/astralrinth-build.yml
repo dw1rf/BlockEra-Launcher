@@ -16,7 +16,6 @@ on:
       - 'packages/assets/**'
       - 'packages/ui/**'
       - 'packages/utils/**'
-  workflow_dispatch: {}
 
 jobs:
   build:
