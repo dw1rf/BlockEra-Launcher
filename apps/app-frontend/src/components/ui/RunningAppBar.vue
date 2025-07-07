@@ -38,7 +38,7 @@
     </div>
     <div v-if="updateState">
       <a>
-        <Button class="download" :disabled="installState" @click="confirmUpdating(), getRemote(false, false)">
+        <Button class="download" :disabled="installState" @click="initUpdateModal(), getRemote(false)">
           <DownloadIcon />
           {{
             installState
@@ -48,7 +48,7 @@
         </Button>
       </a>
     </div>
-    <ModalWrapper ref="confirmUpdate" :has-to-type="false" header="Request to update the AstralRinth launcher">
+    <ModalWrapper ref="updateModalView" :has-to-type="false" header="Request to update the AstralRinth launcher">
       <div class="modal-body">
         <div class="markdown-body">
           <p>The new version of the AstralRinth launcher is available.</p>
@@ -66,12 +66,28 @@
           <p class="cosmic inline-fix">v{{ version }}</p>
         </span>
         <div class="button-group push-right">
-          <Button class="download-modal" @click="confirmUpdate.hide()">
-            Decline</Button>
-          <Button class="download-modal" @click="approveUpdate()">
-            Accept
+          <Button class="updater-modal" @click="updateModalView.hide()">
+            Cancel</Button>
+          <Button class="updater-modal" @click="initDownload()">
+            Download file
           </Button>
         </div>
+      </div>
+    </ModalWrapper>
+    <ModalWrapper ref="updateRequestFailView" :has-to-type="false" header="Failed to request a file from the server :(">
+      <div class="modal-body">
+        <div class="markdown-body">
+          <p><strong>Error occurred</strong></p>
+          <p>Unfortunately, the program was unable to download the file from our servers.</p>
+          <p>Please try downloading it yourself from <a href="https://me.astralium.su/get/ar" target="_blank" rel="noopener noreferrer">Git Astralium</a> if there are any updates available.</p>
+        </div>
+        <span>Local AstralRinth •
+          <p class="cosmic inline-fix">v{{ version }}</p>
+        </span>
+      </div>
+      <div class="button-group push-right">
+          <Button class="updater-modal" @click="updateRequestFailView.hide()">
+            Close</Button>
       </div>
     </ModalWrapper>
   </div>
@@ -129,18 +145,22 @@ const version = await getVersion()
 import { installState, getRemote, updateState } from '@/helpers/update.js'
 import ModalWrapper from './modal/ModalWrapper.vue'
 
-const confirmUpdate = ref(null)
+const updateModalView = ref(null)
+const updateRequestFailView = ref(null)
 
-const confirmUpdating = async () => {
-  confirmUpdate.value.show()
+const initUpdateModal = async () => {
+  updateModalView.value.show()
 }
 
-const approveUpdate = async () => {
-  confirmUpdate.value.hide()
-  await getRemote(true, true)
+const initDownload = async () => {
+  updateModalView.value.hide()
+  const result = await getRemote(true);
+  if (!result) {
+    updateRequestFailView.value.show()
+  }
 }
 
-await getRemote(true, false)
+await getRemote(false)
 
 const router = useRouter()
 const card = ref(null)
@@ -375,7 +395,7 @@ onBeforeUnmount(() => {
   text-shadow: #26065e;
 }
 
-.download-modal {
+.updater-modal {
   color: #3e8cde;
   padding: var(--gap-sm) var(--gap-lg);
   text-decoration: none;
@@ -386,9 +406,9 @@ onBeforeUnmount(() => {
   transition: color 0.35s ease;
 }
 
-.download-modal:hover,
-.download-modal:focus,
-.download-modal:active {
+.updater-modal:hover,
+.updater-modal:focus,
+.updater-modal:active {
   color: #10fae5;
   text-shadow: #26065e;
 }

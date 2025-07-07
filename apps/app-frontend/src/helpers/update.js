@@ -2,21 +2,19 @@ import { ref } from 'vue'
 import { getVersion } from '@tauri-apps/api/app'
 import { getArtifact, getOS } from '@/helpers/utils.js'
 
-
 export const allowState = ref(false)
 export const installState = ref(false)
 export const updateState = ref(false)
-export const latestBetaCommitTruncatedSha = ref('')
-export const latestBetaCommitLink = ref('')
-export const launcherUrl = 'https://www.astralium.su/get/ar'
 
-const os = ref('')
+const currentOS = ref('')
 const releaseLink = `https://git.astralium.su/api/v1/repos/didirus/AstralRinth/releases/latest`
 const failedFetch = [`Failed to fetch remote releases:`, `Failed to fetch remote commits:`]
-const osNames = ['macos', 'windows', 'linux']
-const macExtension = `.dmg` // MacOS file type for download
-const windowsExtension = `.msi` // Windows file type for download
-const blacklistedBuilds = [
+
+const osList = ['macos', 'windows', 'linux']
+const macExtensionList = ['.app', '.dmg']
+const windowsExtensionList = ['.exe', '.msi']
+
+const blacklistPrefixes = [
   `dev`,
   `nightly`,
   `dirty`,
@@ -26,110 +24,73 @@ const blacklistedBuilds = [
   `dirty_nightly`,
 ] // This is blacklisted builds for download. For example, file.startsWith('dev') is not allowed.
 
-/**
- * Asynchronous function to get remote data and handle updates and downloads.
- *
- * @param {boolean} elementIdBool - Indicates whether to disable an element ID.
- * @param {boolean} downloadArtifactBool - Indicates whether to download an artifact.
- */
-export async function getRemote(elementIdBool, downloadArtifactBool) {
-  fetch(releaseLink)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(response.status)
-      }
-      return response.json()
-    })
-    .then(async (data) => {
-      os.value = await getOS()
-      const latestRelease = data.name
-      let remoteVersion = undefined
+export async function getRemote(isDownloadState) {
+  var releaseData = null;
+  var result = false;
+  try {
+    const response = await fetch(releaseLink);
+    if (!response.ok) {
+      throw new Error(response.status);
+    }
+    const remoteData = await response.json();
+    currentOS.value = await getOS();
+    const remoteLatestReleaseTag = remoteData.tag_name;
+    releaseData = document.getElementById('releaseData');
+    const remoteVersion = releaseData ? (releaseData.textContent = remoteLatestReleaseTag) : remoteLatestReleaseTag;
 
-      if (!elementIdBool) {
-        const releaseData = document.getElementById('releaseData')
-        if (releaseData == null) {
-          console.error('Release data element not found.')
-          return false
-        }
-        releaseData.textContent = latestRelease
-        remoteVersion = `${releaseData.textContent}`
-      } else {
-        remoteVersion = latestRelease
-      }
-      if (osNames.includes(os.value.toLowerCase())) {
-        if (remoteVersion.startsWith('v' + await getVersion())) {
-          updateState.value = false
-          allowState.value = false
-        } else {
-          updateState.value = true
-          allowState.value = true
-        }
-      } else {
-        updateState.value = false
-        allowState.value = false
-      }
-      console.log('Update available state is', updateState.value)
-      console.log('Remote version is', remoteVersion)
-      console.log('Local version is', await getVersion())
-      console.log('Operating System is', os.value)
+    if (osList.includes(currentOS.value.toLowerCase())) {
+      const localVersion = await getVersion();
+      const isUpdateAvailable = !remoteVersion.includes(localVersion);
 
-      if (downloadArtifactBool) {
-        installState.value = true
-        const builds = data.assets
-        const fileName = getInstaller(getExtension(), builds)
-        if (fileName != null) {
-          await getArtifact(fileName[1], fileName[0], os.value, true)
-        }
-        installState.value = false
-      }
-    })
-    .catch((error) => {
-      console.error(failedFetch[0], error)
-      if (!elementIdBool) {
-        const errorData = document.getElementById('releaseData')
-        if (errorData) {
-          errorData.textContent = `${error.message}`
-        }
-        updateState.value = false
-        allowState.value = false
-        installState.value = false
-      }
-    })
-}
+      updateState.value = isUpdateAvailable;
+      allowState.value = isUpdateAvailable;
+    } else {
+      updateState.value = false;
+      allowState.value = false;
+    }
+    if (isDownloadState) {
+      installState.value = true;
+      const builds = remoteData.assets;
+      const fileName = getInstaller(getExtension(), builds);
+      result = !fileName ? await getArtifact(fileName[1], fileName[0], currentOS.value, true) : false;
+      installState.value = false;
+    }
 
-/**
- * Retrieves the installer for a specific operating system.
- *
- * @param {string} osExtension - The file extension of the installer.
- * @param {Array} builds - The list of builds.
- * @return {Array|null} An array containing the installer name and URL if found, or null if not found.
- */
-function getInstaller(osExtension, builds) {
-  for (let i of builds) {
-    let blacklistedItem = false
-    blacklistedBuilds.forEach((item) => {
-      if (i.name.startsWith(item)) {
-        return (blacklistedItem = true)
+    console.log('Update available state is', updateState.value);
+    console.log('Remote version is', remoteVersion);
+    console.log('Local version is', await getVersion());
+    console.log('Operating System is', currentOS.value);
+    return result;
+  } catch (error) {
+    console.error(failedFetch[0], error);
+    if (!releaseData) {
+      const errorData = document.getElementById('releaseData');
+      if (errorData) {
+        errorData.textContent = `${error.message}`;
       }
-    })
-    if (i.name.endsWith(osExtension) && !blacklistedItem) {
-      console.log(i.browser_download_url)
-      return [i.name, i.browser_download_url]
+      updateState.value = false;
+      allowState.value = false;
+      installState.value = false;
     }
   }
-  return null
 }
 
-/**
- * A function to get the extension based on the operating system.
- *
- * @return {string} The extension based on the operating system.
- */
-function getExtension() {
-  if (os.value.toLowerCase() == osNames[0]) {
-    return macExtension
-  } else if (os.value.toLowerCase() == osNames[1]) {
-    return windowsExtension
+function getInstaller(osExtension, builds) {
+  console.log(osExtension, builds)
+  for (const build of builds) {
+    if (blacklistPrefixes.some(prefix => build.name.startsWith(prefix))) {
+      continue;
+    }
+    if (osExtension.some(ext => build.name.endsWith(ext))) {
+      console.log(build.name, build.browser_download_url);
+      return [build.name, build.browser_download_url];
+    }
   }
-  return null
+  return null;
+}
+
+function getExtension() {
+  return osList.find(osName => osName === currentOS.value.toLowerCase())?.endsWith('macos')
+    ? macExtensionList
+    : windowsExtensionList;
 }
