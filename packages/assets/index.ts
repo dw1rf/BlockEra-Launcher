@@ -97,4 +97,8 @@ export const MicrosoftIcon = _MicrosoftIcon
 export const PirateShipIcon = _PirateShipIcon
 export const AstralRinthLogo = _AstralRinthLogo
 
+export { default as CapeModel } from './models/cape.gltf?url'
+export { default as ClassicPlayerModel } from './models/classic-player.gltf?url'
+export { default as SlimPlayerModel } from './models/slim-player.gltf?url'
+
 export * from './generated-icons'

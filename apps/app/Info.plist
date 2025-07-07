@@ -20,30 +20,23 @@
         <string>A Minecraft mod wants to access your microphone.</string>
         <key>NSAppTransportSecurity</key>
         <dict>
-            <key>NSExceptionDomains</key>
+          <key>NSExceptionDomains</key>
+          <dict>
+            <key>asset.localhost</key>
             <dict>
-                <key>textures.minecraft.net</key>
-                <dict>
-                    <key>NSExceptionAllowsInsecureHTTPLoads</key>
-                    <true/>
-                    <key>NSIncludesSubdomains</key>
-                    <true/>
-                </dict>
-                <key>localhost</key>
-                <dict>
-                    <key>NSExceptionAllowsInsecureHTTPLoads</key>
-                    <true/>
-                    <key>NSIncludesSubdomains</key>
-                    <true/>
-                </dict>
-                <key>ipc.localhost</key>
-                <dict>
-                    <key>NSExceptionAllowsInsecureHTTPLoads</key>
-                    <true/>
-                    <key>NSIncludesSubdomains</key>
-                    <true/>
-                </dict>
+              <key>NSExceptionAllowsInsecureHTTPLoads</key>
+              <true/>
+              <key>NSIncludesSubdomains</key>
+              <true/>
             </dict>
+            <key>textures.minecraft.net</key>
+            <dict>
+              <key>NSExceptionAllowsInsecureHTTPLoads</key>
+              <true/>
+              <key>NSIncludesSubdomains</key>
+              <true/>
+            </dict>
+          </dict>
         </dict>
     </dict>
 </plist>
