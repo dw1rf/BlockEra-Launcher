@@ -23,13 +23,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, windows-latest, ubuntu-22.04]
+        platform: [macos-latest, windows-latest, ubuntu-latest]
         include:
           - platform: macos-latest
             artifact-target-name: universal-apple-darwin
           - platform: windows-latest
             artifact-target-name: x86_64-pc-windows-msvc
-          - platform: ubuntu-22.04
+          - platform: ubuntu-latest
             artifact-target-name: x86_64-unknown-linux-gnu
 
     runs-on: ${{ matrix.platform }}
@@ -55,10 +55,11 @@ jobs:
           cache: pnpm
 
       - name: 🧰 Install Linux build dependencies
-        if: matrix.platform == 'ubuntu'
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -yq \
+            libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
@@ -91,7 +92,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       - name: 🔨 Build Linux app
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-latest'
         run: pnpm --filter=@modrinth/app run tauri build --config tauri-release.conf.json
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
