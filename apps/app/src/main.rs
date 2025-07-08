@@ -34,9 +34,6 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
 
     //     let update_fut = updater.check();
 
-        // tracing::info!("Initializing app state...");
-        State::init().await?;
-
     //     let check_bar = theseus::init_loading(
     //         theseus::LoadingBarType::CheckingForUpdates,
     //         1.0,
@@ -87,7 +84,7 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
     // #[cfg(not(feature = "updater"))]
     // {
         // }
-        
+    tracing::info!("Initializing app state...");    
     State::init().await?;
     tracing::info!("AstralRinth state successfully initialized.");
     let state = State::get().await?;
@@ -164,10 +161,10 @@ fn main() {
 
     let mut builder = tauri::Builder::default();
 
-    #[cfg(feature = "updater")]
-    {
-        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
-    }
+    // #[cfg(feature = "updater")]
+    // {
+    //     builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    // }
 
     builder = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
