@@ -84,6 +84,11 @@ Problem files:
 async fn fix_modrinth_issued_migrations(
     pool: &Pool<Sqlite>,
 ) -> crate::Result<()> {
+    if cfg!(target_os = "windows") && cfg!(target_arch = "x86") {
+        tracing::warn!("🛑 Skipping migration checksum fix on Windows x86 platform.");
+        return Ok(());
+    }
+
     let started = Instant::now();
     tracing::info!("Fixing modrinth issued migrations");
     sqlx::query(
@@ -95,7 +100,7 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed first migration");
+    tracing::info!("⚙️ Fixed checksum for first migration");
     sqlx::query(
             r#"
             UPDATE "_sqlx_migrations"
@@ -105,7 +110,7 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed second migration");
+    tracing::info!("⚙️ Fixed checksum for second migration");
     sqlx::query(
             r#"
             UPDATE "_sqlx_migrations"
@@ -115,7 +120,7 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed third migration");
+    tracing::info!("⚙️ Fixed checksum for third migration");
     sqlx::query(
             r#"
             UPDATE "_sqlx_migrations"
@@ -125,10 +130,10 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed fourth migration");
+    tracing::info!("⚙️ Fixed checksum for fourth migration");
     let elapsed = started.elapsed();
     tracing::info!(
-        "✅ Fixed all known modrinth-issued migrations in {:.2?}",
+        "✅ Fixed all known Modrinth checksums for migrations in {:.2?}",
         elapsed
     );
     Ok(())
