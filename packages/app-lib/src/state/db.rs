@@ -30,7 +30,7 @@ pub(crate) async fn connect() -> crate::Result<Pool<Sqlite>> {
         .connect_with(conn_options)
         .await?;
 
-    fix_migration_20240711194701(&pool).await?; // Patch by AstralRinth - 08.07.2025
+    fix_modrinth_issued_migrations(&pool).await?; // Patch by AstralRinth - 08.07.2025
 
     sqlx::migrate!().run(&pool).await?;
 
@@ -66,16 +66,62 @@ async fn stale_data_cleanup(pool: &Pool<Sqlite>) -> crate::Result<()> {
 }
 /*
 // Patch by AstralRinth - 08.07.2025
+Problem files:
+/packages/app-lib/migrations/20240711194701_init.sql !eol
+/packages/app-lib/migrations/20240813205023_drop-active-unique.sql !eol
+/packages/app-lib/migrations/20240930001852_disable-personalized-ads.sql !eol
+/packages/app-lib/migrations/20241222013857_feature-flags.sql !eol
 */
-async fn fix_migration_20240711194701(pool: &Pool<Sqlite>) -> crate::Result<()> {
+async fn fix_modrinth_issued_migrations(pool: &Pool<Sqlite>) -> crate::Result<()> {
+    const FIX_INIT: &str = "20240711194701";
+    const FIX_DROP_ACTIVE_UNIQUE: &str = "20240813205023";
+    const FIX_DISABLE_PERSONALIZED_ADS: &str = "20240930001852";
+    const FIX_FEATURE_FLAGS: &str = "20241222013857";
+    tracing::info!("Fixing modrinth issued migrations");
     sqlx::query(
             r#"
             UPDATE "_sqlx_migrations"
             SET checksum = X'e973512979feac07e415405291eefafc1ef0bd89454958ad66f5452c381db8679c20ffadab55194ecf6ba8ec4ca2db21'
-            WHERE version = '20240711194701';
+            WHERE version = '$1';
             "#,
         )
+        .bind(FIX_INIT)
         .execute(pool)
         .await?;
+    tracing::info!("Fixed first migration");
+    sqlx::query(
+            r#"
+            UPDATE "_sqlx_migrations"
+            SET checksum = X'5b53534a7ffd74eebede234222be47e1d37bd0cc5fee4475212491b0c0379c16e3079e08eee0af959b1fa20835eeb206'
+            WHERE version = '$1';
+            "#,
+        )
+        .bind(FIX_DROP_ACTIVE_UNIQUE)
+        .execute(pool)
+        .await?;
+    tracing::info!("Fixed second migration");
+    sqlx::query(
+            r#"
+            UPDATE "_sqlx_migrations"
+            SET checksum = X'c0de804f171b5530010edae087a6e75645c0e90177e28365f935c9fdd9a5c68e24850b8c1498e386a379d525d520bc57'
+            WHERE version = '$1';
+            "#,
+        )
+        .bind(FIX_DISABLE_PERSONALIZED_ADS)
+        .execute(pool)
+        .await?;
+    tracing::info!("Fixed third migration");
+    sqlx::query(
+            r#"
+            UPDATE "_sqlx_migrations"
+            SET checksum = X'c17542cb989a0466153e695bfa4717f8970feee185ca186a2caa1f2f6c5d4adb990ab97c26cacfbbe09c39ac81551704'
+            WHERE version = '$1';
+            "#,
+        )
+        .bind(FIX_FEATURE_FLAGS)
+        .execute(pool)
+        .await?;
+    tracing::info!("Fixed fourth migration");
+    tracing::info!("Fixed all known modrinth issued migrations");
     Ok(())
 }
