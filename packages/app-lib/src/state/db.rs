@@ -3,6 +3,7 @@ use sqlx::sqlite::{
     SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions,
 };
 use sqlx::{Pool, Sqlite};
+use std::env;
 use tokio::time::Instant;
 use std::str::FromStr;
 use std::time::Duration;
@@ -84,8 +85,13 @@ Problem files:
 async fn fix_modrinth_issued_migrations(
     pool: &Pool<Sqlite>,
 ) -> crate::Result<()> {
-    if cfg!(target_os = "windows") && cfg!(target_arch = "x86") {
-        tracing::warn!("🛑 Skipping migration checksum fix on Windows x86 platform.");
+    let arch = env::consts::ARCH;
+    let os = env::consts::OS;
+
+    tracing::info!("Running on OS: {}, ARCH: {}", os, arch);
+
+    if os == "windows" && arch == "x86" {
+        tracing::warn!("🛑 Skipping migration checksum fix on Windows x86 (runtime-detected)");
         return Ok(());
     }
 
