@@ -3,6 +3,7 @@ use sqlx::sqlite::{
     SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions,
 };
 use sqlx::{Pool, Sqlite};
+use std::env;
 use tokio::time::Instant;
 use std::str::FromStr;
 use std::time::Duration;
@@ -84,6 +85,16 @@ Problem files:
 async fn fix_modrinth_issued_migrations(
     pool: &Pool<Sqlite>,
 ) -> crate::Result<()> {
+    let arch = env::consts::ARCH;
+    let os = env::consts::OS;
+
+    tracing::info!("Running on OS: {}, ARCH: {}", os, arch);
+
+    if os == "windows" && arch == "x86_64" {
+        tracing::warn!("🛑 Skipping migration checksum fix on Windows x86_64 (runtime-detected)");
+        return Ok(());
+    }
+
     let started = Instant::now();
     tracing::info!("Fixing modrinth issued migrations");
     sqlx::query(
@@ -95,7 +106,7 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed first migration");
+    tracing::info!("⚙️ Fixed checksum for first migration");
     sqlx::query(
             r#"
             UPDATE "_sqlx_migrations"
@@ -105,7 +116,7 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed second migration");
+    tracing::info!("⚙️ Fixed checksum for second migration");
     sqlx::query(
             r#"
             UPDATE "_sqlx_migrations"
@@ -115,7 +126,7 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed third migration");
+    tracing::info!("⚙️ Fixed checksum for third migration");
     sqlx::query(
             r#"
             UPDATE "_sqlx_migrations"
@@ -125,10 +136,10 @@ async fn fix_modrinth_issued_migrations(
         )
         .execute(pool)
         .await?;
-    tracing::info!("⚙️ Fixed fourth migration");
+    tracing::info!("⚙️ Fixed checksum for fourth migration");
     let elapsed = started.elapsed();
     tracing::info!(
-        "✅ Fixed all known modrinth-issued migrations in {:.2?}",
+        "✅ Fixed all known Modrinth checksums for migrations in {:.2?}",
         elapsed
     );
     Ok(())
