@@ -6,13 +6,15 @@ pub mod jre;
 pub mod logs;
 pub mod metadata;
 pub mod minecraft_auth;
+pub mod minecraft_skins;
 pub mod mr_auth;
 pub mod pack;
 pub mod process;
 pub mod profile;
 pub mod settings;
 pub mod tags;
-pub mod download;
+pub mod download; // AstralRinth
+pub mod worlds;
 
 pub mod data {
     pub use crate::state::{
@@ -27,12 +29,12 @@ pub mod data {
 
 pub mod prelude {
     pub use crate::{
+        State,
         data::*,
         event::CommandPayload,
         jre, metadata, minecraft_auth, mr_auth, pack, process,
-        profile::{self, create, Profile},
+        profile::{self, Profile, create},
         settings,
-        util::io::{canonicalize, IOError},
-        State,
+        util::io::{IOError, canonicalize},
     };
 }

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <ModalConfirm
+    <ConfirmModal
       ref="modal_confirm"
       title="Are you sure you want to delete this project?"
       description="If you proceed, all versions and any attached data will be removed from our servers. This may break other projects, so be careful."
@@ -104,7 +104,7 @@
             <span class="label__title">Client-side</span>
             <span class="label__description">
               Select based on if the
-              {{ $formatProjectType(project.project_type).toLowerCase() }} has functionality on the
+              {{ formatProjectType(project.project_type).toLowerCase() }} has functionality on the
               client side. Just because a mod works in Singleplayer doesn't mean it has actual
               client-side functionality.
             </span>
@@ -128,7 +128,7 @@
             <span class="label__title">Server-side</span>
             <span class="label__description">
               Select based on if the
-              {{ $formatProjectType(project.project_type).toLowerCase() }} has functionality on the
+              {{ formatProjectType(project.project_type).toLowerCase() }} has functionality on the
               <strong>logical</strong> server. Remember that Singleplayer contains an integrated
               server.
             </span>
@@ -239,11 +239,10 @@
 </template>
 
 <script setup>
-import { formatProjectStatus } from "@modrinth/utils";
+import { formatProjectStatus, formatProjectType } from "@modrinth/utils";
 import { UploadIcon, SaveIcon, TrashIcon, XIcon, IssuesIcon, CheckIcon } from "@modrinth/assets";
 import { Multiselect } from "vue-multiselect";
-import Avatar from "~/components/ui/Avatar.vue";
-import ModalConfirm from "~/components/ui/ModalConfirm.vue";
+import { ConfirmModal, Avatar } from "@modrinth/ui";
 import FileInput from "~/components/ui/FileInput.vue";
 
 const props = defineProps({

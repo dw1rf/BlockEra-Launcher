@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, provide } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   ArrowBigUpDashIcon,
+  ChangeSkinIcon,
   CompassIcon,
   DownloadIcon,
   HomeIcon,
@@ -16,14 +17,23 @@ import {
   RestoreIcon,
   RightArrowIcon,
   SettingsIcon,
+  WorldIcon,
   XIcon,
+  NewspaperIcon,
 } from '@modrinth/assets'
-import { Avatar, Button, ButtonStyled, Notifications, OverflowMenu } from '@modrinth/ui'
+import {
+  Avatar,
+  Button,
+  ButtonStyled,
+  Notifications,
+  OverflowMenu,
+  NewsArticleCard,
+} from '@modrinth/ui'
 import { useLoading, useTheming } from '@/store/state'
 // import ModrinthAppLogo from '@/assets/modrinth_app.svg?component'
 import AccountsCard from '@/components/ui/AccountsCard.vue'
 import InstanceCreationModal from '@/components/ui/InstanceCreationModal.vue'
-import { get, set } from '@/helpers/settings'
+import { get, set } from '@/helpers/settings.ts'
 import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
 import RunningAppBar from '@/components/ui/RunningAppBar.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
@@ -54,12 +64,13 @@ import NavButton from '@/components/ui/NavButton.vue'
 import { get as getCreds, login, logout } from '@/helpers/mr_auth.js'
 import { get_user } from '@/helpers/cache.js'
 import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
-import dayjs from 'dayjs'
 // import PromotionWrapper from '@/components/ui/PromotionWrapper.vue'
 // import { hide_ads_window, init_ads_window } from '@/helpers/ads.js'
 import FriendsList from '@/components/ui/friends/FriendsList.vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
+import { get_available_capes, get_available_skins } from './helpers/skins'
+import { generateSkinPreviews } from './helpers/rendering/batch-skin-renderer'
 
 const themeStore = useTheming()
 
@@ -177,25 +188,53 @@ async function setupApp() {
     }),
   )
 
+  // Patched by AstralRinth
   // useFetch(
   //   `https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
   //   'criticalAnnouncements',
   //   true,
-  // ).then((res) => {
-  //   if (res && res.header && res.body) {
-  //     criticalErrorMessage.value = res
-  //   }
-  // })
+  // )
+  //   .then((response) => response.json())
+  //   .then((res) => {
+  //     if (res && res.header && res.body) {
+  //       criticalErrorMessage.value = res
+  //     }
+  //   })
+  //   .catch(() => {
+  //     console.log(
+  //       `No critical announcement found at https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
+  //     )
+  //   })
 
-  useFetch(`https://modrinth.com/blog/news.json`, 'news', true).then((res) => {
-    if (res && res.articles) {
-      news.value = res.articles
-    }
-  })
+  useFetch(`https://modrinth.com/news/feed/articles.json`, 'news', true)
+    .then((response) => response.json())
+    .then((res) => {
+      if (res && res.articles) {
+        // Format expected by NewsArticleCard component.
+        news.value = res.articles
+          .map((article) => ({
+            ...article,
+            path: article.link,
+            thumbnail: article.thumbnail,
+            title: article.title,
+            summary: article.summary,
+            date: article.date,
+          }))
+          .slice(0, 4)
+      }
+    })
 
   get_opening_command().then(handleCommand)
   // checkUpdates()
   fetchCredentials()
+
+  try {
+    const skins = (await get_available_skins()) ?? []
+    const capes = (await get_available_capes()) ?? []
+    generateSkinPreviews(skins, capes)
+  } catch (error) {
+    console.warn('Failed to generate skin previews in app setup.', error)
+  }
 }
 
 const stateFailed = ref(false)
@@ -303,6 +342,7 @@ onMounted(() => {
 })
 
 const accounts = ref(null)
+provide('accountsCard', accounts)
 
 command_listener(handleCommand)
 async function handleCommand(e) {
@@ -374,7 +414,7 @@ function handleAuxClick(e) {
 <template>
   <SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
   <div id="teleports"></div>
-  <div v-if="stateInitialized" class="app-grid-layout relative">
+  <div v-if="stateInitialized" class="app-grid-layout experimental-styles-within relative">
     <Suspense>
       <AppSettingsModal ref="settingsModal" />
     </Suspense>
@@ -387,6 +427,9 @@ function handleAuxClick(e) {
       <NavButton v-tooltip.right="'Home'" to="/">
         <HomeIcon />
       </NavButton>
+      <NavButton v-if="themeStore.featureFlags.worlds_tab" v-tooltip.right="'Worlds'" to="/worlds">
+        <WorldIcon />
+      </NavButton>
       <NavButton
         v-tooltip.right="'Discover content'"
         to="/browse/modpack"
@@ -394,6 +437,9 @@ function handleAuxClick(e) {
         :is-subpage="(route) => route.path.startsWith('/project') && !route.query.i"
       >
         <CompassIcon />
+      </NavButton>
+      <NavButton v-tooltip.right="'Skins (Beta)'" to="/skins">
+        <ChangeSkinIcon />
       </NavButton>
       <NavButton
         v-tooltip.right="'Library'"
@@ -488,7 +534,7 @@ function handleAuxClick(e) {
             <RunningAppBar />
           </Suspense>
         </div>
-        <section v-if="!nativeDecorations" class="window-controls">
+        <section v-if="!nativeDecorations" class="window-controls" data-tauri-drag-region-exclude>
           <Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
             <MinimizeIcon />
           </Button>
@@ -575,34 +621,20 @@ function handleAuxClick(e) {
               <FriendsList :credentials="credentials" :sign-in="() => signIn()" />
             </suspense>
           </div>
-          <div v-if="news && news.length > 0" class="pt-4 flex flex-col">
-            <h3 class="px-4 text-lg m-0">News</h3>
-            <template v-for="(item, index) in news" :key="`news-${index}`">
-              <a
-                :class="`flex flex-col outline-offset-[-4px] hover:bg-[--brand-gradient-border] focus:bg-[--brand-gradient-border] px-4 transition-colors ${index === 0 ? 'pt-2 pb-4' : 'py-4'}`"
-                :href="item.link"
-                target="_blank"
-                rel="external"
-              >
-                <img
-                  :src="item.thumbnail"
-                  alt="News thumbnail"
-                  aria-hidden="true"
-                  class="w-full aspect-[3/1] object-cover rounded-2xl border-[1px] border-solid border-[--brand-gradient-border]"
-                />
-                <h4 class="mt-2 mb-0 text-sm leading-none text-contrast font-semibold">
-                  {{ item.title }}
-                </h4>
-                <p class="my-1 text-sm text-secondary leading-tight">{{ item.summary }}</p>
-                <p class="text-right text-sm text-secondary opacity-60 leading-tight m-0">
-                  {{ dayjs(item.date).fromNow() }}
-                </p>
-              </a>
-              <hr
-                v-if="index !== news.length - 1"
-                class="h-px my-[-2px] mx-4 border-0 m-0 bg-[--brand-gradient-border]"
+          <div v-if="news && news.length > 0" class="pt-4 flex flex-col items-center">
+            <h3 class="px-4 text-lg m-0 text-left w-full">News</h3>
+            <div class="px-4 pt-2 space-y-4 flex flex-col items-center w-full">
+              <NewsArticleCard
+                v-for="(item, index) in news"
+                :key="`news-${index}`"
+                :article="item"
               />
-            </template>
+              <ButtonStyled color="brand" size="large">
+                <a href="https://modrinth.com/news" target="_blank" class="my-4">
+                  <NewspaperIcon /> View all news
+                </a>
+              </ButtonStyled>
+            </div>
           </div>
         </div>
       </div>
@@ -717,6 +749,14 @@ function handleAuxClick(e) {
 
 .app-grid-statusbar {
   grid-area: status;
+}
+
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-tauri-drag-region-exclude] {
+  -webkit-app-region: no-drag;
 }
 
 .app-contents {

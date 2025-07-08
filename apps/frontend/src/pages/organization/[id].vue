@@ -98,7 +98,10 @@
               {{ formatCompactNumber(projects?.length || 0) }}
               projects
             </div>
-            <div class="flex items-center gap-2 font-semibold">
+            <div
+              v-tooltip="sumDownloads.toLocaleString()"
+              class="flex items-center gap-2 font-semibold"
+            >
               <DownloadIcon class="h-6 w-6 text-secondary" />
               {{ formatCompactNumber(sumDownloads) }}
               downloads
@@ -123,6 +126,7 @@
                   },
                   { divider: true, shown: auth.user && currentMember },
                   { id: 'copy-id', action: () => copyId() },
+                  { id: 'copy-permalink', action: () => copyPermalink() },
                 ]"
                 aria-label="More options"
               >
@@ -135,15 +139,17 @@
                   <ClipboardCopyIcon aria-hidden="true" />
                   {{ formatMessage(commonMessages.copyIdButton) }}
                 </template>
+                <template #copy-permalink>
+                  <ClipboardCopyIcon aria-hidden="true" />
+                  {{ formatMessage(commonMessages.copyPermalinkButton) }}
+                </template>
               </OverflowMenu>
             </ButtonStyled>
           </template>
         </ContentPageHeader>
       </div>
       <div class="normal-page__sidebar">
-        <!-- <AdPlaceholder
-          v-if="!auth.user || !isPermission(auth.user.badges, 1 << 0) || flags.showAdsWithPlus"
-        /> -->
+        <!-- <AdPlaceholder v-if="!auth.user" /> -->
 
         <div class="card flex-card">
           <h2>Members</h2>
@@ -279,14 +285,14 @@ import NavTabs from "~/components/ui/NavTabs.vue";
 const vintl = useVIntl();
 const { formatMessage } = vintl;
 
-const formatCompactNumber = useCompactNumber();
+const formatCompactNumber = useCompactNumber(true);
 
 const auth = await useAuth();
 const user = await useUser();
 const cosmetics = useCosmetics();
 const route = useNativeRoute();
 const tags = useTags();
-const flags = useFeatureFlags();
+const config = useRuntimeConfig();
 
 let orgId = useRouteId();
 
@@ -501,6 +507,12 @@ const navLinks = computed(() => [
 
 async function copyId() {
   await navigator.clipboard.writeText(organization.value.id);
+}
+
+async function copyPermalink() {
+  await navigator.clipboard.writeText(
+    `${config.public.siteUrl}/organization/${organization.value.id}`,
+  );
 }
 </script>
 

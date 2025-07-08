@@ -1,17 +1,16 @@
 use std::{
     sync::{atomic::AtomicBool, Arc},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH}, // AstralRinth
 };
 
 use discord_rich_presence::{
-    activity::{Activity, Assets, Timestamps},
+    activity::{Activity, Assets, Timestamps}, // AstralRinth
     DiscordIpc, DiscordIpcClient,
 };
-use rand::seq::SliceRandom;
+use rand::seq::SliceRandom; // AstralRinth
 use tokio::sync::RwLock;
 
-// use crate::state::Profile;
-use crate::util::utils;
+use crate::util::utils; // AstralRinth
 use crate::State;
 
 pub struct DiscordGuard {
@@ -43,8 +42,7 @@ impl DiscordGuard {
         let dipc =
             DiscordIpcClient::new("1190718475832918136").map_err(|e| {
                 crate::ErrorKind::OtherError(format!(
-                    "Could not create Discord client {}",
-                    e,
+                    "Could not create Discord client {e}",
                 ))
             })?;
 
@@ -133,8 +131,7 @@ impl DiscordGuard {
         let res = client.set_activity(activity.clone());
         let could_not_set_err = |e: Box<dyn serde::ser::StdError>| {
             crate::ErrorKind::OtherError(format!(
-                "Could not update Discord activity {}",
-                e,
+                "Could not update Discord activity {e}",
             ))
         };
 
@@ -142,8 +139,7 @@ impl DiscordGuard {
             if let Err(_e) = res {
                 client.reconnect().map_err(|e| {
                     crate::ErrorKind::OtherError(format!(
-                        "Could not reconnect to Discord IPC {}",
-                        e,
+                        "Could not reconnect to Discord IPC {e}",
                     ))
                 })?;
                 return Ok(client
@@ -174,8 +170,7 @@ impl DiscordGuard {
 
         let could_not_clear_err = |e: Box<dyn serde::ser::StdError>| {
             crate::ErrorKind::OtherError(format!(
-                "Could not clear Discord activity {}",
-                e,
+                "Could not clear Discord activity {e}",
             ))
         };
 
@@ -183,8 +178,7 @@ impl DiscordGuard {
             if res.is_err() {
                 client.reconnect().map_err(|e| {
                     crate::ErrorKind::OtherError(format!(
-                        "Could not reconnect to Discord IPC {}",
-                        e,
+                        "Could not reconnect to Discord IPC {e}",
                     ))
                 })?;
                 return Ok(client

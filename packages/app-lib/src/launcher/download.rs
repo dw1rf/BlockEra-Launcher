@@ -1,10 +1,11 @@
 //! Downloader for Minecraft data
 
 use crate::launcher::parse_rules;
+use crate::profile::QuickPlayType;
 use crate::{
     event::{
-        emit::{emit_loading, loading_try_for_each_concurrent},
         LoadingBarId,
+        emit::{emit_loading, loading_try_for_each_concurrent},
     },
     state::State,
     util::{fetch::*, io, platform::OsExt},
@@ -36,12 +37,7 @@ pub async fn download_minecraft(
     let assets_index =
         download_assets_index(st, version, Some(loading_bar), force).await?;
 
-    let amount = if version
-        .processors
-        .as_ref()
-        .map(|x| !x.is_empty())
-        .unwrap_or(false)
-    {
+    let amount = if version.processors.as_ref().is_some_and(|x| !x.is_empty()) {
         25.0
     } else {
         40.0
@@ -295,7 +291,7 @@ pub async fn download_libraries(
         stream::iter(libraries.iter())
             .map(Ok::<&Library, crate::Error>), None, loading_bar,loading_amount,num_files, None,|library| async move {
                 if let Some(rules) = &library.rules {
-                    if !parse_rules(rules, java_arch, minecraft_updated) {
+                    if !parse_rules(rules, java_arch, &QuickPlayType::None, minecraft_updated) {
                         tracing::trace!("Skipped library {}", &library.name);
                         return Ok(());
                     }

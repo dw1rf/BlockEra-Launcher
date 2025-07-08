@@ -144,7 +144,7 @@
       <div v-else class="input-group">
         <ButtonStyled v-if="primaryFile" color="brand">
           <a
-            v-tooltip="primaryFile.filename + ' (' + $formatBytes(primaryFile.size) + ')'"
+            v-tooltip="primaryFile.filename + ' (' + formatBytes(primaryFile.size) + ')'"
             :href="primaryFile.url"
             @click="emit('onDownload')"
           >
@@ -320,7 +320,7 @@
         <FileIcon aria-hidden="true" />
         <span class="filename">
           <strong>{{ replaceFile.name }}</strong>
-          <span class="file-size">({{ $formatBytes(replaceFile.size) }})</span>
+          <span class="file-size">({{ formatBytes(replaceFile.size) }})</span>
         </span>
         <FileInput
           class="iconified-button raised-button"
@@ -345,7 +345,7 @@
         <FileIcon aria-hidden="true" />
         <span class="filename">
           <strong>{{ file.filename }}</strong>
-          <span class="file-size">({{ $formatBytes(file.size) }})</span>
+          <span class="file-size">({{ formatBytes(file.size) }})</span>
           <span v-if="primaryFile.hashes.sha1 === file.hashes.sha1" class="file-type">
             Primary
           </span>
@@ -412,7 +412,7 @@
           <FileIcon aria-hidden="true" />
           <span class="filename">
             <strong>{{ file.name }}</strong>
-            <span class="file-size">({{ $formatBytes(file.size) }})</span>
+            <span class="file-size">({{ formatBytes(file.size) }})</span>
           </span>
           <multiselect
             v-if="version.loaders.some((x) => tags.loaderData.dataPackLoaders.includes(x))"
@@ -533,7 +533,7 @@
                 )
                 .map((it) => it.name)
             "
-            :custom-label="(value) => $formatCategory(value)"
+            :custom-label="formatCategory"
             :loading="tags.loaders.length === 0"
             :multiple="true"
             :searchable="true"
@@ -541,7 +541,6 @@
             :close-on-select="false"
             :clear-on-select="false"
             :show-labels="false"
-            :limit="6"
             :hide-selected="true"
             placeholder="Choose loaders..."
           />
@@ -566,7 +565,6 @@
               :close-on-select="false"
               :clear-on-select="false"
               :show-labels="false"
-              :limit="6"
               :hide-selected="true"
               :custom-label="(version) => version"
               placeholder="Choose versions..."
@@ -621,12 +619,26 @@
           <h4>Version ID</h4>
           <CopyCode :text="version.id" />
         </div>
+        <div v-if="!isEditing && flags.developerMode">
+          <h4>Maven coordinates</h4>
+          <div class="maven-section">
+            <CopyCode :text="`maven.modrinth:${project.id}:${version.id}`" />
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 <script>
-import { ButtonStyled, ConfirmModal, MarkdownEditor } from "@modrinth/ui";
+import {
+  Avatar,
+  Badge,
+  CopyCode,
+  Checkbox,
+  ButtonStyled,
+  ConfirmModal,
+  MarkdownEditor,
+} from "@modrinth/ui";
 import {
   FileIcon,
   TrashIcon,
@@ -645,6 +657,7 @@ import {
   ChevronRightIcon,
 } from "@modrinth/assets";
 import { Multiselect } from "vue-multiselect";
+import { formatBytes, formatCategory } from "@modrinth/utils";
 import { acceptFileFromProjectType } from "~/helpers/fileUtils.js";
 import { inferVersionInfo } from "~/helpers/infer.js";
 import { createDataPackVersion } from "~/helpers/package.js";
@@ -652,13 +665,9 @@ import { renderHighlightedString } from "~/helpers/highlight.js";
 import { reportVersion } from "~/utils/report-helpers.ts";
 import { useImageUpload } from "~/composables/image-upload.ts";
 
-import Avatar from "~/components/ui/Avatar.vue";
 import AdPlaceholder from "~/components/ui/AdPlaceholder.vue";
-import Badge from "~/components/ui/Badge.vue";
 import Breadcrumbs from "~/components/ui/Breadcrumbs.vue";
-import CopyCode from "~/components/ui/CopyCode.vue";
 import Categories from "~/components/ui/search/Categories.vue";
-import Checkbox from "~/components/ui/Checkbox.vue";
 import FileInput from "~/components/ui/FileInput.vue";
 import Modal from "~/components/ui/Modal.vue";
 
@@ -954,6 +963,8 @@ export default defineNuxtComponent({
     },
   },
   methods: {
+    formatBytes,
+    formatCategory,
     async onImageUpload(file) {
       const response = await useImageUpload(file, { context: "version" });
 
@@ -1136,7 +1147,7 @@ export default defineNuxtComponent({
         this.$notify({
           group: "main",
           title: "An error occurred",
-          text: err.data.description,
+          text: err.data ? err.data.description : err,
           type: "error",
         });
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1543,6 +1554,16 @@ export default defineNuxtComponent({
 
   h4 {
     margin: 1rem 0 0.25rem 0;
+  }
+
+  .maven-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    button {
+      max-width: 100%;
+    }
   }
 
   .team-member {
