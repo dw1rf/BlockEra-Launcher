@@ -30,6 +30,8 @@ pub(crate) async fn connect() -> crate::Result<Pool<Sqlite>> {
         .connect_with(conn_options)
         .await?;
 
+    fix_migration_20240711194701(&pool).await?; // Patch by AstralRinth - 08.07.2025
+
     sqlx::migrate!().run(&pool).await?;
 
     if let Err(err) = stale_data_cleanup(&pool).await {
@@ -60,5 +62,20 @@ async fn stale_data_cleanup(pool: &Pool<Sqlite>) -> crate::Result<()> {
 
     tx.commit().await?;
 
+    Ok(())
+}
+/*
+// Patch by AstralRinth - 08.07.2025
+*/
+async fn fix_migration_20240711194701(pool: &Pool<Sqlite>) -> crate::Result<()> {
+    sqlx::query(
+            r#"
+            UPDATE "_sqlx_migrations"
+            SET checksum = X'e973512979feac07e415405291eefafc1ef0bd89454958ad66f5452c381db8679c20ffadab55194ecf6ba8ec4ca2db21'
+            WHERE version = '20240711194701';
+            "#,
+        )
+        .execute(pool)
+        .await?;
     Ok(())
 }
