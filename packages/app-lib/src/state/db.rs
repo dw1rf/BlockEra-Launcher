@@ -90,8 +90,8 @@ async fn fix_modrinth_issued_migrations(
 
     tracing::info!("Running on OS: {}, ARCH: {}", os, arch);
 
-    if os == "windows" && arch == "x86" {
-        tracing::warn!("🛑 Skipping migration checksum fix on Windows x86 (runtime-detected)");
+    if os == "windows" && arch == "x86_64" {
+        tracing::warn!("🛑 Skipping migration checksum fix on Windows x86_64 (runtime-detected)");
         return Ok(());
     }
 
