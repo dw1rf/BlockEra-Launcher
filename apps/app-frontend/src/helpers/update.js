@@ -52,7 +52,7 @@ export async function getRemote(isDownloadState) {
       installState.value = true;
       const builds = remoteData.assets;
       const fileName = getInstaller(getExtension(), builds);
-      result = !fileName ? await getArtifact(fileName[1], fileName[0], currentOS.value, true) : false;
+      result = fileName ? await getArtifact(fileName[1], fileName[0], currentOS.value, true) : false;
       installState.value = false;
     }
 
