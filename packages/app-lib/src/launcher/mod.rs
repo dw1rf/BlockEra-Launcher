@@ -633,6 +633,19 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
+    // Patched by AstralRinth
+    if credentials.access_token == "null" && credentials.refresh_token == "null" {
+        if version_jar == "1.16.4" || version_jar == "1.16.5" {
+            let invalid_url = "https://invalid.invalid";
+            tracing::info!("✅ JVM args is patched by AstralRinth for MC {}", version_jar);
+            command.arg("-Dminecraft.api.env=custom");
+            command.arg(format!("-Dminecraft.api.auth.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.account.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.session.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.services.host={}", invalid_url));
+        }
+    }
+
     command
         .arg("com.modrinth.theseus.MinecraftLaunch")
         .arg(version_info.main_class.clone())
