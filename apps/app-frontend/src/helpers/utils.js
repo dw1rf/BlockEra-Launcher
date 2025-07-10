@@ -10,9 +10,15 @@ export async function getOS() {
   return await invoke('plugin:utils|get_os')
 }
 
+// [AR] Feature
 export async function getArtifact(downloadurl, filename, ostype, autoupdatesupported) {
   console.log('Downloading build', downloadurl, filename, ostype, autoupdatesupported)
   return await invoke('plugin:utils|get_artifact', { downloadurl, filename, ostype, autoupdatesupported })
+}
+
+// [AR] Patch fix
+export async function applyMigrationFix(eol) {
+  return await invoke('plugin:utils|apply_migration_fix', { eol })
 }
 
 export async function openPath(path) {

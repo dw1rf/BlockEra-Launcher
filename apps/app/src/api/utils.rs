@@ -11,10 +11,12 @@ use dashmap::DashMap;
 use std::path::{Path, PathBuf};
 use theseus::prelude::canonicalize;
 use url::Url;
+use theseus::util::utils;
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("utils")
         .invoke_handler(tauri::generate_handler![
+            apply_migration_fix,
             get_artifact,
             get_os,
             should_disable_mouseover,
@@ -27,9 +29,17 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
+/// [AR] Patch fix
+#[tauri::command]
+pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
+    let result = utils::apply_migration_fix(eol).await?;
+    Ok(result)
+}
+
+/// [AR] Feature
 #[tauri::command]
 pub async fn get_artifact(downloadurl: &str, filename: &str, ostype: &str, autoupdatesupported: bool) -> Result<()> {
-    theseus::download::init_download(downloadurl, filename, ostype, autoupdatesupported).await;
+    let _ = utils::init_download(downloadurl, filename, ostype, autoupdatesupported).await;
     Ok(())
 }
 
