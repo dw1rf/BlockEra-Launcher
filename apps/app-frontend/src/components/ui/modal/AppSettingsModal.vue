@@ -8,6 +8,8 @@ import {
   PaintbrushIcon,
   GameIcon,
   CoffeeIcon,
+  DownloadIcon,
+  SpinnerIcon,
 } from '@modrinth/assets'
 import { TabbedModal } from '@modrinth/ui'
 import { computed, ref, watch } from 'vue'
@@ -23,6 +25,23 @@ import { useTheming } from '@/store/state'
 import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vue'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { get, set } from '@/helpers/settings.ts'
+// [AR] Imports
+import { installState, getRemote, updateState } from '@/helpers/update.js'
+
+const updateModalView = ref(null)
+const updateRequestFailView = ref(null)
+
+const initUpdateModal = async () => {
+  updateModalView.value.show()
+}
+
+const initDownload = async () => {
+  updateModalView.value.hide()
+  const result = await getRemote(true);
+  if (!result) {
+    updateRequestFailView.value.show()
+  }
+}
 
 const themeStore = useTheming()
 
@@ -138,11 +157,10 @@ function devModeCount() {
             {{ formatMessage(developerModeEnabled) }}
           </p>
           <div class="flex items-center gap-3">
-            <button
+            <button 
               class="p-0 m-0 bg-transparent border-none cursor-pointer button-animation"
               :class="{ 'text-brand': themeStore.devMode, 'text-secondary': !themeStore.devMode }"
-              @click="devModeCount"
-            >
+              @click="devModeCount">
               <AstralRinthLogo class="w-6 h-6" />
             </button>
             <div>
@@ -153,9 +171,81 @@ function devModeCount() {
                 {{ osVersion }}
               </p>
             </div>
+            <div v-if="updateState" class="w-8 h-8 cursor-pointer hover:brightness-75 neon-icon pulse">
+              <template v-if="installState">
+                <SpinnerIcon class="size-6 animate-spin" />
+              </template>
+              <template v-else>
+                <DownloadIcon class="size-6" @click="!installState && (initUpdateModal(), getRemote(false))" />
+              </template>
+            </div>
+
           </div>
         </div>
       </template>
     </TabbedModal>
+    <!-- [AR] Feature -->
+    <ModalWrapper ref="updateModalView" :has-to-type="false" header="Request to update the AstralRinth launcher">
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <p>The new version of the AstralRinth launcher is available.</p>
+          <p>Your version is outdated. We recommend that you update to the latest version.</p>
+          <p><strong>⚠️ Warning ⚠️</strong></p>
+          <p>
+            Before updating, make sure that you have saved all running instances and made a backup copy of the instances
+            that are valuable to you. Remember that the authors of the product are not responsible for the breakdown of
+            your files, so you should always make copies of them and keep them in a safe place.
+          </p>
+        </div>
+        <div class="text-sm text-secondary space-y-1">
+          <a class="neon-text" href="https://me.astralium.su/get/ar" target="_blank"
+            rel="noopener noreferrer"><strong>Source:</strong> Git Astralium</a>
+          <p>
+            <strong>Version on remote server:</strong>
+            <span id="releaseData" class="neon-text"></span>
+          </p>
+          <p>
+            <strong>Version on local device:</strong>
+            <span class="neon-text">v{{ version }}</span>
+          </p>
+        </div>
+
+        <div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
+          <Button class="bordered" @click="updateModalView.hide()">Cancel</Button>
+          <Button class="bordered" @click="initDownload()">Download file</Button>
+        </div>
+      </div>
+    </ModalWrapper>
+    <ModalWrapper ref="updateRequestFailView" :has-to-type="false" header="Failed to request a file from the server :(">
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <p><strong>Error occurred</strong></p>
+          <p>Unfortunately, the program was unable to download the file from our servers.</p>
+          <p>
+            Please try downloading it yourself from
+            <a class="neon-text" href="https://me.astralium.su/get/ar" target="_blank" rel="noopener noreferrer">Git
+              Astralium</a>
+            if there are any updates available.
+          </p>
+        </div>
+
+        <div class="text-sm text-secondary">
+          <p>
+            <strong>Local AstralRinth:</strong>
+            <span class="neon-text">v{{ version }}</span>
+          </p>
+        </div>
+
+        <div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
+          <Button class="bordered" @click="updateRequestFailView.hide()">Close</Button>
+        </div>
+      </div>
+    </ModalWrapper>
   </ModalWrapper>
 </template>
+
+<style lang="scss" scoped>
+@import '../../../../../../packages/assets/styles/neon-icon.scss';
+@import '../../../../../../packages/assets/styles/neon-button.scss';
+@import '../../../../../../packages/assets/styles/neon-text.scss';
+</style>

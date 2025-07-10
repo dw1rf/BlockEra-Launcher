@@ -1,13 +1,8 @@
 // [AR] Feature
-.btn-wrapper.neon :deep(:is(button, a, .button-like):first-child),
-.btn-wrapper.neon :slotted(:is(button, a, .button-like):first-child),
-.btn-wrapper.neon :slotted(*) > :is(button, a, .button-like):first-child,
-.btn-wrapper.neon :slotted(*) > *:first-child > :is(button, a, .button-like):first-child,
-.btn-wrapper.neon
-  :slotted(*)
-  > *:first-child
-  > *:first-child
-  > :is(button, a, .button-like):first-child {
+.neon-button.neon :deep(:is(button, a, .button-like)),
+.neon-button.neon :slotted(:is(button, a, .button-like)),
+.neon-button.neon :slotted(*) :is(button, a, .button-like) {
+  cursor: pointer;
   background-color: transparent;
   border: 1px solid #3e8cde;
   color: #3e8cde;
@@ -22,20 +17,17 @@
   box-shadow: 0 0 4px rgba(79, 173, 255, 0.5);
 }
 
+.bordered {
+  border-radius: 12px;
+}
+
 /* Hover */
-.btn-wrapper.neon
-  :deep(:is(button, a, .button-like):first-child):hover:not([disabled]):not(.disabled),
-.btn-wrapper.neon
-  :slotted(:is(button, a, .button-like):first-child):hover:not([disabled]):not(.disabled),
-.btn-wrapper.neon
-  :slotted(*) > :is(button, a, .button-like):first-child:hover:not([disabled]):not(.disabled),
-.btn-wrapper.neon
-  :slotted(*) > *:first-child > :is(button, a, .button-like):first-child:hover:not([disabled]):not(.disabled),
-.btn-wrapper.neon
-  :slotted(*)
-  > *:first-child
-  > *:first-child
-  > :is(button, a, .button-like):first-child:hover:not([disabled]):not(.disabled) {
+.neon-button.neon
+  :deep(:is(button, a, .button-like):hover):not([disabled]):not(.disabled),
+.neon-button.neon
+  :slotted(:is(button, a, .button-like):hover):not([disabled]):not(.disabled),
+.neon-button.neon
+  :slotted(*) :is(button, a, .button-like):hover:not([disabled]):not(.disabled) {
   color: #10fae5;
   transform: scale(1.02);
   box-shadow:
