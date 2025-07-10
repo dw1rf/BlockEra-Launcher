@@ -188,7 +188,7 @@ async function setupApp() {
     }),
   )
 
-  // Patched by AstralRinth
+  /// [AR] Patch
   // useFetch(
   //   `https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
   //   'criticalAnnouncements',

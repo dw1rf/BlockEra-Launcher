@@ -30,7 +30,7 @@ watch(
         option, you opt out and ads will no longer be shown based on your interests.
       </p>
     </div>
-    <!-- AstralRinth disabled element by default -->
+    <!-- [AR] Patch. Disabled element by default -->
     <Toggle id="personalized-ads" v-model="settings.personalized_ads" :disabled="!settings.personalized_ads" />
   </div>
 
@@ -43,7 +43,7 @@ watch(
         longer be collected.
       </p>
     </div>
-    <!-- AstralRinth disabled element by default -->
+    <!-- [AR] Patch. Disabled element by default -->
     <Toggle id="opt-out-analytics" v-model="settings.telemetry" :disabled="!settings.telemetry"  />
   </div>
 

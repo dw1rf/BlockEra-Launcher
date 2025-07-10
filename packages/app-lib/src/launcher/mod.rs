@@ -14,7 +14,7 @@ use chrono::Utc;
 use daedalus as d;
 use daedalus::minecraft::{LoggingSide, RuleAction, VersionInfo};
 use daedalus::modded::LoaderVersion;
-use rand::seq::SliceRandom; // AstralRinth
+use rand::seq::SliceRandom; // [AR] Feature
 use regex::Regex;
 use serde::Deserialize;
 use st::Profile;
@@ -633,7 +633,7 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
-    // Patched by AstralRinth
+    // [AR] Patch
     if credentials.access_token == "null" && credentials.refresh_token == "null" {
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
             let invalid_url = "https://invalid.invalid";
@@ -743,6 +743,7 @@ pub async fn launch_minecraft(
         }
     }
 
+    // [AR] Feature
     let selected_phrase = ACTIVE_STATE.choose(&mut rand::thread_rng()).unwrap();
         let _ = state
             .discord_rpc
