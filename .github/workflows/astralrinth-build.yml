@@ -41,6 +41,37 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - name: 🔍 Validate Git config does not introduce CRLF
+        run: |
+          echo "🔍 Checking Git config for CRLF settings..."
+
+          autocrlf=$(git config --get core.autocrlf || echo "unset")
+          eol_setting=$(git config --get core.eol || echo "unset")
+
+          echo "core.autocrlf = $autocrlf"
+          echo "core.eol = $eol_setting"
+
+          if [ "$autocrlf" = "true" ]; then
+            echo "❌ ERROR: core.autocrlf is set to 'true'. Please set to 'input' or 'false'."
+            exit 1
+          fi
+
+          if [ "$eol_setting" = "crlf" ]; then
+            echo "❌ ERROR: core.eol is set to 'crlf'. Please unset it or set to 'lf'."
+            exit 1
+          fi
+
+          echo "✅ Git config is safe (no forced CRLF)"
+
+      - name: 🔍 Check migration files line endings (LF only)
+        run: |
+          echo "🔍 Scanning migration SQL files for CR characters (\\r)..."
+          if grep -Iq $'\r' packages/app-lib/migrations/*.sql; then
+            echo "❌ ERROR: Some migration files contain CR (\\r) characters — expected only LF line endings."
+            exit 1
+          fi
+          echo "✅ All migration files use LF line endings"
+
 
       - name: 🧰 Setup Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
