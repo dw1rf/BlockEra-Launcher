@@ -19,6 +19,7 @@ import { install } from '@/helpers/profile.js'
 import { trackEvent } from '@/helpers/analytics'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { applyMigrationFix } from '@/helpers/utils.js'
+import { restartApp } from '@/helpers/utils.js'
 
 const errorModal = ref()
 const error = ref()
@@ -168,6 +169,11 @@ async function onApplyMigrationFix(eol) {
     migrationFixSuccess.value = false
   } finally {
     migrationFixCallbackModel.value?.show?.()
+    if (migrationFixSuccess.value === true) {
+      setTimeout(async () => {
+        await restartApp()
+      }, 3000)
+    }
   }
 }
 
