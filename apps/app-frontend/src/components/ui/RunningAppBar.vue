@@ -84,9 +84,6 @@ import ProgressBar from '@/components/ui/ProgressBar.vue'
 import { handleError } from '@/store/notifications.js'
 import { get_many } from '@/helpers/profile.js'
 import { trackEvent } from '@/helpers/analytics'
-import { getRemote } from '@/helpers/update.js'
-
-await getRemote(false)
 
 const router = useRouter()
 const card = ref(null)

@@ -173,13 +173,12 @@ function devModeCount() {
             </div>
             <div v-if="updateState" class="w-8 h-8 cursor-pointer hover:brightness-75 neon-icon pulse">
               <template v-if="installState">
-                <SpinnerIcon class="size-6 animate-spin" />
+                <SpinnerIcon class="size-6 animate-spin" v-tooltip.bottom="'Installing in process...'" />
               </template>
               <template v-else>
-                <DownloadIcon class="size-6" @click="!installState && (initUpdateModal(), getRemote(false))" />
+                <DownloadIcon class="size-6" v-tooltip.bottom="'View update info'" @click="!installState && (initUpdateModal(), getRemote(false))" />
               </template>
             </div>
-
           </div>
         </div>
       </template>
