@@ -16,6 +16,7 @@ on:
       - 'packages/assets/**'
       - 'packages/ui/**'
       - 'packages/utils/**'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,12 +25,12 @@ jobs:
       fail-fast: false
       matrix:
         # platform: [macos-latest, windows-latest, ubuntu-latest]
-        platform: [ubuntu-latest]
+        platform: [windows-latest, ubuntu-latest]
         include:
           # - platform: macos-latest
           #   artifact-target-name: universal-apple-darwin
-          # - platform: windows-latest
-          #   artifact-target-name: x86_64-pc-windows-msvc
+          - platform: windows-latest
+            artifact-target-name: x86_64-pc-windows-msvc
           - platform: ubuntu-latest
             artifact-target-name: x86_64-unknown-linux-gnu
 
@@ -73,11 +74,11 @@ jobs:
       - name: 🧰 Install dependencies
         run: pnpm install
 
-      # - name: ✍️ Set up Windows code signing (jsign)
-      #   if: matrix.platform == 'windows-latest' && env.SIGN_WINDOWS_BINARIES == 'true'
-      #   shell: bash
-      #   run: |
-      #     choco install jsign --ignore-dependencies
+      - name: ✍️ Set up Windows code signing (jsign)
+        if: matrix.platform == 'windows-latest' && env.SIGN_WINDOWS_BINARIES == 'true'
+        shell: bash
+        run: |
+          choco install jsign --ignore-dependencies
 
       - name: 🗑️ Clean up cached bundles
         shell: bash
@@ -99,15 +100,15 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
-      # - name: 🔨 Build Windows app
-      #   if: matrix.platform == 'windows-latest'
-      #   shell: pwsh
-      #   run: |
-      #     $env:JAVA_HOME = "$env:JAVA_HOME_11_X64"
-      #     pnpm --filter=@modrinth/app run tauri build --config tauri-release.conf.json --verbose --bundles 'nsis'
-      #   env:
-      #     TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-      #     TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+      - name: 🔨 Build Windows app
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $env:JAVA_HOME = "$env:JAVA_HOME_11_X64"
+          pnpm --filter=@modrinth/app run tauri build --config tauri-release.conf.json --verbose --bundles 'nsis'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       - name: 📤 Upload app bundles
         uses: actions/upload-artifact@v3
