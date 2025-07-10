@@ -321,9 +321,14 @@ async function onApplyMigrationFix(eol) {
             <template v-if="copied"> <CheckIcon class="text-green" /> Copied! </template>
             <template v-else> <CopyIcon /> Copy debug info </template>
           </button>
-        <ButtonStyled color="brand">
+        <ButtonStyled class="btn-wrapper neon">
                 <a href="https://me.astralium.su/get/ar/help" target="_blank" rel="noopener noreferrer">
-                  <button>Get AstralRinth support</button>
+                  Get AstralRinth support
+                </a>
+        </ButtonStyled>
+        <ButtonStyled class="btn-wrapper neon" >
+                <a href="https://me.astralium.su/get/ar" target="_blank" rel="noopener noreferrer">
+                  Checkout latest releases
                 </a>
         </ButtonStyled>
         </ButtonStyled>
@@ -344,75 +349,77 @@ async function onApplyMigrationFix(eol) {
             <pre class="m-0 px-4 py-3 bg-bg rounded-none">{{ debugInfo }}</pre>
           </Collapsible>
         </div>
-    <div class="notice">
-      <div class="flex justify-between items-center">
-        <h3 v-if="language === 'en'" class="notice__title">⚠️ Important Notice ⚠️</h3>
-        <h3 v-if="language === 'ru'" class="notice__title">⚠️ Важное уведомление ⚠️</h3>
-        <ButtonStyled>
-          <button @click="toggleLanguage">
-            {{ language === 'en' ? '📖 Русский' : '📖 English' }}
-          </button>
-        </ButtonStyled>
-      </div>
-      <p v-if="language === 'en'" class="notice__text">
-        We're experiencing an issue with our database migration system due to differences in how different operating systems handle line endings. This might cause problems with our app's functionality.
-      </p>
-      <p v-if="language === 'en'" class="notice__text">
-        <strong>What's happening?</strong> When we build our app, we use a system that checks the integrity of our database migrations. However, this system can get confused when it encounters different line endings (like CRLF vs LF) used by different operating systems. This can lead to errors and make our app unusable.
-      </p>
-      <p v-if="language === 'en'" class="notice__text">
-        <strong>Why is this happening?</strong> This issue is caused by a combination of factors, including different operating systems handling line endings differently, Git's line ending conversion settings, and our app's build process.
-      </p>
-      <p v-if="language === 'en'" class="notice__text">
-        <strong>What are we doing about it?</strong> We're working to resolve this issue and ensure that our app works smoothly for all users. In the meantime, we apologize for any inconvenience this might cause and appreciate your patience and understanding.
-      </p>
-      <p v-if="language === 'ru'" class="notice__text">
-        Мы сталкиваемся с проблемой в нашей системе миграции базы данных из-за различий в том, как разные операционные системы обрабатывают окончания строк. Это может вызвать проблемы с функциональностью нашего приложения.
-      </p>
-      <p v-if="language === 'ru'" class="notice__text">
-        <strong>Что происходит?</strong> Когда мы строим наше приложение, мы используем систему, которая проверяет целостность наших миграций базы данных. Однако эта система может сбиваться, когда сталкивается с различными окончаниями строк (например, CRLF против LF), используемыми разными операционными системами. Это может привести к ошибкам и сделать наше приложение неработоспособным.
-      </p>
-      <p v-if="language === 'ru'" class="notice__text">
-        <strong>Почему это происходит?</strong> Эта проблема вызвана сочетанием факторов, включая различную обработку окончаний строк разными операционными системами, настройки преобразования окончаний строк в Git и процесс сборки нашего приложения.
-      </p>
-      <p v-if="language === 'ru'" class="notice__text">
-        <strong>Что мы с этим делаем?</strong> Мы работаем над решением этой проблемы и обеспечением бесперебойной работы нашего приложения для всех пользователей. В это время мы извиняемся за возможные неудобства и благодарим вас за терпение и понимание.
-      </p>
-    </div>
-    <h2 class="text-lg font-bold text-contrast">
-      <template v-if="language === 'en'">Possible fix in real time:</template>
-      <template v-if="language === 'ru'">Возможное исправление в реальном времени:</template>
-    </h2>
-        <div class="flex justify-between">
-          <ul class="flex flex-col gap-3">
-            <li>
-              <ButtonStyled color="purple">
-                <button
-                  :title="language === 'en' 
-                    ? 'Convert all line endings in migration files to LF (Unix-style: \\n)' 
-                    : 'Преобразовать все окончания строк в файлах миграций в LF (Unix-стиль: \\n)'"
-                  aria-label="LF"
-                  @click="onApplyMigrationFix('lf')"
-                >
-                  {{ language === 'en' ? 'Apply LF Migration Fix' : 'Применить исправление миграции LF' }}
+        <template v-if="errorType === 'state_init'">
+          <div class="notice">
+            <div class="flex justify-between items-center">
+              <h3 v-if="language === 'en'" class="notice__title">⚠️ Migration Issue • Important Notice ⚠️</h3>
+              <h3 v-if="language === 'ru'" class="notice__title">⚠️ Проблема миграции • Важное уведомление ⚠️</h3>
+              <ButtonStyled>
+                <button @click="toggleLanguage">
+                  {{ language === 'en' ? '📖 Русский' : '📖 English' }}
                 </button>
               </ButtonStyled>
-            </li>
-            <li>
-              <ButtonStyled color="purple">
-                <button
-                  :title="language === 'en' 
-                    ? 'Convert all line endings in migration files to CRLF (Windows-style: \\r\\n)' 
-                    : 'Преобразовать все окончания строк в файлах миграций в CRLF (Windows-стиль: \\r\\n)'"
-                  aria-label="CRLF"
-                  @click="onApplyMigrationFix('crlf')"
-                >
-                  {{ language === 'en' ? 'Apply CRLF Migration Fix' : 'Применить исправление миграции CRLF' }}
-                </button>
-              </ButtonStyled>
-            </li>
-          </ul>
-        </div>
+            </div>
+              <p v-if="language === 'en'" class="notice__text">
+                We're experiencing an issue with our database migration system due to differences in how different operating systems handle line endings. This might cause problems with our app's functionality.
+              </p>
+              <p v-if="language === 'en'" class="notice__text">
+                <strong>What's happening?</strong> When we build our app, we use a system that checks the integrity of our database migrations. However, this system can get confused when it encounters different line endings (like CRLF vs LF) used by different operating systems. This can lead to errors and make our app unusable.
+              </p>
+              <p v-if="language === 'en'" class="notice__text">
+                <strong>Why is this happening?</strong> This issue is caused by a combination of factors, including different operating systems handling line endings differently, Git's line ending conversion settings, and our app's build process.
+              </p>
+              <p v-if="language === 'en'" class="notice__text">
+                <strong>What are we doing about it?</strong> We're working to resolve this issue and ensure that our app works smoothly for all users. In the meantime, we apologize for any inconvenience this might cause and appreciate your patience and understanding.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                Мы сталкиваемся с проблемой в нашей системе миграции базы данных из-за различий в том, как разные операционные системы обрабатывают окончания строк. Это может вызвать проблемы с функциональностью нашего приложения.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                <strong>Что происходит?</strong> Когда мы строим наше приложение, мы используем систему, которая проверяет целостность наших миграций базы данных. Однако эта система может сбиваться, когда сталкивается с различными окончаниями строк (например, CRLF против LF), используемыми разными операционными системами. Это может привести к ошибкам и сделать наше приложение неработоспособным.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                <strong>Почему это происходит?</strong> Эта проблема вызвана сочетанием факторов, включая различную обработку окончаний строк разными операционными системами, настройки преобразования окончаний строк в Git и процесс сборки нашего приложения.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                <strong>Что мы с этим делаем?</strong> Мы работаем над решением этой проблемы и обеспечением бесперебойной работы нашего приложения для всех пользователей. В это время мы извиняемся за возможные неудобства и благодарим вас за терпение и понимание.
+              </p>
+            </div>
+            <h2 class="text-lg font-bold text-contrast">
+              <template v-if="language === 'en'">Possible fix in real time:</template>
+              <template v-if="language === 'ru'">Возможное исправление в реальном времени:</template>
+            </h2>
+            <div class="flex justify-between">
+              <ol class="flex flex-col gap-3">
+                <li>
+                  <ButtonStyled class="btn-wrapper neon">
+                    <button
+                      :title="language === 'en' 
+                        ? 'Convert all line endings in migration files to LF (Unix-style: \\n)' 
+                        : 'Преобразовать все окончания строк в файлах миграций в LF (Unix-стиль: \\n)'"
+                      aria-label="LF"
+                      @click="onApplyMigrationFix('lf')"
+                    >
+                      {{ language === 'en' ? 'Apply LF Migration Fix' : 'Применить исправление миграции LF' }}
+                    </button>
+                  </ButtonStyled>
+                </li>
+                <li>
+                  <ButtonStyled class="btn-wrapper neon">
+                    <button
+                      :title="language === 'en' 
+                        ? 'Convert all line endings in migration files to CRLF (Windows-style: \\r\\n)' 
+                        : 'Преобразовать все окончания строк в файлах миграций в CRLF (Windows-стиль: \\r\\n)'"
+                      aria-label="CRLF"
+                      @click="onApplyMigrationFix('crlf')"
+                    >
+                      {{ language === 'en' ? 'Apply CRLF Migration Fix' : 'Применить исправление миграции CRLF' }}
+                    </button>
+                  </ButtonStyled>
+                </li>
+              </ol>
+            </div>
+        </template>
       </template>
     </div>
   </ModalWrapper>
@@ -468,6 +475,8 @@ async function onApplyMigrationFix(eol) {
 </style>
 
 <style scoped lang="scss">
+@import '../../../../../packages/assets/styles/neon-button.scss';
+
 .cta-button {
   display: flex;
   align-items: center;
