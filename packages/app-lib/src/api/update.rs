@@ -18,7 +18,7 @@ pub(crate) async fn get_resource(
     let bytes = response.bytes().await?;
     let mut dest_file = AsyncFile::create(&full_path).await?;
     dest_file.write_all(&bytes).await?;
-    println!("[AR] • File downloaded to: {:?}", full_path);
+    tracing::info!("[AR] • File downloaded to: {:?}", full_path);
 
     if auto_update_supported {
         let result = match os_type.to_lowercase().as_str() {
@@ -28,8 +28,8 @@ pub(crate) async fn get_resource(
         };
 
         match result {
-            Ok(_) => println!("[AR] • File opened successfully!"),
-            Err(e) => eprintln!("[AR] • Failed to open file: {e}"),
+            Ok(_) => tracing::info!("[AR] • File opened successfully!"),
+            Err(e) => tracing::info!("[AR] • Failed to open file: {e}"),
         }
     }
 
@@ -44,7 +44,7 @@ async fn handle_windows_file(path: &PathBuf) -> Result<(), Box<dyn std::error::E
         .to_lowercase();
 
     if filename.ends_with(".exe") || filename.ends_with(".msi") {
-        println!("[AR] • Detected installer: {}", filename);
+        tracing::info!("[AR] • Detected installer: {}", filename);
         run_windows_installer(path).await
     } else {
         open_windows_folder(path).await
@@ -67,10 +67,12 @@ async fn run_windows_installer(path: &PathBuf) -> Result<(), Box<dyn std::error:
     };
 
     if status.success() {
-        println!("[AR] • Installer started successfully.");
+        tracing::info!("[AR] • Installer started successfully.");
         Ok(())
     } else {
-        Err(format!("Installer failed. Exit code: {:?}", status.code()).into())
+        tracing::error!("Installer failed. Exit code: {:?}", status.code());
+        tracing::info!("[AR] • Trying to open folder...");
+        open_windows_folder(path).await
     }
 }
 
