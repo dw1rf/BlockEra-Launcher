@@ -26,7 +26,7 @@ pub fn read_package_json() -> io::Result<Launcher> {
 
 pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
     tracing::info!("[AR] • Attempting to apply migration fix");
-    let patched = db::fix_version_hash(eol).await?;
+    let patched = db::apply_migration_fix(eol).await?;
     if patched {
         tracing::info!("[AR] • Successfully applied migration fix");
     } else {
@@ -43,7 +43,7 @@ pub async fn init_download(
 ) -> Result<()> {
     println!("[AR] • Initialize downloading from • {:?}", download_url);
     println!("[AR] • Save local file name • {:?}", local_filename);
-    if let Err(e) = update::download_file(
+    if let Err(e) = update::get_resource(
         download_url,
         local_filename,
         os_type,

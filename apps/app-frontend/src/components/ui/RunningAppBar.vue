@@ -36,60 +36,6 @@
       <span class="circle stopped" />
       <span class="running-text"> No instances running </span>
     </div>
-    <div v-if="updateState">
-      <a>
-        <Button class="download" :disabled="installState" @click="initUpdateModal(), getRemote(false)">
-          <DownloadIcon />
-          {{
-            installState
-              ? "Downloading new update..."
-              : "Download new update"
-          }}
-        </Button>
-      </a>
-    </div>
-    <ModalWrapper ref="updateModalView" :has-to-type="false" header="Request to update the AstralRinth launcher">
-      <div class="modal-body">
-        <div class="markdown-body">
-          <p>The new version of the AstralRinth launcher is available.</p>
-          <p>Your version is outdated. We recommend that you update to the latest version.</p>
-          <p><strong>⚠️ Warning ⚠️</strong></p>
-          <p>
-            Before updating, make sure that you have saved all running instances and made a backup copy of the instances
-            that are valuable to you. Remember that the authors of the product are not responsible for the breakdown of
-            your files, so you should always make copies of them and keep them in a safe place.
-          </p>
-        </div>
-        <span>Source • Git Astralium</span>
-        <span>Version on remote server • <p id="releaseData" class="cosmic inline-fix"></p></span>
-        <span>Version on local device •
-          <p class="cosmic inline-fix">v{{ version }}</p>
-        </span>
-        <div class="button-group push-right">
-          <Button class="updater-modal" @click="updateModalView.hide()">
-            Cancel</Button>
-          <Button class="updater-modal" @click="initDownload()">
-            Download file
-          </Button>
-        </div>
-      </div>
-    </ModalWrapper>
-    <ModalWrapper ref="updateRequestFailView" :has-to-type="false" header="Failed to request a file from the server :(">
-      <div class="modal-body">
-        <div class="markdown-body">
-          <p><strong>Error occurred</strong></p>
-          <p>Unfortunately, the program was unable to download the file from our servers.</p>
-          <p>Please try downloading it yourself from <a href="https://me.astralium.su/get/ar" target="_blank" rel="noopener noreferrer">Git Astralium</a> if there are any updates available.</p>
-        </div>
-        <span>Local AstralRinth •
-          <p class="cosmic inline-fix">v{{ version }}</p>
-        </span>
-      </div>
-      <div class="button-group push-right">
-          <Button class="updater-modal" @click="updateRequestFailView.hide()">
-            Close</Button>
-      </div>
-    </ModalWrapper>
   </div>
   <transition name="download">
     <Card v-if="showCard === true && currentLoadingBars.length > 0" ref="card" class="info-card">
@@ -138,29 +84,6 @@ import ProgressBar from '@/components/ui/ProgressBar.vue'
 import { handleError } from '@/store/notifications.js'
 import { get_many } from '@/helpers/profile.js'
 import { trackEvent } from '@/helpers/analytics'
-import { getVersion } from '@tauri-apps/api/app'
-
-const version = await getVersion()
-
-import { installState, getRemote, updateState } from '@/helpers/update.js'
-import ModalWrapper from './modal/ModalWrapper.vue'
-
-const updateModalView = ref(null)
-const updateRequestFailView = ref(null)
-
-const initUpdateModal = async () => {
-  updateModalView.value.show()
-}
-
-const initDownload = async () => {
-  updateModalView.value.hide()
-  const result = await getRemote(true);
-  if (!result) {
-    updateRequestFailView.value.show()
-  }
-}
-
-await getRemote(false)
 
 const router = useRouter()
 const card = ref(null)
@@ -318,101 +241,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.inline-fix {
-  display: inline-flex;
-  margin-top: -2rem;
-  margin-bottom: -2rem;
-  //margin-left: 0.3rem;
-}
-
-.cosmic {
-  color: #3e8cde;
-  text-decoration: none;
-  text-shadow:
-    0 0 4px rgba(79, 173, 255, 0.5),
-    0 0 8px rgba(14, 98, 204, 0.5),
-    0 0 12px rgba(122, 31, 199, 0.5);
-  transition: color 0.35s ease;
-}
-
-.markdown-body {
-  :deep(table) {
-    width: auto;
-  }
-
-  :deep(hr),
-  :deep(h1),
-  :deep(h2) {
-    max-width: max(60rem, 90%);
-  }
-
-  :deep(ul),
-  :deep(ol) {
-    margin-left: 2rem;
-  }
-}
-
-.modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: var(--gap-lg);
-  text-align: left;
-
-  .button-group {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
-
-  strong {
-    color: var(--color-contrast);
-  }
-}
-
-.download {
-  color: #3e8cde;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-button-bg);
-  // padding: var(--gap-sm) var(--gap-lg);
-  background-color: rgba(0, 0, 0, 0);
-  text-decoration: none;
-  text-shadow:
-    0 0 4px rgba(79, 173, 255, 0.5),
-    0 0 8px rgba(14, 98, 204, 0.5),
-    0 0 12px rgba(122, 31, 199, 0.5);
-  transition: color 0.35s ease;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.download:hover,
-.download:focus,
-.download:active {
-  color: #10fae5;
-  text-shadow: #26065e;
-}
-
-.updater-modal {
-  color: #3e8cde;
-  padding: var(--gap-sm) var(--gap-lg);
-  text-decoration: none;
-  text-shadow:
-    0 0 4px rgba(79, 173, 255, 0.5),
-    0 0 8px rgba(14, 98, 204, 0.5),
-    0 0 12px rgba(122, 31, 199, 0.5);
-  transition: color 0.35s ease;
-}
-
-.updater-modal:hover,
-.updater-modal:focus,
-.updater-modal:active {
-  color: #10fae5;
-  text-shadow: #26065e;
-}
-
 .action-groups {
   display: flex;
   flex-direction: row;

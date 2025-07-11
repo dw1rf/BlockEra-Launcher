@@ -19,6 +19,7 @@ import { install } from '@/helpers/profile.js'
 import { trackEvent } from '@/helpers/analytics'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { applyMigrationFix } from '@/helpers/utils.js'
+import { restartApp } from '@/helpers/utils.js'
 
 const errorModal = ref()
 const error = ref()
@@ -168,6 +169,11 @@ async function onApplyMigrationFix(eol) {
     migrationFixSuccess.value = false
   } finally {
     migrationFixCallbackModel.value?.show?.()
+    if (migrationFixSuccess.value === true) {
+      setTimeout(async () => {
+        await restartApp()
+      }, 3000)
+    }
   }
 }
 
@@ -321,12 +327,12 @@ async function onApplyMigrationFix(eol) {
             <template v-if="copied"> <CheckIcon class="text-green" /> Copied! </template>
             <template v-else> <CopyIcon /> Copy debug info </template>
           </button>
-        <ButtonStyled class="btn-wrapper neon">
+        <ButtonStyled class="neon-button neon">
                 <a href="https://me.astralium.su/get/ar/help" target="_blank" rel="noopener noreferrer">
                   Get AstralRinth support
                 </a>
         </ButtonStyled>
-        <ButtonStyled class="btn-wrapper neon" >
+        <ButtonStyled class="neon-button neon" >
                 <a href="https://me.astralium.su/get/ar" target="_blank" rel="noopener noreferrer">
                   Checkout latest releases
                 </a>
@@ -334,7 +340,7 @@ async function onApplyMigrationFix(eol) {
         </ButtonStyled>
       </div>
       <template v-if="hasDebugInfo">
-        <div class="bg-button-bg rounded-xl mt-2 overflow-clip">
+        <div class="bg-button-bg rounded-xl mt-2 overflow-hidden">
           <button
             class="flex items-center justify-between w-full bg-transparent border-0 px-4 py-3 cursor-pointer"
             @click="errorCollapsed = !errorCollapsed"
@@ -346,7 +352,9 @@ async function onApplyMigrationFix(eol) {
             />
           </button>
           <Collapsible :collapsed="errorCollapsed">
-            <pre class="m-0 px-4 py-3 bg-bg rounded-none">{{ debugInfo }}</pre>
+            <pre
+              class="m-0 px-4 py-3 bg-bg rounded-none whitespace-pre-wrap break-words overflow-x-auto max-w-full"
+            >{{ debugInfo }}</pre>
           </Collapsible>
         </div>
         <template v-if="errorType === 'state_init'">
@@ -392,7 +400,7 @@ async function onApplyMigrationFix(eol) {
             <div class="flex justify-between">
               <ol class="flex flex-col gap-3">
                 <li>
-                  <ButtonStyled class="btn-wrapper neon">
+                  <ButtonStyled class="neon-button neon">
                     <button
                       :title="language === 'en' 
                         ? 'Convert all line endings in migration files to LF (Unix-style: \\n)' 
@@ -405,7 +413,7 @@ async function onApplyMigrationFix(eol) {
                   </ButtonStyled>
                 </li>
                 <li>
-                  <ButtonStyled class="btn-wrapper neon">
+                  <ButtonStyled class="neon-button neon">
                     <button
                       :title="language === 'en' 
                         ? 'Convert all line endings in migration files to CRLF (Windows-style: \\r\\n)' 
@@ -432,13 +440,13 @@ async function onApplyMigrationFix(eol) {
     <div class="modal-body">
       <h2 class="text-lg font-bold text-contrast space-y-2">
         <template v-if="migrationFixSuccess === true">
-          <p class="flex items-center gap-2 text-green-600">
+          <p class="flex items-center gap-2 neon-text">
             ✅
             {{ language === 'en' 
               ? 'The migration fix has been applied successfully. Please restart the launcher and try to log in to the game :)' 
               : 'Исправление миграции успешно применено. Пожалуйста, перезапустите лаунчер и попробуйте снова авторизоваться в игре :)' }}
           </p>
-          <p class="mt-2 text-sm text-gray-600">
+          <p class="mt-2 text-sm neon-text">
             {{ language === 'en' 
               ? 'If the problem persists, please try the other fix.' 
               : 'Если проблема сохраняется, пожалуйста, попробуйте другой способ.' }}
@@ -446,13 +454,13 @@ async function onApplyMigrationFix(eol) {
         </template>
       
         <template v-else-if="migrationFixSuccess === false">
-          <p class="flex items-center gap-2 text-red-600">
+          <p class="flex items-center gap-2 neon-text">
             ❌
             {{ language === 'en' 
               ? 'The migration fix failed or had no effect.' 
               : 'Исправление миграции не было успешно применено или не имело эффекта.' }}
           </p>
-          <p class="mt-2 text-sm text-gray-600">
+          <p class="mt-2 text-sm neon-text">
             {{ language === 'en' 
               ? 'If the problem persists, please try the other fix.' 
               : 'Если проблема сохраняется, пожалуйста, попробуйте другой способ.' }}
@@ -476,6 +484,7 @@ async function onApplyMigrationFix(eol) {
 
 <style scoped lang="scss">
 @import '../../../../../packages/assets/styles/neon-button.scss';
+@import '../../../../../packages/assets/styles/neon-text.scss';
 
 .cta-button {
   display: flex;
