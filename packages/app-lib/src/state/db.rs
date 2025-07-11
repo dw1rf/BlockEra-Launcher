@@ -1,5 +1,5 @@
-use crate::state::DirectoryInfo;
 use crate::ErrorKind;
+use crate::state::DirectoryInfo;
 use sqlx::sqlite::{
     SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions,
 };
@@ -87,14 +87,14 @@ LF -> c0de804f171b5530010edae087a6e75645c0e90177e28365f935c9fdd9a5c68e24850b8c14
 CRLF -> f8c55065e2563fa4738976eb13a052ae4c28da8d33143185550f6e1cee394a3243b1dca090b3e8bc50a93a8286a78c09
 LF -> c17542cb989a0466153e695bfa4717f8970feee185ca186a2caa1f2f6c5d4adb990ab97c26cacfbbe09c39ac81551704
 */
-pub(crate) async fn fix_version_hash(
-    eol: &str,
-) -> crate::Result<bool> {
+pub(crate) async fn apply_migration_fix(eol: &str) -> crate::Result<bool> {
     let started = Instant::now();
 
     // Create connection to the database without migrations
     let pool = connect_without_migrate().await?;
-    tracing::info!("⚙️  Patching Modrinth corrupted migration checksums using EOL standard: {eol}");
+    tracing::info!(
+        "⚙️  Patching Modrinth corrupted migration checksums using EOL standard: {eol}"
+    );
 
     // validate EOL input
     if eol != "lf" && eol != "crlf" {

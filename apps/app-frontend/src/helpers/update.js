@@ -11,7 +11,7 @@ const releaseLink = `https://git.astralium.su/api/v1/repos/didirus/AstralRinth/r
 const failedFetch = [`Failed to fetch remote releases:`, `Failed to fetch remote commits:`]
 
 const osList = ['macos', 'windows', 'linux']
-const macExtensionList = ['.app', '.dmg']
+const macExtensionList = ['.dmg', '.pkg']
 const windowsExtensionList = ['.exe', '.msi']
 
 const blacklistPrefixes = [
