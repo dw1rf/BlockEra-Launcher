@@ -218,6 +218,7 @@ fn main() {
                 "utils",
                 InlinedPlugin::new()
                     .commands(&[
+                        "apply_migration_fix",
                         "get_artifact",
                         "get_os",
                         "should_disable_mouseover",

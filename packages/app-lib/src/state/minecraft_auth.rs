@@ -213,7 +213,7 @@ pub async fn login_finish(
     Ok(credentials)
 }
 
-// Patched by AstralRinth
+// [AR] Feature
 #[tracing::instrument]
 pub async fn offline_auth(
     name: &str,
@@ -790,7 +790,7 @@ const MICROSOFT_CLIENT_ID: &str = "00000000402b5328";
 const REDIRECT_URL: &str = "https://login.live.com/oauth20_desktop.srf";
 const REQUESTED_SCOPES: &str = "service::user.auth.xboxlive.com::MBI_SSL";
 
-/* AstralRinth
+/* [AR] Fix
  * Weird visibility issue that didn't reproduce before
  * Had to make DeviceToken and RequestWithDate pub(crate) to fix compilation error
  */
