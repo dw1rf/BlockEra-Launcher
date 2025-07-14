@@ -14,7 +14,7 @@ use chrono::Utc;
 use daedalus as d;
 use daedalus::minecraft::{LoggingSide, RuleAction, VersionInfo};
 use daedalus::modded::LoaderVersion;
-use rand::seq::SliceRandom; // AstralRinth
+use rand::seq::SliceRandom; // [AR] Feature
 use regex::Regex;
 use serde::Deserialize;
 use st::Profile;
@@ -633,6 +633,19 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
+    // [AR] Patch
+    if credentials.access_token == "null" && credentials.refresh_token == "null" {
+        if version_jar == "1.16.4" || version_jar == "1.16.5" {
+            let invalid_url = "https://invalid.invalid";
+            tracing::info!("✅ JVM args is patched by AstralRinth for MC {}", version_jar);
+            command.arg("-Dminecraft.api.env=custom");
+            command.arg(format!("-Dminecraft.api.auth.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.account.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.session.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.services.host={}", invalid_url));
+        }
+    }
+
     command
         .arg("com.modrinth.theseus.MinecraftLaunch")
         .arg(version_info.main_class.clone())
@@ -730,6 +743,7 @@ pub async fn launch_minecraft(
         }
     }
 
+    // [AR] Feature
     let selected_phrase = ACTIVE_STATE.choose(&mut rand::thread_rng()).unwrap();
         let _ = state
             .discord_rpc

@@ -18,11 +18,16 @@ import { cancel_directory_change } from '@/helpers/settings.ts'
 import { install } from '@/helpers/profile.js'
 import { trackEvent } from '@/helpers/analytics'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import { applyMigrationFix } from '@/helpers/utils.js'
+import { restartApp } from '@/helpers/utils.js'
 
 const errorModal = ref()
 const error = ref()
 const closable = ref(true)
 const errorCollapsed = ref(false)
+const language = ref('en')
+const migrationFixSuccess = ref(null) // null | true | false
+const migrationFixCallbackModel = ref()
 
 const title = ref('An error occurred')
 const errorType = ref('unknown')
@@ -148,6 +153,30 @@ async function copyToClipboard(text) {
     copied.value = false
   }, 3000)
 }
+
+function toggleLanguage() {
+  language.value = language.value === 'en' ? 'ru' : 'en'
+}
+
+async function onApplyMigrationFix(eol) {
+  console.log(`[AR] • Attempting to apply migration ${eol.toUpperCase()} fix`)
+  try {
+    const result = await applyMigrationFix(eol)
+    migrationFixSuccess.value = result === true
+    console.log(`[AR] • Successfully applied migration ${eol.toUpperCase()} fix`, result)
+  } catch (err) {
+    console.error(`[AR] • Failed to apply migration fix:`, err)
+    migrationFixSuccess.value = false
+  } finally {
+    migrationFixCallbackModel.value?.show?.()
+    if (migrationFixSuccess.value === true) {
+      setTimeout(async () => {
+        await restartApp()
+      }, 3000)
+    }
+  }
+}
+
 </script>
 
 <template>
@@ -298,10 +327,20 @@ async function copyToClipboard(text) {
             <template v-if="copied"> <CheckIcon class="text-green" /> Copied! </template>
             <template v-else> <CopyIcon /> Copy debug info </template>
           </button>
+        <ButtonStyled class="neon-button neon">
+                <a href="https://me.astralium.su/get/ar/help" target="_blank" rel="noopener noreferrer">
+                  Get AstralRinth support
+                </a>
+        </ButtonStyled>
+        <ButtonStyled class="neon-button neon" >
+                <a href="https://me.astralium.su/get/ar" target="_blank" rel="noopener noreferrer">
+                  Checkout latest releases
+                </a>
+        </ButtonStyled>
         </ButtonStyled>
       </div>
       <template v-if="hasDebugInfo">
-        <div class="bg-button-bg rounded-xl mt-2 overflow-clip">
+        <div class="bg-button-bg rounded-xl mt-2 overflow-hidden">
           <button
             class="flex items-center justify-between w-full bg-transparent border-0 px-4 py-3 cursor-pointer"
             @click="errorCollapsed = !errorCollapsed"
@@ -313,10 +352,121 @@ async function copyToClipboard(text) {
             />
           </button>
           <Collapsible :collapsed="errorCollapsed">
-            <pre class="m-0 px-4 py-3 bg-bg rounded-none">{{ debugInfo }}</pre>
+            <pre
+              class="m-0 px-4 py-3 bg-bg rounded-none whitespace-pre-wrap break-words overflow-x-auto max-w-full"
+            >{{ debugInfo }}</pre>
           </Collapsible>
         </div>
+        <template v-if="errorType === 'state_init'">
+          <div class="notice">
+            <div class="flex justify-between items-center">
+              <h3 v-if="language === 'en'" class="notice__title">⚠️ Migration Issue • Important Notice ⚠️</h3>
+              <h3 v-if="language === 'ru'" class="notice__title">⚠️ Проблема миграции • Важное уведомление ⚠️</h3>
+              <ButtonStyled>
+                <button @click="toggleLanguage">
+                  {{ language === 'en' ? '📖 Русский' : '📖 English' }}
+                </button>
+              </ButtonStyled>
+            </div>
+              <p v-if="language === 'en'" class="notice__text">
+                We're experiencing an issue with our database migration system due to differences in how different operating systems handle line endings. This might cause problems with our app's functionality.
+              </p>
+              <p v-if="language === 'en'" class="notice__text">
+                <strong>What's happening?</strong> When we build our app, we use a system that checks the integrity of our database migrations. However, this system can get confused when it encounters different line endings (like CRLF vs LF) used by different operating systems. This can lead to errors and make our app unusable.
+              </p>
+              <p v-if="language === 'en'" class="notice__text">
+                <strong>Why is this happening?</strong> This issue is caused by a combination of factors, including different operating systems handling line endings differently, Git's line ending conversion settings, and our app's build process.
+              </p>
+              <p v-if="language === 'en'" class="notice__text">
+                <strong>What are we doing about it?</strong> We're working to resolve this issue and ensure that our app works smoothly for all users. In the meantime, we apologize for any inconvenience this might cause and appreciate your patience and understanding.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                Мы сталкиваемся с проблемой в нашей системе миграции базы данных из-за различий в том, как разные операционные системы обрабатывают окончания строк. Это может вызвать проблемы с функциональностью нашего приложения.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                <strong>Что происходит?</strong> Когда мы строим наше приложение, мы используем систему, которая проверяет целостность наших миграций базы данных. Однако эта система может сбиваться, когда сталкивается с различными окончаниями строк (например, CRLF против LF), используемыми разными операционными системами. Это может привести к ошибкам и сделать наше приложение неработоспособным.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                <strong>Почему это происходит?</strong> Эта проблема вызвана сочетанием факторов, включая различную обработку окончаний строк разными операционными системами, настройки преобразования окончаний строк в Git и процесс сборки нашего приложения.
+              </p>
+              <p v-if="language === 'ru'" class="notice__text">
+                <strong>Что мы с этим делаем?</strong> Мы работаем над решением этой проблемы и обеспечением бесперебойной работы нашего приложения для всех пользователей. В это время мы извиняемся за возможные неудобства и благодарим вас за терпение и понимание.
+              </p>
+            </div>
+            <h2 class="text-lg font-bold text-contrast">
+              <template v-if="language === 'en'">Possible fix in real time:</template>
+              <template v-if="language === 'ru'">Возможное исправление в реальном времени:</template>
+            </h2>
+            <div class="flex justify-between">
+              <ol class="flex flex-col gap-3">
+                <li>
+                  <ButtonStyled class="neon-button neon">
+                    <button
+                      :title="language === 'en' 
+                        ? 'Convert all line endings in migration files to LF (Unix-style: \\n)' 
+                        : 'Преобразовать все окончания строк в файлах миграций в LF (Unix-стиль: \\n)'"
+                      aria-label="LF"
+                      @click="onApplyMigrationFix('lf')"
+                    >
+                      {{ language === 'en' ? 'Apply LF Migration Fix' : 'Применить исправление миграции LF' }}
+                    </button>
+                  </ButtonStyled>
+                </li>
+                <li>
+                  <ButtonStyled class="neon-button neon">
+                    <button
+                      :title="language === 'en' 
+                        ? 'Convert all line endings in migration files to CRLF (Windows-style: \\r\\n)' 
+                        : 'Преобразовать все окончания строк в файлах миграций в CRLF (Windows-стиль: \\r\\n)'"
+                      aria-label="CRLF"
+                      @click="onApplyMigrationFix('crlf')"
+                    >
+                      {{ language === 'en' ? 'Apply CRLF Migration Fix' : 'Применить исправление миграции CRLF' }}
+                    </button>
+                  </ButtonStyled>
+                </li>
+              </ol>
+            </div>
+        </template>
       </template>
+    </div>
+  </ModalWrapper>
+  <ModalWrapper
+    ref="migrationFixCallbackModel"
+    :header="language === 'en'
+      ? '💡 Migration fix report'
+      : '💡 Отчет об исправлении миграции'"
+    :closable="closable">
+    <div class="modal-body">
+      <h2 class="text-lg font-bold text-contrast space-y-2">
+        <template v-if="migrationFixSuccess === true">
+          <p class="flex items-center gap-2 neon-text">
+            ✅
+            {{ language === 'en' 
+              ? 'The migration fix has been applied successfully. Please restart the launcher and try to log in to the game :)' 
+              : 'Исправление миграции успешно применено. Пожалуйста, перезапустите лаунчер и попробуйте снова авторизоваться в игре :)' }}
+          </p>
+          <p class="mt-2 text-sm neon-text">
+            {{ language === 'en' 
+              ? 'If the problem persists, please try the other fix.' 
+              : 'Если проблема сохраняется, пожалуйста, попробуйте другой способ.' }}
+          </p>
+        </template>
+      
+        <template v-else-if="migrationFixSuccess === false">
+          <p class="flex items-center gap-2 neon-text">
+            ❌
+            {{ language === 'en' 
+              ? 'The migration fix failed or had no effect.' 
+              : 'Исправление миграции не было успешно применено или не имело эффекта.' }}
+          </p>
+          <p class="mt-2 text-sm neon-text">
+            {{ language === 'en' 
+              ? 'If the problem persists, please try the other fix.' 
+              : 'Если проблема сохраняется, пожалуйста, попробуйте другой способ.' }}
+          </p>
+        </template>
+      </h2>
     </div>
   </ModalWrapper>
 </template>
@@ -333,6 +483,9 @@ async function copyToClipboard(text) {
 </style>
 
 <style scoped lang="scss">
+@import '../../../../../packages/assets/styles/neon-button.scss';
+@import '../../../../../packages/assets/styles/neon-text.scss';
+
 .cta-button {
   display: flex;
   align-items: center;

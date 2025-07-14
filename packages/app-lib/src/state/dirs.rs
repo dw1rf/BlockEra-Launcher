@@ -22,6 +22,7 @@ pub struct DirectoryInfo {
 impl DirectoryInfo {
     // Get the settings directory
     // init() is not needed for this function
+    // [AR] Patch fix. From PR.
     pub fn get_initial_settings_dir() -> Option<PathBuf> {
         Self::env_path("THESEUS_CONFIG_DIR").or_else(|| {
             if std::env::current_dir().ok()?.join("portable.txt").exists() {

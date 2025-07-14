@@ -42,7 +42,7 @@ import ModrinthLoadingIndicator from '@/components/LoadingIndicatorBar.vue'
 import { handleError, useNotifications } from '@/store/notifications.js'
 import { command_listener, warning_listener } from '@/helpers/events.js'
 import { type } from '@tauri-apps/plugin-os'
-import { getOS, isDev, restartApp } from '@/helpers/utils.js'
+import { getOS, isDev } from '@/helpers/utils.js'
 import { debugAnalytics, initAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getVersion } from '@tauri-apps/api/app'
@@ -72,6 +72,9 @@ import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import { get_available_capes, get_available_skins } from './helpers/skins'
 import { generateSkinPreviews } from './helpers/rendering/batch-skin-renderer'
 
+// [AR] Feature
+import { getRemote, updateState } from '@/helpers/update.js'
+
 const themeStore = useTheming()
 
 const news = ref([])
@@ -99,6 +102,7 @@ const isMaximized = ref(false)
 
 onMounted(async () => {
   await useCheckDisableMouseover()
+  await getRemote(false) // [AR] Check for updates
 
   document.querySelector('body').addEventListener('click', handleClick)
   document.querySelector('body').addEventListener('auxclick', handleAuxClick)
@@ -161,11 +165,11 @@ async function setupApp() {
 
   initAnalytics()
   if (!telemetry) {
-    console.info("[AR] Telemetry disabled by default (Hard patched).")
+    console.info("[AR] • Telemetry disabled by default (Hard patched).")
     optOutAnalytics()
   }
   if (!personalized_ads) {
-    console.info("[AR] Personalized ads disabled by default (Hard patched).")
+    console.info("[AR] • Personalized ads disabled by default (Hard patched).")
   }
 
   if (dev) debugAnalytics()
@@ -188,7 +192,7 @@ async function setupApp() {
     }),
   )
 
-  // Patched by AstralRinth
+  /// [AR] Patch
   // useFetch(
   //   `https://api.modrinth.com/appCriticalAnnouncement.json?version=${version}`,
   //   'criticalAnnouncements',
@@ -465,12 +469,20 @@ function handleAuxClick(e) {
         <PlusIcon />
       </NavButton>
       <div class="flex flex-grow"></div>
-      <NavButton v-if="updateAvailable" v-tooltip.right="'Install update'" :to="() => restartApp()">
+      <!-- [AR] TODO -->
+      <!-- <NavButton v-if="updateAvailable" v-tooltip.right="'Install update'" :to="() => restartApp()">
         <DownloadIcon />
-      </NavButton>
-      <NavButton v-tooltip.right="'Settings'" :to="() => $refs.settingsModal.show()">
-        <SettingsIcon />
-      </NavButton>
+      </NavButton> -->
+      <template v-if="updateState">
+        <NavButton class="neon-icon pulse" v-tooltip.right="'Settings'" :to="() => $refs.settingsModal.show()">
+          <SettingsIcon />
+        </NavButton>
+      </template>
+      <template v-else>
+        <NavButton v-tooltip.right="'Settings'" :to="() => $refs.settingsModal.show()">
+          <SettingsIcon />
+        </NavButton>
+      </template>
       <ButtonStyled v-if="credentials" type="transparent" circular>
         <OverflowMenu
           :options="[
@@ -501,13 +513,13 @@ function handleAuxClick(e) {
         <!-- <ModrinthAppLogo class="h-full w-auto text-contrast pointer-events-none" /> -->
         <div class="flex items-center gap-1 ml-3">
           <button
-            class="cursor-pointer p-0 m-0 border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
+            class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
             @click="router.back()"
           >
             <LeftArrowIcon />
           </button>
           <button
-            class="cursor-pointer p-0 m-0 border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
+            class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
             @click="router.forward()"
           >
             <RightArrowIcon />
@@ -659,6 +671,9 @@ function handleAuxClick(e) {
 </template>
 
 <style lang="scss" scoped>
+@import '../../../packages/assets/styles/neon-icon.scss';
+@import '../../../packages/assets/styles/neon-text.scss';
+
 .window-controls {
   z-index: 20;
   display: none;

@@ -153,11 +153,11 @@ const loginErrorModal = ref(null)
 const unexpectedErrorModal = ref(null)
 const playerName = ref('')
 
-async function tryOfflineLogin() { // Patched by AstralRinth
+async function tryOfflineLogin() { // [AR] Feature
   loginOfflineModal.value.show()
 }
 
-async function offlineLoginFinally() { // Patched by AstralRinth
+async function offlineLoginFinally() { // [AR] Feature
   const name = playerName.value
   if (name.length > 1 && name.length < 20 && name !== '') {
     const loggedIn = await offline_login(name).catch(handleError)
@@ -176,12 +176,12 @@ async function offlineLoginFinally() { // Patched by AstralRinth
   }
 }
 
-function retryOfflineLogin() { // Patched by AstralRinth
+function retryOfflineLogin() { // [AR] Feature
   loginErrorModal.value.hide()
   tryOfflineLogin()
 }
 
-function getAccountType(account) { // Patched by AstralRinth
+function getAccountType(account) { // [AR] Feature
   if (account.access_token != "null" && account.access_token != null && account.access_token != "") {
     return License
   } else {

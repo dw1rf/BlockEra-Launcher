@@ -83,21 +83,21 @@ export const TwitterIcon = _TwitterIcon
 export const WindowsIcon = _WindowsIcon
 export const YouTubeIcon = _YouTubeIcon
 
-// AstralRinth Icons
+// [AR] Feature. Icons
 
 import _PirateIcon from './icons/pirate.svg?component'
 import _MicrosoftIcon from './icons/microsoft.svg?component'
 import _PirateShipIcon from './icons/pirate-ship.svg?component'
 import _AstralRinthLogo from './icons/astralrinth-logo.svg?component'
 
-// AstralRinth Exports
+// [AR] Feature. Exports
 
 export const PirateIcon = _PirateIcon
 export const MicrosoftIcon = _MicrosoftIcon
 export const PirateShipIcon = _PirateShipIcon
 export const AstralRinthLogo = _AstralRinthLogo
 
-export { default as CapeModel } from './models/cape.gltf?url'
+// Skin Models
 export { default as ClassicPlayerModel } from './models/classic-player.gltf?url'
 export { default as SlimPlayerModel } from './models/slim-player.gltf?url'
 
