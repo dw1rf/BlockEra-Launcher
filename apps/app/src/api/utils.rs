@@ -10,14 +10,15 @@ use crate::api::{Result, TheseusSerializableError};
 use dashmap::DashMap;
 use std::path::{Path, PathBuf};
 use theseus::prelude::canonicalize;
-use url::Url;
 use theseus::util::utils;
+use url::Url;
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("utils")
         .invoke_handler(tauri::generate_handler![
+            init_authlib_patching,
             apply_migration_fix,
-            get_artifact,
+            init_update_launcher,
             get_os,
             should_disable_mouseover,
             highlight_in_folder,
@@ -29,6 +30,17 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
+/// [AR] Feature
+#[tauri::command]
+pub async fn init_authlib_patching(
+    minecraftversion: &str,
+    ismojang: bool,
+) -> Result<bool> {
+    let result =
+        utils::init_authlib_patching(minecraftversion, ismojang).await?;
+    Ok(result)
+}
+
 /// [AR] Patch fix
 #[tauri::command]
 pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
@@ -38,8 +50,19 @@ pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
 
 /// [AR] Feature
 #[tauri::command]
-pub async fn get_artifact(downloadurl: &str, filename: &str, ostype: &str, autoupdatesupported: bool) -> Result<()> {
-    let _ = utils::init_download(downloadurl, filename, ostype, autoupdatesupported).await;
+pub async fn init_update_launcher(
+    downloadurl: &str,
+    filename: &str,
+    ostype: &str,
+    autoupdatesupported: bool,
+) -> Result<()> {
+    let _ = utils::init_update_launcher(
+        downloadurl,
+        filename,
+        ostype,
+        autoupdatesupported,
+    )
+    .await;
     Ok(())
 }
 
