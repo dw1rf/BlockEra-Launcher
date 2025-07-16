@@ -191,6 +191,7 @@ pub async fn login_finish(
         expires: oauth_token.date
             + Duration::seconds(oauth_token.value.expires_in as i64),
         active: true,
+        account_type: AccountType::Microsoft.as_lowercase_str(),
     };
 
     // During login, we need to fetch the online profile at least once to get the
@@ -229,6 +230,7 @@ pub async fn offline_auth(
         refresh_token: refresh_token,
         expires: Utc::now() + Duration::days(365 * 99),
         active: true,
+        account_type: AccountType::Pirate.as_lowercase_str(),
     };
 
     credentials.offline_profile = MinecraftProfile {
@@ -240,6 +242,30 @@ pub async fn offline_auth(
     credentials.upsert(exec).await?;
 
     Ok(credentials)
+}
+
+/// [AR] • Feature
+#[derive(Deserialize, Debug)]
+pub enum AccountType {
+    Unknown,
+    Microsoft,
+    Pirate,
+    ElyBy,
+}
+
+impl AccountType {
+    fn as_str(&self) -> &'static str {
+        match self {
+            AccountType::Unknown => "Unknown",
+            AccountType::Microsoft => "Microsoft",
+            AccountType::Pirate => "Pirate",
+            AccountType::ElyBy => "ElyBy",
+        }
+    }
+
+    fn as_lowercase_str(&self) -> String {
+        self.as_str().to_lowercase()
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -255,6 +281,7 @@ pub struct Credentials {
     pub refresh_token: String,
     pub expires: DateTime<Utc>,
     pub active: bool,
+    pub account_type: String,
 }
 
 /// An entry in the player profile cache, keyed by player UUID.
@@ -480,7 +507,7 @@ impl Credentials {
         let res = sqlx::query!(
             "
             SELECT
-                uuid, active, username, access_token, refresh_token, expires
+                uuid, active, username, access_token, refresh_token, expires, account_type
             FROM minecraft_users
             WHERE active = TRUE
             "
@@ -503,6 +530,7 @@ impl Credentials {
                         .single()
                         .unwrap_or_else(Utc::now),
                     active: x.active == 1,
+                    account_type: x.account_type,
                 };
                 credentials.refresh(exec).await.ok();
                 Some(credentials)
@@ -517,7 +545,7 @@ impl Credentials {
         let res = sqlx::query!(
             "
             SELECT
-                uuid, active, username, access_token, refresh_token, expires
+                uuid, active, username, access_token, refresh_token, expires, account_type
             FROM minecraft_users
             "
         )
@@ -537,6 +565,7 @@ impl Credentials {
                     .single()
                     .unwrap_or_else(Utc::now),
                 active: x.active == 1,
+                account_type: x.account_type,
             };
 
             async move {
@@ -572,14 +601,15 @@ impl Credentials {
 
         sqlx::query!(
             "
-            INSERT INTO minecraft_users (uuid, active, username, access_token, refresh_token, expires)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO minecraft_users (uuid, active, username, access_token, refresh_token, expires, account_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (uuid) DO UPDATE SET
                 active = $2,
                 username = $3,
                 access_token = $4,
                 refresh_token = $5,
-                expires = $6
+                expires = $6,
+                account_type = $7
             ",
             uuid,
             self.active,
@@ -587,6 +617,7 @@ impl Credentials {
             self.access_token,
             self.refresh_token,
             expires,
+            self.account_type,
         )
             .execute(exec)
             .await?;
@@ -649,6 +680,7 @@ impl Serialize for Credentials {
         ser.serialize_field("refresh_token", &self.refresh_token)?;
         ser.serialize_field("expires", &self.expires)?;
         ser.serialize_field("active", &self.active)?;
+        ser.serialize_field("account_type", &self.account_type)?;
         ser.end()
     }
 }
