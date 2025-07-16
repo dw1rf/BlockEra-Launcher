@@ -50,9 +50,8 @@
           color="primary"
           @click="login()"
         >
-          <LogInIcon v-if="!loginDisabled" />
+          <MicrosoftIcon v-if="!loginDisabled"/>
           <SpinnerIcon v-else class="animate-spin" />
-          <MicrosoftIcon/>
         </Button>
         <Button v-tooltip="'Add offline'" icon-only @click="tryOfflineLogin()">
           <PirateIcon />

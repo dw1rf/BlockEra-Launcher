@@ -11,14 +11,19 @@ export async function getOS() {
 }
 
 // [AR] Feature
-export async function getArtifact(downloadurl, filename, ostype, autoupdatesupported) {
+export async function initUpdateLauncher(downloadurl, filename, ostype, autoupdatesupported) {
   console.log('Downloading build', downloadurl, filename, ostype, autoupdatesupported)
-  return await invoke('plugin:utils|get_artifact', { downloadurl, filename, ostype, autoupdatesupported })
+  return await invoke('plugin:utils|init_update_launcher', { downloadurl, filename, ostype, autoupdatesupported })
 }
 
 // [AR] Patch fix
 export async function applyMigrationFix(eol) {
   return await invoke('plugin:utils|apply_migration_fix', { eol })
+}
+
+// [AR] Feature
+export async function initAuthlibPatching(minecraftversion, ismojang) {
+  return await invoke('plugin:utils|init_authlib_patching', { minecraftversion, ismojang })
 }
 
 export async function openPath(path) {

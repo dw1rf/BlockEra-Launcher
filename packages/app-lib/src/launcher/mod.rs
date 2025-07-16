@@ -633,6 +633,7 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
+    // FIXME: Fix ElyBy integration with this patch.
     // [AR] Patch
     if credentials.access_token == "null" && credentials.refresh_token == "null" {
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
