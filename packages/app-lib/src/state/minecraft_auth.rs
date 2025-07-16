@@ -263,7 +263,7 @@ impl AccountType {
         }
     }
 
-    fn as_lowercase_str(&self) -> String {
+    pub(crate) fn as_lowercase_str(&self) -> String {
         self.as_str().to_lowercase()
     }
 }

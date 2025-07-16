@@ -6,9 +6,9 @@ use crate::launcher::download::download_log_config;
 use crate::launcher::io::IOError;
 use crate::profile::QuickPlayType;
 use crate::state::{
-    Credentials, JavaVersion, ProcessMetadata, ProfileInstallStage,
+    AccountType, Credentials, JavaVersion, ProcessMetadata, ProfileInstallStage
 };
-use crate::util::io;
+use crate::util::{io, utils};
 use crate::{State, get_resource_file, process, state as st};
 use chrono::Utc;
 use daedalus as d;
@@ -633,18 +633,23 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
-    // FIXME: Fix ElyBy integration with this patch.
     // [AR] Patch
-    if credentials.access_token == "null" && credentials.refresh_token == "null" {
+    if credentials.account_type == AccountType::Pirate.as_lowercase_str() {
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
             let invalid_url = "https://invalid.invalid";
-            tracing::info!("✅ JVM args is patched by AstralRinth for MC {}", version_jar);
+            tracing::info!("[AR] • The launcher detected the launch of {} on the offline account. Applying multiplayer fixes.", version_jar);
             command.arg("-Dminecraft.api.env=custom");
             command.arg(format!("-Dminecraft.api.auth.host={}", invalid_url));
             command.arg(format!("-Dminecraft.api.account.host={}", invalid_url));
             command.arg(format!("-Dminecraft.api.session.host={}", invalid_url));
             command.arg(format!("-Dminecraft.api.services.host={}", invalid_url));
         }
+    } else if credentials.account_type == AccountType::ElyBy.as_lowercase_str() {
+        tracing::info!("[AR] • The launcher detected the launch of {} on the ElyBy account. Applying ElyBy Java Injector.", version_jar);
+        let path_buf = utils::get_or_download_ely_by_injector().await?;
+        let path = path_buf.to_str().unwrap();
+        tracing::info!("[AR] • ElyBy Java Injector path: {}", path);
+        command.arg(format!("-javaagent:{}=ely.by", path));
     }
 
     command
