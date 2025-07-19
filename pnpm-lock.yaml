@@ -394,9 +394,9 @@ importers:
       '@modrinth/utils':
         specifier: workspace:*
         version: link:../utils
-      fast-glob:
-        specifier: ^3.3.3
-        version: 3.3.3
+      glob:
+        specifier: ^10.2.7
+        version: 10.4.2
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -410,6 +410,9 @@ importers:
         specifier: ^0.6.2
         version: 0.6.2
     devDependencies:
+      '@types/glob':
+        specifier: ^9.0.0
+        version: 9.0.0
       '@types/html-minifier-terser':
         specifier: ^7.0.2
         version: 7.0.2
@@ -470,6 +473,12 @@ importers:
         specifier: ^3.5.13
         version: 3.5.13(typescript@5.8.2)
     devDependencies:
+      '@formatjs/cli':
+        specifier: ^6.2.12
+        version: 6.2.12(@vue/compiler-core@3.5.13)(vue@3.5.13(typescript@5.8.2))
+      '@vintl/vintl':
+        specifier: ^4.4.1
+        version: 4.4.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))
       eslint:
         specifier: ^8.57.0
         version: 8.57.0
@@ -2635,6 +2644,10 @@ packages:
 
   '@types/fs-extra@9.0.13':
     resolution: {integrity: sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==}
+
+  '@types/glob@9.0.0':
+    resolution: {integrity: sha512-00UxlRaIUvYm4R4W9WYkN8/J+kV8fmOQ7okeH6YFtGWFMt3odD45tpG5yA5wnL7HE6lLgjaTW5n14ju2hl2NNA==}
+    deprecated: This is a stub types definition. glob provides its own type definitions, so you do not need this installed.
 
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
@@ -8738,6 +8751,10 @@ snapshots:
     dependencies:
       vue: 3.5.13(typescript@5.5.4)
 
+  '@braw/async-computed@5.0.2(vue@3.5.13(typescript@5.8.2))':
+    dependencies:
+      vue: 3.5.13(typescript@5.8.2)
+
   '@cloudflare/kv-asset-handler@0.3.4':
     dependencies:
       mime: 3.0.0
@@ -9265,6 +9282,11 @@ snapshots:
       '@vue/compiler-core': 3.5.13
       vue: 3.5.13(typescript@5.5.4)
 
+  '@formatjs/cli@6.2.12(@vue/compiler-core@3.5.13)(vue@3.5.13(typescript@5.8.2))':
+    optionalDependencies:
+      '@vue/compiler-core': 3.5.13
+      vue: 3.5.13(typescript@5.8.2)
+
   '@formatjs/ecma402-abstract@1.18.3':
     dependencies:
       '@formatjs/intl-localematcher': 0.5.4
@@ -9321,6 +9343,18 @@ snapshots:
       tslib: 2.6.3
     optionalDependencies:
       typescript: 5.5.4
+
+  '@formatjs/intl@2.10.4(typescript@5.8.2)':
+    dependencies:
+      '@formatjs/ecma402-abstract': 2.0.0
+      '@formatjs/fast-memoize': 2.2.0
+      '@formatjs/icu-messageformat-parser': 2.7.8
+      '@formatjs/intl-displaynames': 6.6.8
+      '@formatjs/intl-listformat': 7.5.7
+      intl-messageformat: 10.5.14
+      tslib: 2.6.3
+    optionalDependencies:
+      typescript: 5.8.2
 
   '@formatjs/ts-transformer@3.13.14':
     dependencies:
@@ -10558,6 +10592,10 @@ snapshots:
     dependencies:
       '@types/node': 20.14.11
 
+  '@types/glob@9.0.0':
+    dependencies:
+      glob: 10.4.2
+
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -11048,6 +11086,17 @@ snapshots:
       '@formatjs/intl-localematcher': 0.4.2
       intl-messageformat: 10.5.14
       vue: 3.5.13(typescript@5.5.4)
+    transitivePeerDependencies:
+      - typescript
+
+  '@vintl/vintl@4.4.1(typescript@5.8.2)(vue@3.5.13(typescript@5.8.2))':
+    dependencies:
+      '@braw/async-computed': 5.0.2(vue@3.5.13(typescript@5.8.2))
+      '@formatjs/icu-messageformat-parser': 2.7.8
+      '@formatjs/intl': 2.10.4(typescript@5.8.2)
+      '@formatjs/intl-localematcher': 0.4.2
+      intl-messageformat: 10.5.14
+      vue: 3.5.13(typescript@5.8.2)
     transitivePeerDependencies:
       - typescript
 
