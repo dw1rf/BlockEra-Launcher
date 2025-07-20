@@ -7,6 +7,7 @@ use crate::{Result, State};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process;
+use std::time::SystemTime;
 use tokio::{fs, io};
 
 const PACKAGE_JSON_CONTENT: &str =
@@ -48,34 +49,79 @@ pub fn read_package_json() -> io::Result<Launcher> {
 }
 
 /// ### AR • Ely.by Injector
-/// Returns the path to the Ely.by injector
+/// Returns the PathBuf to the Ely.by AuthLib Injector
 /// If resource doesn't exist or outdated, it will be downloaded from Git Astralium.
 pub async fn get_or_download_elyby_injector() -> Result<PathBuf> {
-    // TODO: Add support for offline mode
-    tracing::info!("[AR] • Attempting to get or download latest AuthLib Injector");
+    tracing::info!("[AR] • Attempting to get local authlib-injector file or download latest AuthLib Injector from remote repository.");
     let state = State::get().await?;
     let libraries_dir = state.directories.libraries_dir();
 
-    validate_astralrinth_library_dir(&libraries_dir).await?;
+    // Stores the local authlib injectors from `libraries/astralrinth/authlib_injectors/` directory.
+    let mut local_authlib_injectors = Vec::new();
 
-    let (asset_name, download_url) =
-        extract_elyby_authlib_metadata("authlib-injector").await?;
-    let elyby_injector = state
-        .directories
-        .libraries_dir()
-        .join(format!("astralrinth/{}", asset_name));
-    let path_in_libs = format!("astralrinth/{}", asset_name);
-    tracing::info!("[AR] • Path in libs: {}", path_in_libs);
+    validate_astralrinth_library_dir(&libraries_dir, "authlib_injector/").await?;
+    let astralrinth_dir = libraries_dir.join("astralrinth/");
+    let authlib_injector_dir = astralrinth_dir.join("authlib_injector/");
+    let mut authlib_injector_dir_data = fs::read_dir(&authlib_injector_dir).await?;
 
-    if !elyby_injector.exists() {
+    // Get all local authlib injectors
+    while let Some(entry) = authlib_injector_dir_data.next_entry().await? {
+        let path = entry.path();
+        if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
+            if file_name.starts_with("authlib-injector") {
+                let metadata = entry.metadata().await?;
+                let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                local_authlib_injectors.push((path.clone(), modified));
+            }
+        }
+    }
+    local_authlib_injectors.sort_by(|a, b| b.1.cmp(&a.1));
+
+    if !local_authlib_injectors.is_empty() {
+        tracing::info!("[AR] • Found local AuthLib Injector(s):");
+        for (path, time) in &local_authlib_injectors {
+            tracing::info!("• {:?} (modified: {:?})", path.file_name().unwrap(), time);
+        }
+    } else {
+        tracing::info!("[AR] • No local AuthLib Injector found.");
+    }
+
+    let latest_local_authlib_injector = local_authlib_injectors
+            .first()
+            .map(|(p, _)| p.clone());
+    let latest_local_authlib_injector_full_path_buf = authlib_injector_dir.join(latest_local_authlib_injector.unwrap());
+
+    // Get information about latest authlib injector from remote repository
+    // Return latest local installed authlib injector, if remote repository unreachable.
+    let (asset_name, download_url) = match extract_elyby_authlib_metadata("authlib-injector").await {
+        Ok(data) => data,
+        Err(_err) => {
+            tracing::warn!("[AR] • Failed to get latest AuthLib Injector from Git Astralium, using local version {}", latest_local_authlib_injector_full_path_buf.display());
+            return Ok(latest_local_authlib_injector_full_path_buf)
+        }
+    };
+
+    tracing::info!("[AR] • Asset name: {}", asset_name);
+    tracing::info!("[AR] • Download URL: {}", download_url);
+    tracing::info!("[AR] • Latest local AuthLib Injector: {}", latest_local_authlib_injector_full_path_buf.file_name().unwrap().display());
+
+    let remote_authlib_injector = authlib_injector_dir
+        .join(format!("{}", asset_name));
+
+    tracing::info!("[AR] • Comparing local version {} with remote version {}", latest_local_authlib_injector_full_path_buf.display(), remote_authlib_injector.display());
+    if remote_authlib_injector.eq(&latest_local_authlib_injector_full_path_buf) {
+        tracing::info!("[AR] • Remote version is the same as local version, still using local version {}", latest_local_authlib_injector_full_path_buf.display());
+        return Ok(latest_local_authlib_injector_full_path_buf)
+    } else {
         tracing::info!(
             "[AR] • Doesn't exist or outdated, attempting to download latest AuthLib Injector from URL: {}",
             download_url
         );
         let bytes = fetch_bytes_from_url(download_url.as_str()).await?;
-        write_file_to_libraries(&path_in_libs, &bytes).await?;
+        write_file_to_libraries(&remote_authlib_injector.to_str().unwrap(), &bytes).await?;
+        tracing::info!("[AR] • Successfully saved AuthLib Injector to {}", remote_authlib_injector.display());
     }
-    Ok(elyby_injector)
+    Ok(remote_authlib_injector)
 }
 
 /// ### AR • Migration. Patch
@@ -157,11 +203,13 @@ pub async fn init_authlib_patching(
     .await
 }
 
-/// Ensures the `astralrinth/` directory exists inside the libraries directory.
+/// ### AR • Universal Write (IO) Function.
+/// Validating the `astralrinth/{target_directory}/` directory exists inside the libraries/astralrinth directory.
 async fn validate_astralrinth_library_dir(
     libraries_dir: &PathBuf,
+    validation_directory: &str
 ) -> Result<()> {
-    let astralrinth_path = libraries_dir.join("astralrinth");
+    let astralrinth_path = libraries_dir.join(format!("astralrinth/{}", validation_directory));
     if !astralrinth_path.exists() {
         tokio::fs::create_dir_all(&astralrinth_path)
             .await
