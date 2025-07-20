@@ -10,20 +10,20 @@ export async function getOS() {
   return await invoke('plugin:utils|get_os')
 }
 
-// [AR] Feature
-export async function initUpdateLauncher(downloadurl, filename, ostype, autoupdatesupported) {
-  console.log('Downloading build', downloadurl, filename, ostype, autoupdatesupported)
-  return await invoke('plugin:utils|init_update_launcher', { downloadurl, filename, ostype, autoupdatesupported })
+// [AR] Feature. Updater
+export async function initUpdateLauncher(downloadUrl, filename, osType, autoUpdateSupported) {
+  console.log('Downloading build', downloadUrl, filename, osType, autoUpdateSupported)
+  return await invoke('plugin:utils|init_update_launcher', { downloadUrl, filename, osType, autoUpdateSupported })
 }
 
-// [AR] Patch fix
+// [AR] Migration. Patch
 export async function applyMigrationFix(eol) {
   return await invoke('plugin:utils|apply_migration_fix', { eol })
 }
 
-// [AR] Feature
-export async function initAuthlibPatching(minecraftversion, ismojang) {
-  return await invoke('plugin:utils|init_authlib_patching', { minecraftversion, ismojang })
+// [AR] Feature. Ely.by
+export async function initAuthlibPatching(minecraftVersion, isMojang) {
+  return await invoke('plugin:utils|init_authlib_patching', { minecraftVersion, isMojang })
 }
 
 export async function openPath(path) {

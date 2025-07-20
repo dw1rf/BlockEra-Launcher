@@ -47,30 +47,38 @@ pub fn read_package_json() -> io::Result<Launcher> {
     Ok(launcher)
 }
 
-/// ### AR • Ely By Injector
-/// Returns the path to the ely by injector
-/// If resource doesn't exist, it will be downloaded.
-pub async fn get_or_download_ely_by_injector() -> Result<PathBuf> {
-    tracing::info!("[AR] • Attempting to get or download AuthLib Injector");
-    let state= State::get().await?;
+/// ### AR • Ely.by Injector
+/// Returns the path to the Ely.by injector
+/// If resource doesn't exist or outdated, it will be downloaded from Git Astralium.
+pub async fn get_or_download_elyby_injector() -> Result<PathBuf> {
+    // TODO: Add support for offline mode
+    tracing::info!("[AR] • Attempting to get or download latest AuthLib Injector");
+    let state = State::get().await?;
     let libraries_dir = state.directories.libraries_dir();
 
-    ensure_astralrinth_library_dir_exists(&libraries_dir).await?;
+    validate_astralrinth_library_dir(&libraries_dir).await?;
 
-    let (asset_name, download_url) = extract_ely_authlib_metadata("authlib-injector").await?;
-    let ely_by_injector = state.directories.libraries_dir().join(format!("astralrinth/{}", asset_name));
+    let (asset_name, download_url) =
+        extract_elyby_authlib_metadata("authlib-injector").await?;
+    let elyby_injector = state
+        .directories
+        .libraries_dir()
+        .join(format!("astralrinth/{}", asset_name));
     let path_in_libs = format!("astralrinth/{}", asset_name);
     tracing::info!("[AR] • Path in libs: {}", path_in_libs);
 
-    if !ely_by_injector.exists() {
-        tracing::info!("[AR] • Doesn't exist, attempting to download AuthLib Injector from URL: {}", download_url);
+    if !elyby_injector.exists() {
+        tracing::info!(
+            "[AR] • Doesn't exist or outdated, attempting to download latest AuthLib Injector from URL: {}",
+            download_url
+        );
         let bytes = fetch_bytes_from_url(download_url.as_str()).await?;
         write_file_to_libraries(&path_in_libs, &bytes).await?;
     }
-    Ok(ely_by_injector)
+    Ok(elyby_injector)
 }
 
-/// ### AR • Migration
+/// ### AR • Migration. Patch
 /// Applying migration fix for SQLite database.
 pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
     tracing::info!("[AR] • Attempting to apply migration fix");
@@ -83,7 +91,7 @@ pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
     Ok(patched)
 }
 
-/// ### AR • Updater
+/// ### AR • Feature. Updater
 /// Initialize the update launcher.
 pub async fn init_update_launcher(
     download_url: &str,
@@ -115,7 +123,7 @@ pub async fn init_update_launcher(
     Ok(())
 }
 
-/// ### AR • AuthLib (Ely By)
+/// ### AR • AuthLib (Ely.by)
 /// Initializes the AuthLib patching process.
 ///
 /// Returns `true` if the authlib patched successfully.
@@ -123,13 +131,18 @@ pub async fn init_authlib_patching(
     minecraft_version: &str,
     is_mojang: bool,
 ) -> Result<bool> {
-    let minecraft_library_metadata = get_minecraft_library_metadata(minecraft_version).await?;
+    let minecraft_library_metadata =
+        get_minecraft_library_metadata(minecraft_version).await?;
     // Parses the AuthLib version from string
     // Example output: "com.mojang:authlib:6.0.58" -> "6.0.58"
-    let authlib_version = minecraft_library_metadata.name.split(':').nth(2).unwrap_or("unknown");
+    let authlib_version = minecraft_library_metadata
+        .name
+        .split(':')
+        .nth(2)
+        .unwrap_or("unknown");
     let authlib_fullname_string = format!("authlib-{}.jar", authlib_version);
     let authlib_fullname_str = authlib_fullname_string.as_str();
-    
+
     tracing::info!(
         "[AR] • Attempting to download AuthLib -> {}.",
         authlib_fullname_string
@@ -145,17 +158,32 @@ pub async fn init_authlib_patching(
 }
 
 /// Ensures the `astralrinth/` directory exists inside the libraries directory.
-async fn ensure_astralrinth_library_dir_exists(libraries_dir: &PathBuf) -> Result<()> {
+async fn validate_astralrinth_library_dir(
+    libraries_dir: &PathBuf,
+) -> Result<()> {
     let astralrinth_path = libraries_dir.join("astralrinth");
     if !astralrinth_path.exists() {
-        tokio::fs::create_dir_all(&astralrinth_path).await.map_err(|e| {
-            tracing::error!("[AR] • Failed to create {} directory: {:?}", astralrinth_path.display(), e);
-            crate::ErrorKind::IOErrorOccurred {
-                error: format!("Failed to create {} directory: {}", astralrinth_path.display(), e),
-            }
-            .as_error()
-        })?;
-        tracing::info!("[AR] • Created missing {} directory", astralrinth_path.display());
+        tokio::fs::create_dir_all(&astralrinth_path)
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    "[AR] • Failed to create {} directory: {:?}",
+                    astralrinth_path.display(),
+                    e
+                );
+                crate::ErrorKind::IOErrorOccurred {
+                    error: format!(
+                        "Failed to create {} directory: {}",
+                        astralrinth_path.display(),
+                        e
+                    ),
+                }
+                .as_error()
+            })?;
+        tracing::info!(
+            "[AR] • Created missing {} directory",
+            astralrinth_path.display()
+        );
     }
     Ok(())
 }
@@ -178,7 +206,7 @@ async fn write_file_to_libraries(
     })
 }
 
-/// ### AR • AuthLib (Ely By)
+/// ### AR • AuthLib (Ely.by)
 /// Downloads the AuthLib file from Mojang libraries or Git Astralium services.
 async fn download_authlib(
     minecraft_library_metadata: &Library,
@@ -187,14 +215,17 @@ async fn download_authlib(
     is_mojang: bool,
 ) -> Result<bool> {
     let state = State::get().await?;
-    let (mut url, path) = extract_minecraft_local_download_info(minecraft_library_metadata, minecraft_version)?;
+    let (mut url, path) = extract_minecraft_local_download_info(
+        minecraft_library_metadata,
+        minecraft_version,
+    )?;
     let full_path = state.directories.libraries_dir().join(path);
 
     if !is_mojang {
         tracing::info!(
             "[AR] • Attempting to download AuthLib from Git Astralium"
         );
-        (_, url) = extract_ely_authlib_metadata(authlib_fullname).await?;
+        (_, url) = extract_elyby_authlib_metadata(authlib_fullname).await?;
     }
     tracing::info!("[AR] • Downloading AuthLib from URL: {}", url);
     let bytes = fetch_bytes_from_url(&url).await?;
@@ -204,9 +235,11 @@ async fn download_authlib(
     Ok(true)
 }
 
-/// ### AR • AuthLib (Ely By)
+/// ### AR • AuthLib (Ely.by)
 /// Parses the ElyIntegration release JSON and returns the download URL for the given AuthLib version.
-async fn extract_ely_authlib_metadata(authlib_fullname: &str) -> Result<(String, String)> {
+async fn extract_elyby_authlib_metadata(
+    authlib_fullname: &str,
+) -> Result<(String, String)> {
     const URL: &str = "https://git.astralium.su/api/v1/repos/didirus/ElyIntegration/releases/latest";
 
     let response = reqwest::get(URL).await.map_err(|e| {
@@ -215,7 +248,10 @@ async fn extract_ely_authlib_metadata(authlib_fullname: &str) -> Result<(String,
             e
         );
         crate::ErrorKind::NetworkErrorOccurred {
-            error: format!("Failed to fetch ElyIntegration release JSON: {}", e),
+            error: format!(
+                "Failed to fetch ElyIntegration release JSON: {}",
+                e
+            ),
         }
         .as_error()
     })?;
@@ -228,15 +264,15 @@ async fn extract_ely_authlib_metadata(authlib_fullname: &str) -> Result<(String,
         .as_error()
     })?;
 
-    let assets = json
-        .get("assets")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| {
-            crate::ErrorKind::ParseError {
-                reason: "Missing 'assets' array".into(),
-            }
-            .as_error()
-        })?;
+    let assets =
+        json.get("assets")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| {
+                crate::ErrorKind::ParseError {
+                    reason: "Missing 'assets' array".into(),
+                }
+                .as_error()
+            })?;
 
     let asset = assets
         .iter()
@@ -281,7 +317,7 @@ async fn extract_ely_authlib_metadata(authlib_fullname: &str) -> Result<(String,
     Ok((asset_name, download_url))
 }
 
-/// ### AR • AuthLib (Ely By)
+/// ### AR • AuthLib (Ely.by)
 /// Extracts the artifact URL and Path from the library structure.
 ///
 /// Returns a tuple of references to the URL and path strings,
@@ -331,9 +367,15 @@ async fn fetch_bytes_from_url(url: &str) -> Result<bytes::Bytes> {
     )
     .await
     .map_err(|_| {
-        tracing::error!("[AR] • Download timed out after {} seconds", TIMEOUT_SECONDS);
+        tracing::error!(
+            "[AR] • Download timed out after {} seconds",
+            TIMEOUT_SECONDS
+        );
         crate::ErrorKind::NetworkErrorOccurred {
-            error: format!("Download timed out after {TIMEOUT_SECONDS} seconds").to_string(),
+            error: format!(
+                "Download timed out after {TIMEOUT_SECONDS} seconds"
+            )
+            .to_string(),
         }
         .as_error()
     })?
@@ -363,9 +405,11 @@ async fn fetch_bytes_from_url(url: &str) -> Result<bytes::Bytes> {
     })
 }
 
-/// ### AR • AuthLib (Ely By)
+/// ### AR • AuthLib (Ely.by)
 /// Gets the Minecraft library metadata from the local libraries directory.
-async fn get_minecraft_library_metadata(minecraft_version: &str) -> Result<Library> {
+async fn get_minecraft_library_metadata(
+    minecraft_version: &str,
+) -> Result<Library> {
     let state = State::get().await?;
 
     let path = state

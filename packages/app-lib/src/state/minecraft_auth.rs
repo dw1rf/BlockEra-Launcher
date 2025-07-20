@@ -244,6 +244,34 @@ pub async fn offline_auth(
     Ok(credentials)
 }
 
+// [AR] Feature
+#[tracing::instrument]
+pub async fn elyby_auth(
+    uuid: Uuid,
+    username: &str,
+    access_token: &str,
+    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+) -> crate::Result<Credentials> {
+    let mut credentials = Credentials {
+        offline_profile: MinecraftProfile::default(),
+        access_token: access_token.to_string(),
+        refresh_token: "null".to_string(),
+        expires: Utc::now() + Duration::days(365 * 99),
+        active: true,
+        account_type: AccountType::ElyBy.as_lowercase_str(),
+    };
+
+    credentials.offline_profile = MinecraftProfile {
+        id: uuid,
+        name: username.to_string(),
+        ..credentials.offline_profile
+    };
+
+    credentials.upsert(exec).await?;
+
+    Ok(credentials)
+}
+
 /// [AR] • Feature
 #[derive(Deserialize, Debug)]
 pub enum AccountType {

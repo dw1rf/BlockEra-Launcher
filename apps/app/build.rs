@@ -13,6 +13,8 @@ fn main() {
                 InlinedPlugin::new()
                     .commands(&[
                         "offline_login",
+                        "elyby_login",
+                        "elyby_auth_authenticate",
                         "login",
                         "remove_user",
                         "get_default_user",

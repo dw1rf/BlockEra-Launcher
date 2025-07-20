@@ -37,7 +37,7 @@
         <Button v-tooltip="'Add offline account'" icon-only @click="showOfflineLoginModal()">
           <PirateIcon />
         </Button>
-        <Button v-tooltip="'Log via Ely.by'" icon-only @click="loginViaElyBy()">
+        <Button v-tooltip="'Log via Ely.by'" icon-only @click="showElybyLoginModal()">
           <ElyByIcon v-if="!elybyLoginDisabled" />
           <SpinnerIcon v-else class="animate-spin" />
         </Button>
@@ -64,35 +64,84 @@
         <Button v-tooltip="'Add offline account'" icon-only @click="showOfflineLoginModal()">
           <PirateIcon />
         </Button>
-        <Button v-tooltip="'Log via Ely.by'" icon-only @click="loginViaElyBy()">
+        <Button v-tooltip="'Log via Ely.by'" icon-only @click="showElybyLoginModal()">
           <ElyByIcon v-if="!elybyLoginDisabled" />
           <SpinnerIcon v-else class="animate-spin" />
         </Button>
       </div>
     </Card>
   </transition>
-  <ModalWrapper ref="addOfflineModal" class="modal" header="Add new offline account">
+  <ModalWrapper ref="addElybyModal" class="modal" header="Authenticate with Ely.by">
+    <ModalWrapper ref="requestElybyTwoFactorCodeModal" class="modal"
+      header="Ely.by requested 2FA code for authentication">
+      <div class="flex flex-col gap-4 px-6 py-5">
+        <label class="label">Enter your 2FA code</label>
+        <input v-model="elybyTwoFactorCode" type="text" placeholder="Your 2FA code here..." class="input" />
+        <div class="mt-6 ml-auto">
+          <Button icon-only color="primary" class="continue-button" @click="addElybyProfile()">
+            Continue
+          </Button>
+        </div>
+      </div>
+    </ModalWrapper>
     <div class="flex flex-col gap-4 px-6 py-5">
-      <label class="label">Enter your player name</label>
-      <input 
-        type="text" 
-        v-model="offlinePlayerName" 
-        placeholder="Your player name here..." 
-        class="input"
-      />
+      <label class="label">Enter your player name or email (preferred)</label>
+      <input v-model="elybyLogin" type="text" placeholder="Your player name or email here..." class="input" />
+      <label class="label">Enter your password</label>
+      <input v-model="elybyPassword" type="password" placeholder="Your password here..." class="input" />
       <div class="mt-6 ml-auto">
-        <Button 
-          icon-only 
-          color="primary" 
-          @click="addOfflineProfile()" 
-          class="continue-button"
-        >
+        <Button icon-only color="primary" class="continue-button" @click="addElybyProfile()">
           Login
         </Button>
       </div>
     </div>
   </ModalWrapper>
-  <ModalWrapper ref="inputErrorModal" class="modal" header="Error while proceeding">
+  <ModalWrapper ref="addOfflineModal" class="modal" header="Add new offline account">
+    <div class="flex flex-col gap-4 px-6 py-5">
+      <label class="label">Enter your player name</label>
+      <input v-model="offlinePlayerName" type="text" placeholder="Your player name here..." class="input" />
+      <div class="mt-6 ml-auto">
+        <Button icon-only color="primary" class="continue-button" @click="addOfflineProfile()">
+          Login
+        </Button>
+      </div>
+    </div>
+  </ModalWrapper>
+  <ModalWrapper 
+    ref="authenticationElybyErrorModal"
+    class="modal"
+    header="Error while proceeding authentication event with Ely.by">
+    <div class="flex flex-col gap-4 px-6 py-5">
+      <label class="text-base font-medium text-red-700">
+        An error occurred while logging in.
+      </label>
+
+      <div class="mt-6 ml-auto">
+        <Button color="primary" class="retry-button" @click="retryAddElybyProfile">
+          Try again
+        </Button>
+      </div>
+    </div>
+  </ModalWrapper>
+  <ModalWrapper ref="inputElybyErrorModal" class="modal" header="Error while proceeding input event with Ely.by">
+    <div class="flex flex-col gap-4 px-6 py-5">
+      <label class="text-base font-medium text-red-700">
+        An error occurred while adding the Ely.by account. Please follow the instructions below.
+      </label>
+
+      <ul class="list-disc list-inside text-sm space-y-1">
+        <li>Check that you have entered the correct player name or email.</li>
+        <li>Check that you have entered the correct password.</li>
+      </ul>
+
+      <div class="mt-6 ml-auto">
+        <Button color="primary" class="retry-button" @click="retryAddElybyProfile">
+          Try again
+        </Button>
+      </div>
+    </div>
+  </ModalWrapper>
+  <ModalWrapper ref="inputErrorModal" class="modal" header="Error while proceeding input event with offline account">
     <div class="flex flex-col gap-4 px-6 py-5">
       <label class="text-base font-medium text-red-700">
         An error occurred while adding the offline account. Please follow the instructions below.
@@ -107,11 +156,7 @@
       </ul>
 
       <div class="mt-6 ml-auto">
-        <Button 
-          color="primary" 
-          @click="retryAddOfflineProfile"
-          class="retry-button"
-        >
+        <Button color="primary" class="retry-button" @click="retryAddOfflineProfile">
           Try again
         </Button>
       </div>
@@ -130,7 +175,7 @@ import {
   TrashIcon,
   PirateIcon as Offline,
   MicrosoftIcon as License,
-  ElyByIcon as ElyBy,
+  ElyByIcon as Elyby,
   MicrosoftIcon,
   PirateIcon,
   ElyByIcon,
@@ -139,6 +184,8 @@ import {
 import { Avatar, Button, Card } from '@modrinth/ui'
 import { ref, computed, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
 import {
+  elyby_auth_authenticate,
+  elyby_login,
   offline_login,
   users,
   remove_user,
@@ -170,10 +217,18 @@ const elybyLoginDisabled = ref(false)
 const defaultUser = ref()
 
 // [AR] • Feature
+const clientToken = "astralrinth"
 const addOfflineModal = ref(null)
+const addElybyModal = ref(null)
+const requestElybyTwoFactorCodeModal = ref(null)
+const authenticationElybyErrorModal = ref(null)
+const inputElybyErrorModal = ref(null)
 const inputErrorModal = ref(null)
 const exceptionErrorModal = ref(null)
 const offlinePlayerName = ref('')
+const elybyLogin = ref('')
+const elybyPassword = ref('')
+const elybyTwoFactorCode = ref('')
 const minOfflinePlayerNameLength = 2
 const maxOfflinePlayerNameLength = 20
 
@@ -185,7 +240,7 @@ function getAccountType(account) {
     case 'pirate':
       return Offline
     case 'elyby':
-      return ElyBy
+      return Elyby
   }
 }
 
@@ -195,9 +250,35 @@ function showOfflineLoginModal() {
 }
 
 // [AR] • Feature
+function showElybyLoginModal() {
+  addElybyModal.value?.show()
+}
+
+// [AR] • Feature
 function retryAddOfflineProfile() {
   inputErrorModal.value?.hide()
+  clearOfflineFields()
   showOfflineLoginModal()
+}
+
+// [AR] • Feature
+function retryAddElybyProfile() {
+  authenticationElybyErrorModal.value?.hide()
+  inputElybyErrorModal.value?.hide()
+  clearElybyFields()
+  showElybyLoginModal()
+}
+
+// [AR] • Feature
+function clearElybyFields() {
+  elybyLogin.value = ''
+  elybyPassword.value = ''
+  elybyTwoFactorCode.value = ''
+}
+
+// [AR] • Feature
+function clearOfflineFields() {
+  offlinePlayerName.value = ''
 }
 
 // [AR] • Feature
@@ -208,7 +289,7 @@ async function addOfflineProfile() {
   if (!isValidName) {
     addOfflineModal.value?.hide()
     inputErrorModal.value?.show()
-    offlinePlayerName.value = ''
+    clearOfflineFields()
     return
   }
 
@@ -227,16 +308,82 @@ async function addOfflineProfile() {
     handleError(error)
     exceptionErrorModal.value?.show()
   } finally {
-    offlinePlayerName.value = ''
+    clearOfflineFields()
   }
 }
 
 // [AR] • Feature
-// TODO:
-async function loginViaElyBy() {
+async function addElybyProfile() {
+  if (!elybyLogin.value || !elybyPassword.value) {
+    addElybyModal.value?.hide()
+    inputElybyErrorModal.value?.show()
+    clearElybyFields()
+    return
+  }
   elybyLoginDisabled.value = true
-  console.log("Login via Ely.by clicked!")
-  elybyLoginDisabled.value = false
+
+  const login = elybyLogin.value.trim()
+  let password = elybyPassword.value.trim()
+  const twoFactorCode = elybyTwoFactorCode.value.trim()
+  if (password && twoFactorCode) {
+    password = `${password}:${twoFactorCode}`
+  }
+
+  try {
+    const raw_result = await elyby_auth_authenticate(
+      login,
+      password,
+      clientToken
+    )
+
+    const json_data = JSON.parse(raw_result)
+
+    console.log(json_data?.error)
+    console.log(json_data?.errorMessage)
+
+    if (!json_data.accessToken) {
+      if (
+        json_data.error === 'ForbiddenOperationException' &&
+        json_data.errorMessage?.includes('two factor')
+      ) {
+        requestElybyTwoFactorCodeModal.value?.show()
+        return
+      }
+
+      addElybyModal.value?.hide()
+      requestElybyTwoFactorCodeModal.value?.hide()
+      authenticationElybyErrorModal.value?.show()
+      return
+    }
+
+    const accessToken = json_data.accessToken
+    const selectedProfileId = convertRawStringToUUIDv4(json_data.selectedProfile.id)
+    const selectedProfileName = json_data.selectedProfile.name
+
+    const result = await elyby_login(selectedProfileId, selectedProfileName, accessToken)
+
+    addElybyModal.value?.hide()
+    requestElybyTwoFactorCodeModal.value?.hide()
+
+    clearElybyFields()
+
+    await setAccount(result)
+    await refreshValues()
+  } catch (err) {
+    handleError(err)
+    exceptionErrorModal.value?.show()
+  } finally {
+    elybyLoginDisabled.value = false
+  }
+}
+
+// [AR] • Feature
+function convertRawStringToUUIDv4(rawId) {
+  if (rawId.length !== 32) {
+    console.warn('Invalid UUID string:', rawId)
+    return rawId
+  }
+  return `${rawId.slice(0, 8)}-${rawId.slice(8, 12)}-${rawId.slice(12, 16)}-${rawId.slice(16, 20)}-${rawId.slice(20)}`
 }
 
 const equippedSkin = ref(null)
