@@ -2,6 +2,8 @@ use crate::api::update;
 use crate::state::db;
 ///
 /// [AR] Feature Utils
+/// 
+/// Version: 0.1.1
 ///
 use crate::{Result, State};
 use serde::{Deserialize, Serialize};
@@ -52,7 +54,7 @@ pub fn read_package_json() -> io::Result<Launcher> {
 /// Returns the PathBuf to the Ely.by AuthLib Injector
 /// If resource doesn't exist or outdated, it will be downloaded from Git Astralium.
 pub async fn get_or_download_elyby_injector() -> Result<PathBuf> {
-    tracing::info!("[AR] • Attempting to get local authlib-injector file or download latest AuthLib Injector from remote repository.");
+    tracing::info!("[AR] • Initializing state for Ely.by AuthLib Injector...");
     let state = State::get().await?;
     let libraries_dir = state.directories.libraries_dir();
 
@@ -75,53 +77,75 @@ pub async fn get_or_download_elyby_injector() -> Result<PathBuf> {
             }
         }
     }
-    local_authlib_injectors.sort_by(|a, b| b.1.cmp(&a.1));
+
+    // Get information about latest authlib injector from remote repository
+    let (asset_name, download_url) = match extract_elyby_authlib_metadata("authlib-injector").await {
+        Ok(data) => data,
+        Err(err) => {
+            if let Some((local_path, _)) = local_authlib_injectors
+                .iter()
+                .max_by(|a, b| a.1.cmp(&b.1)) 
+            {
+                tracing::info!("[AR] • Found local AuthLib Injector(s):");
+                for (path, time) in &local_authlib_injectors {
+                    tracing::info!("• {:?} (modified: {:?})", path.file_name().unwrap(), time);
+                }
+                tracing::warn!("[AR] • Failed to get latest AuthLib Injector from remote, using latest local version: {}", local_path.display());
+                return Ok(local_path.clone());
+            } else {
+                tracing::error!("[AR] • Failed to get AuthLib Injector from remote and no local copy found.");
+                return Err(crate::ErrorKind::NetworkErrorOccurred { error: format!("Failed to fetch authlib-injector metadata and no local version available: {}", err) }.as_error());
+            }
+        }
+    };
 
     if !local_authlib_injectors.is_empty() {
+        local_authlib_injectors.sort_by(|a, b| a.1.cmp(&b.1));
         tracing::info!("[AR] • Found local AuthLib Injector(s):");
         for (path, time) in &local_authlib_injectors {
             tracing::info!("• {:?} (modified: {:?})", path.file_name().unwrap(), time);
         }
-    } else {
-        tracing::info!("[AR] • No local AuthLib Injector found.");
     }
 
-    let latest_local_authlib_injector = local_authlib_injectors
-            .first()
-            .map(|(p, _)| p.clone());
-    let latest_local_authlib_injector_full_path_buf = authlib_injector_dir.join(latest_local_authlib_injector.unwrap());
+    let remote_authlib_injector = if !asset_name.is_empty() {
+        authlib_injector_dir.join(&asset_name)
+    } else {
+        return Err(crate::ErrorKind::ParseError { reason: "Asset name is empty from metadata".to_string() }.as_error());
+    };
 
-    // Get information about latest authlib injector from remote repository
-    // Return latest local installed authlib injector, if remote repository unreachable.
-    let (asset_name, download_url) = match extract_elyby_authlib_metadata("authlib-injector").await {
-        Ok(data) => data,
-        Err(_err) => {
-            tracing::warn!("[AR] • Failed to get latest AuthLib Injector from Git Astralium, using local version {}", latest_local_authlib_injector_full_path_buf.display());
-            return Ok(latest_local_authlib_injector_full_path_buf)
+    let latest_local_authlib_injector = local_authlib_injectors
+        .first()
+        .map(|(p, _)| p.clone());
+
+    let latest_local_authlib_injector_full_path_buf = match latest_local_authlib_injector {
+        Some(path) => path,
+        None => {
+            tracing::info!("[AR] • No local version found, will download from remote: {}", remote_authlib_injector.display());
+            let bytes = fetch_bytes_from_url(download_url.as_str()).await?;
+            write_file_to_libraries(&remote_authlib_injector.to_string_lossy(), &bytes).await?;
+            tracing::info!("[AR] • Successfully saved AuthLib Injector to {}", remote_authlib_injector.display());
+            return Ok(remote_authlib_injector);
         }
     };
 
-    tracing::info!("[AR] • Asset name: {}", asset_name);
-    tracing::info!("[AR] • Download URL: {}", download_url);
-    tracing::info!("[AR] • Latest local AuthLib Injector: {}", latest_local_authlib_injector_full_path_buf.file_name().unwrap().display());
+    tracing::info!("[AR] • Remote Asset name: {}", asset_name);
+    tracing::info!("[AR] • Remote Download URL: {}", download_url);
+    tracing::info!("[AR] • Latest local AuthLib Injector: {}", latest_local_authlib_injector_full_path_buf.file_name().unwrap().to_string_lossy());
+    tracing::info!("[AR] • Comparing local version {} with parsed remote version {}", latest_local_authlib_injector_full_path_buf.display(), remote_authlib_injector.display());
 
-    let remote_authlib_injector = authlib_injector_dir
-        .join(format!("{}", asset_name));
-
-    tracing::info!("[AR] • Comparing local version {} with remote version {}", latest_local_authlib_injector_full_path_buf.display(), remote_authlib_injector.display());
-    if remote_authlib_injector.eq(&latest_local_authlib_injector_full_path_buf) {
-        tracing::info!("[AR] • Remote version is the same as local version, still using local version {}", latest_local_authlib_injector_full_path_buf.display());
-        return Ok(latest_local_authlib_injector_full_path_buf)
+    if remote_authlib_injector == latest_local_authlib_injector_full_path_buf {
+        tracing::info!("[AR] • Remote version is the same as local version, using local copy.");
+        return Ok(latest_local_authlib_injector_full_path_buf);
     } else {
         tracing::info!(
             "[AR] • Doesn't exist or outdated, attempting to download latest AuthLib Injector from URL: {}",
             download_url
         );
         let bytes = fetch_bytes_from_url(download_url.as_str()).await?;
-        write_file_to_libraries(&remote_authlib_injector.to_str().unwrap(), &bytes).await?;
+        write_file_to_libraries(&remote_authlib_injector.to_string_lossy(), &bytes).await?;
         tracing::info!("[AR] • Successfully saved AuthLib Injector to {}", remote_authlib_injector.display());
+        return Ok(remote_authlib_injector);
     }
-    Ok(remote_authlib_injector)
 }
 
 /// ### AR • Migration. Patch
