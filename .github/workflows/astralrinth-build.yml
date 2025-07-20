@@ -144,10 +144,10 @@ jobs:
         with:
           name: App bundle (${{ matrix.artifact-target-name }})
           path: |
-            target/release/bundle/appimage/Modrinth App_*.AppImage*
-            target/release/bundle/deb/Modrinth App_*.deb*
-            target/release/bundle/rpm/Modrinth App-*.rpm*
-            target/universal-apple-darwin/release/bundle/macos/Modrinth App.app.tar.gz*
-            target/universal-apple-darwin/release/bundle/dmg/Modrinth App_*.dmg*
-            target/release/bundle/nsis/Modrinth App_*-setup.exe*
-            target/release/bundle/nsis/Modrinth App_*-setup.nsis.zip*
+            target/release/bundle/appimage/AstralRinth App_*.AppImage*
+            target/release/bundle/deb/AstralRinth App_*.deb*
+            target/release/bundle/rpm/AstralRinth App-*.rpm*
+            target/universal-apple-darwin/release/bundle/macos/AstralRinth App.app.tar.gz*
+            target/universal-apple-darwin/release/bundle/dmg/AstralRinth App_*.dmg*
+            target/release/bundle/nsis/AstralRinth App_*-setup.exe*
+            target/release/bundle/nsis/AstralRinth App_*-setup.nsis.zip*
