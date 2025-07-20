@@ -30,37 +30,37 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
-/// [AR] Feature
+/// [AR] Feature. Ely.by
 #[tauri::command]
 pub async fn init_authlib_patching(
-    minecraftversion: &str,
-    ismojang: bool,
+    minecraft_version: &str,
+    is_mojang: bool,
 ) -> Result<bool> {
     let result =
-        utils::init_authlib_patching(minecraftversion, ismojang).await?;
+        utils::init_authlib_patching(minecraft_version, is_mojang).await?;
     Ok(result)
 }
 
-/// [AR] Patch fix
+/// [AR] Migration. Patch
 #[tauri::command]
 pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
     let result = utils::apply_migration_fix(eol).await?;
     Ok(result)
 }
 
-/// [AR] Feature
+/// [AR] Feature. Updater
 #[tauri::command]
 pub async fn init_update_launcher(
-    downloadurl: &str,
+    download_url: &str,
     filename: &str,
-    ostype: &str,
-    autoupdatesupported: bool,
+    os_type: &str,
+    auto_update_supported: bool,
 ) -> Result<()> {
     let _ = utils::init_update_launcher(
-        downloadurl,
+        download_url,
         filename,
-        ostype,
-        autoupdatesupported,
+        os_type,
+        auto_update_supported,
     )
     .await;
     Ok(())

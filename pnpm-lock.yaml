@@ -394,9 +394,9 @@ importers:
       '@modrinth/utils':
         specifier: workspace:*
         version: link:../utils
-      fast-glob:
-        specifier: ^3.3.3
-        version: 3.3.3
+      glob:
+        specifier: ^10.2.7
+        version: 10.4.2
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -410,6 +410,9 @@ importers:
         specifier: ^0.6.2
         version: 0.6.2
     devDependencies:
+      '@types/glob':
+        specifier: ^9.0.0
+        version: 9.0.0
       '@types/html-minifier-terser':
         specifier: ^7.0.2
         version: 7.0.2
@@ -2635,6 +2638,10 @@ packages:
 
   '@types/fs-extra@9.0.13':
     resolution: {integrity: sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==}
+
+  '@types/glob@9.0.0':
+    resolution: {integrity: sha512-00UxlRaIUvYm4R4W9WYkN8/J+kV8fmOQ7okeH6YFtGWFMt3odD45tpG5yA5wnL7HE6lLgjaTW5n14ju2hl2NNA==}
+    deprecated: This is a stub types definition. glob provides its own type definitions, so you do not need this installed.
 
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
@@ -10557,6 +10564,10 @@ snapshots:
   '@types/fs-extra@9.0.13':
     dependencies:
       '@types/node': 20.14.11
+
+  '@types/glob@9.0.0':
+    dependencies:
+      glob: 10.4.2
 
   '@types/hast@3.0.4':
     dependencies:
