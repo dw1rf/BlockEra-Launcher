@@ -51,6 +51,8 @@ fn main() {
                 "import",
                 InlinedPlugin::new()
                     .commands(&[
+                        "fetch_curseforge_profile_metadata",
+                        "import_curseforge_profile",
                         "get_importable_instances",
                         "import_instance",
                         "is_valid_importable_instance",
