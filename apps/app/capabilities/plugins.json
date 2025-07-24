@@ -19,17 +19,16 @@
     "window-state:default",
     "window-state:allow-restore-state",
     "window-state:allow-save-window-state",
-    
+
     {
       "identifier": "http:default",
-      "allow": [
-        { "url": "https://modrinth.com/*" },
-        { "url": "https://*.modrinth.com/*" }
-      ]
+      "allow": [{ "url": "https://modrinth.com/*" }, { "url": "https://*.modrinth.com/*" }]
     },
 
     "auth:default",
     "import:default",
+    "import:allow-fetch-curseforge-profile-metadata",
+    "import:allow-import-curseforge-profile",
     "jre:default",
     "logs:default",
     "metadata:default",
