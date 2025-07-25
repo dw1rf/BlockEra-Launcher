@@ -96,6 +96,11 @@ jobs:
             librsvg2-dev \
             xdg-utils \
             openjdk-11-jdk
+  
+      - name: ⚙️ Set application environment
+        shell: bash
+        run: |
+          cp packages/app-lib/.env.prod packages/app-lib/.env
 
       - name: 💨 Setup Turbo cache
         uses: rharkor/caching-for-turbo@v1.8
@@ -114,14 +119,6 @@ jobs:
         run: |
           rm -rf target/release/bundle
           rm -rf target/*/release/bundle || true
-      
-      - name: 🌍 Load environment variables for build.rs
-        shell: bash
-        run: |
-          echo "Loading .env.prod..."
-          set -a
-          source packages/app-lib/.env.prod
-          set +a
 
       # - name: 🔨 Build macOS app
       #   if: matrix.platform == 'macos-latest'
