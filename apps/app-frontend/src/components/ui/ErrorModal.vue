@@ -346,7 +346,8 @@ async function onApplyMigrationFix(eol) {
 						/>
 					</button>
 					<Collapsible :collapsed="errorCollapsed">
-						<pre class="m-0 px-4 py-3 bg-bg rounded-none">{{ debugInfo }}</pre>
+						<pre class="m-0 px-4 py-3 bg-bg rounded-none whitespace-pre-wrap break-words overflow-x-auto max-w-full"
+							>{{ debugInfo }}</pre>
 					</Collapsible>
 				</div>
 				<template v-if="errorType === 'state_init'">
