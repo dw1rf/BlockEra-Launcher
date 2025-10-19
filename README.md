@@ -82,7 +82,9 @@ Avoid using builds with these prefixes — they may be unstable or experimental:
   - Built-in update alerts for new versions posted on Git Astralium.
   - Automatic download and installation capabilities.
 - Database migration fixes, when error occurred (Interactive Mode) (Modrinth issue)
-- ElyBy skin system integration (AuthLib / Java)
+- Ely.by full integration
+  - The official account skin system is managed by ely.by
+  - Offline accounts must install AuthLib through the instance settings
 
 ---
 
@@ -119,4 +121,5 @@ To begin using AstralRinth:
 
 If you'd like to support development, you can donate via the following crypto wallets:
 
-- TON (Telegram): UQCG0a2fm5YzKzIm6E8M3_CqBQ5Q1RT95MU60c9UPjKn_NEN
+- Toncoin (TON): UQA5pGOJhIz9UAVEOh5t2ur1QVbNr_FC1eq9bOb3GwTgaiqk
+- USDT (TON): UQA5pGOJhIz9UAVEOh5t2ur1QVbNr_FC1eq9bOb3GwTgaiqk
