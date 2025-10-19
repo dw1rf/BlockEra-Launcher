@@ -4,9 +4,14 @@ on:
   push:
     branches:
       - main
+      - master
+      - prod
+      - release
+      - beta
       - feature*
     tags:
-      - 'v*'
+      - release-*
+      - beta-*
     paths:
       - .github/workflows/astralrinth-build.yml
       - 'apps/app/**'
@@ -96,7 +101,7 @@ jobs:
             librsvg2-dev \
             xdg-utils \
             openjdk-11-jdk
-  
+
       - name: ⚙️ Set application environment
         shell: bash
         run: |
