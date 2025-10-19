@@ -71,8 +71,12 @@
 					</span>
 					<span>
 						Whether or not the subscription should be cancelled. Submitting this as "true" will
-						cancel the subscription, while submitting it as "false" will force another charge
-						attempt to be made.
+						cancel the subscription, while submitting it as "false" will
+						{{
+							selectedCharge.status === 'open'
+								? 'keep it as-is'
+								: 'force another charge attempt to be made'
+						}}.
 					</span>
 				</label>
 				<Toggle id="cancel" v-model="cancel" />
@@ -116,11 +120,15 @@
 				<div class="mb-4 grid grid-cols-[1fr_auto]">
 					<div>
 						<span class="flex items-center gap-2 font-semibold text-contrast">
-							<template v-if="subscription.product.metadata.type === 'midas'">
+							<!-- TODO(backend): provide proper metadata for midas (MR+) subscriptions -->
+							<template v-if="subscription.price_id === 'a6eRm92L'">
 								<ModrinthPlusIcon class="h-7 w-min" />
 							</template>
-							<template v-else-if="subscription.product.metadata.type === 'pyro'">
+							<template v-else-if="subscription.metadata?.type === 'pyro'">
 								<ModrinthServersIcon class="h-7 w-min" />
+							</template>
+							<template v-else-if="subscription.metadata?.type === 'medal'">
+								<span>Medal Trial Server</span>
 							</template>
 							<template v-else> Unknown product </template>
 						</span>
@@ -132,7 +140,11 @@
 						</div>
 					</div>
 					<div v-if="subscription.metadata?.id" class="flex flex-col items-end gap-2">
-						<ButtonStyled v-if="subscription.product.metadata.type === 'pyro'">
+						<ButtonStyled
+							v-if="
+								subscription.metadata?.type === 'pyro' || subscription.metadata?.type === 'medal'
+							"
+						>
 							<nuxt-link
 								:to="`/servers/manage/${subscription.metadata.id}`"
 								target="_blank"
@@ -152,7 +164,11 @@
 					>
 						<div
 							class="absolute bottom-0 left-0 top-0 w-1"
-							:class="charge.type === 'refund' ? 'bg-purple' : chargeStatuses[charge.status].color"
+							:class="
+								charge.type === 'refund'
+									? 'bg-purple'
+									: (chargeStatuses[charge.status]?.color ?? 'bg-blue')
+							"
 						/>
 						<div class="grid w-full grid-cols-[1fr_auto] items-center gap-4">
 							<div class="flex flex-col gap-2">
@@ -163,6 +179,7 @@
 										<template v-else-if="charge.status === 'cancelled'"> Cancelled </template>
 										<template v-else-if="charge.status === 'processing'"> Processing </template>
 										<template v-else-if="charge.status === 'open'"> Upcoming </template>
+										<template v-else-if="charge.status === 'expiring'"> Expiring </template>
 										<template v-else> {{ charge.status }} </template>
 									</span>
 									⋅
@@ -236,8 +253,12 @@
 										Refund options
 									</button>
 								</ButtonStyled>
-								<ButtonStyled v-else-if="charge.status === 'failed'" color="red" color-fill="text">
-									<button @click="showModifyModal(subscription)">
+								<ButtonStyled
+									v-else-if="charge.status === 'failed' || charge.status === 'open'"
+									color="red"
+									color-fill="text"
+								>
+									<button @click="showModifyModal(charge, subscription)">
 										<CurrencyIcon />
 										Modify charge
 									</button>
@@ -274,7 +295,6 @@ import { formatCategory, formatPrice } from '@modrinth/utils'
 import dayjs from 'dayjs'
 
 import ModrinthServersIcon from '~/components/ui/servers/ModrinthServersIcon.vue'
-import { products } from '~/generated/state.json'
 
 const { addNotification } = injectNotificationManager()
 
@@ -333,9 +353,6 @@ const subscriptionCharges = computed(() => {
 				.filter((charge) => charge.subscription_id === subscription.id)
 				.slice()
 				.sort((a, b) => dayjs(b.due).diff(dayjs(a.due))),
-			product: products.find((product) =>
-				product.prices.some((price) => price.id === subscription.price_id),
-			),
 		}
 	})
 })
@@ -343,6 +360,7 @@ const subscriptionCharges = computed(() => {
 const refunding = ref(false)
 const refundModal = ref()
 const selectedCharge = ref(null)
+const selectedSubscription = ref(null)
 const refundType = ref('full')
 const refundTypes = ref(['full', 'partial', 'none'])
 const refundAmount = ref(0)
@@ -360,8 +378,9 @@ function showRefundModal(charge) {
 	refundModal.value.show()
 }
 
-function showModifyModal(charge) {
+function showModifyModal(charge, subscription) {
 	selectedCharge.value = charge
+	selectedSubscription.value = subscription
 	cancel.value = false
 	modifyModal.value.show()
 }
@@ -369,13 +388,17 @@ function showModifyModal(charge) {
 async function refundCharge() {
 	refunding.value = true
 	try {
+		const amountParsed = Math.max(0, Math.floor(Number(refundAmount.value) || 0))
+		const payload =
+			refundType.value === 'partial'
+				? { type: 'partial', amount: amountParsed, unprovision: unprovision.value }
+				: refundType.value === 'none'
+					? { type: 'none', unprovision: unprovision.value }
+					: { type: 'full', unprovision: unprovision.value }
+
 		await useBaseFetch(`billing/charge/${selectedCharge.value.id}/refund`, {
 			method: 'POST',
-			body: JSON.stringify({
-				type: refundType.value,
-				amount: refundAmount.value,
-				unprovision: unprovision.value,
-			}),
+			body: JSON.stringify(payload),
 			internal: true,
 		})
 		await refreshCharges()
@@ -393,7 +416,7 @@ async function refundCharge() {
 async function modifyCharge() {
 	modifying.value = true
 	try {
-		await useBaseFetch(`billing/subscription/${selectedCharge.value.id}`, {
+		await useBaseFetch(`billing/subscription/${selectedSubscription.value.id}`, {
 			method: 'PATCH',
 			body: JSON.stringify({
 				cancelled: cancel.value,
@@ -401,14 +424,14 @@ async function modifyCharge() {
 			internal: true,
 		})
 		addNotification({
-			title: 'Resubscription request submitted',
+			title: 'Modifications made',
 			text: 'If the server is currently suspended, it may take up to 10 minutes for another charge attempt to be made.',
 			type: 'success',
 		})
 		await refreshCharges()
 	} catch (err) {
 		addNotification({
-			title: 'Error reattempting charge',
+			title: 'Error while sending request',
 			text: err.data?.description ?? err,
 			type: 'error',
 		})
@@ -431,6 +454,9 @@ const chargeStatuses = {
 	},
 	cancelled: {
 		color: 'bg-red',
+	},
+	expiring: {
+		color: 'bg-orange',
 	},
 }
 </script>

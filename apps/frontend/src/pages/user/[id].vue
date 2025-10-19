@@ -366,6 +366,7 @@ import {
 	OverflowMenu,
 	useRelativeTime,
 } from '@modrinth/ui'
+import { IntlFormatted } from '@vintl/vintl/components'
 
 import TenMClubBadge from '~/assets/images/badges/10m-club.svg?component'
 import AlphaTesterBadge from '~/assets/images/badges/alpha-tester.svg?component'
@@ -375,9 +376,8 @@ import ModBadge from '~/assets/images/badges/mod.svg?component'
 import PlusBadge from '~/assets/images/badges/plus.svg?component'
 import StaffBadge from '~/assets/images/badges/staff.svg?component'
 import UpToDate from '~/assets/images/illustrations/up_to_date.svg?component'
-// import AdPlaceholder from '~/components/ui/AdPlaceholder.vue'
-import CollectionCreateModal from '~/components/ui/CollectionCreateModal.vue'
-import ModalCreation from '~/components/ui/ModalCreation.vue'
+import CollectionCreateModal from '~/components/ui/create/CollectionCreateModal.vue'
+import ModalCreation from '~/components/ui/create/ProjectCreateModal.vue'
 import NavTabs from '~/components/ui/NavTabs.vue'
 import ProjectCard from '~/components/ui/ProjectCard.vue'
 import { isStaff } from '~/helpers/users.js'
