@@ -7,7 +7,7 @@ export const allowState = ref(false)
 export const installState = ref(false)
 export const updateState = ref(false)
 
-const currentOS = await getOS()
+const currentOS = ref('')
 const api = `https://git.astralium.su/api/v1/repos/didirus/AstralRinth/releases/latest`
 
 const systems = ['macos', 'windows', 'linux']
@@ -28,6 +28,7 @@ export async function getRemote(isDownloadState) {
 	var releaseTag = null;
 	var releaseTitle = null;
 	var result = false;
+	currentOS.value = await getOS();
 	try {
 		const response = await fetch(api);
 		if (!response.ok) {
@@ -40,7 +41,7 @@ export async function getRemote(isDownloadState) {
 			releaseTag.textContent = remoteData.tag_name;
 			releaseTitle.textContent = remoteData.name;
 		}
-		if (systems.includes(currentOS.toLowerCase())) {
+		if (systems.includes(currentOS.value.toLowerCase())) {
 			const localVersion = await getVersion();
 			const isUpdateAvailable = !remoteData.tag_name.includes(localVersion);
 			updateState.value = isUpdateAvailable;
@@ -54,7 +55,7 @@ export async function getRemote(isDownloadState) {
 				installState.value = true;
 				const builds = remoteData.assets;
 				const fileName = getInstaller(getExtension(), builds);
-				result = fileName ? await initUpdateLauncher(fileName[1], fileName[0], currentOS, true) : false;
+				result = fileName ? await initUpdateLauncher(fileName[1], fileName[0], currentOS.value, true) : false;
 				installState.value = false;
 			} catch (err) {
 				installState.value = false;
@@ -64,7 +65,7 @@ export async function getRemote(isDownloadState) {
 		console.log('Remote version is', remoteData.tag_name);
 		console.log('Remote title is', remoteData.name);
 		console.log('Local version is', await getVersion());
-		console.log('Operating System is', currentOS);
+		console.log('Operating System is', currentOS.value);
 		return result;
 	} catch (error) {
 		console.error("Failed to fetch remote releases:", error);
@@ -91,7 +92,7 @@ function getInstaller(osExtension, builds) {
 }
 
 function getExtension() {
-	return systems.find(osName => osName === currentOS.toLowerCase())?.endsWith('macos')
+	return systems.find(osName => osName === currentOS.value.toLowerCase())?.endsWith('macos')
 		? macosExtensions
 		: windowsExtensions;
 }
