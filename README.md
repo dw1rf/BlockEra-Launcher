@@ -119,5 +119,4 @@ To begin using AstralRinth:
 
 If you'd like to support development, you can donate via the following crypto wallets:
 
-- BTC (Telegram): 14g6asNYzcUoaQtB8B2QGKabgEvn55wfLj
-- TONCOIN (Telegram): UQAqUJ2_hVBI6k_gPyfp_jd-1K0OS61nIFPZuJWN9BwGAvKe
+- TON (Telegram): UQCG0a2fm5YzKzIm6E8M3_CqBQ5Q1RT95MU60c9UPjKn_NEN
