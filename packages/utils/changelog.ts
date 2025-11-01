@@ -11,6 +11,39 @@ export type VersionEntry = {
 
 const VERSIONS: VersionEntry[] = [
 	{
+		date: `2025-10-26T18:30:00-07:00`,
+		product: 'app',
+		version: '0.10.15',
+		body: `## Improvements
+- Fixed skins page uploading modified 'normalized' versions of the skin texture instead of the original.
+- Improved skins page lighting to have the player model be lit more from the front.`,
+	},
+	{
+		date: `2025-10-26T18:05:00-07:00`,
+		product: 'web',
+		body: `## Improvements
+- Fixed the colors of OLED mode being brighter than intended.`,
+	},
+	{
+		date: `2025-10-24T21:05:00-07:00`,
+		product: 'app',
+		version: '0.10.14',
+		body: `## Improvements
+- Fixed window maximized state not being saved properly.
+- Fixed padding issue when Friends are loading.
+- Fixed the colors of OLED mode being brighter than intended.`,
+	},
+	{
+		date: `2025-10-19T17:45:00-07:00`,
+		product: 'app',
+		version: '0.10.13',
+		body: `## Improvements
+- Revamped the app sidebar and friends UI to be more straightforward and easier to use.
+- Improved the UI of the Modrinth account button in the bottom left corner. It's now more visually consistent with the other navigation buttons and it has a link to your profile.
+- Updated the ad fallback to be green again instead of blue.
+- Fixed 'Open folder' in the instance page context menu having the wrong icon.`,
+	},
+	{
 		date: `2025-10-15T12:15:00-07:00`,
 		product: 'app',
 		version: '0.10.12',

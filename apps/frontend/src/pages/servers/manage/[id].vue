@@ -151,6 +151,7 @@
 								:server-name="serverData.name"
 								:server-data="serverData"
 								:uptime-seconds="uptimeSeconds"
+								:backup-in-progress="backupInProgress"
 								@action="sendPowerAction"
 							/>
 						</div>
@@ -354,7 +355,7 @@
 	>
 		<h2 class="m-0 text-lg font-extrabold text-contrast">Server data</h2>
 		<pre class="markdown-body w-full overflow-auto rounded-2xl bg-bg-raised p-4 text-sm">{{
-			JSON.stringify(server, null, '  ')
+			JSON.stringify(server, null, ' ')
 		}}</pre>
 	</div>
 </template>
@@ -759,9 +760,14 @@ const handleWebSocketMessage = (data: WSEvent) => {
 					curBackup.task = {}
 				}
 
-				curBackup.task[data.task] = {
-					progress: data.progress,
-					state: data.state,
+				const currentState = curBackup.task[data.task]?.state
+				const shouldUpdate = !(currentState === 'ongoing' && data.state === 'unchanged')
+
+				if (shouldUpdate) {
+					curBackup.task[data.task] = {
+						progress: data.progress,
+						state: data.state,
+					}
 				}
 
 				curBackup.ongoing = data.task === 'create' && data.state === 'ongoing'
@@ -1037,7 +1043,10 @@ const nodeUnavailableDetails = computed(() => [
 	},
 	{
 		label: 'Node',
-		value: server.general?.datacenter ?? 'Unknown',
+		value:
+			server.moduleErrors?.general?.error.responseData?.hostname ??
+			server.general?.datacenter ??
+			'Unknown',
 		type: 'inline' as const,
 	},
 	{
@@ -1277,6 +1286,7 @@ useHead({
 		opacity: 0;
 		transform: translateX(1rem);
 	}
+
 	100% {
 		opacity: 1;
 		transform: none;

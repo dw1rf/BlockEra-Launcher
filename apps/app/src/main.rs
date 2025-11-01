@@ -148,9 +148,15 @@ fn main() {
                     } else {
                         "app-window-state.json".to_string()
                     },
+				)
+                // Use *only* POSITION and SIZE state flags, because saving VISIBLE causes the `visible: false` to not take effect
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::SIZE
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED,
                 )
                 .build(),
-        )
+		)
         .setup(|app| {
             #[cfg(target_os = "macos")]
             {
