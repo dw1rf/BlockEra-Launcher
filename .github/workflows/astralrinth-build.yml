@@ -100,7 +100,7 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             xdg-utils \
-            openjdk-11-jdk
+            openjdk-17-jdk
 
       - name: ⚙️ Set application environment
         shell: bash
