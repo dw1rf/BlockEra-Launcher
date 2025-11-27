@@ -11,6 +11,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             offline_login,
             elyby_login,
             elyby_auth_authenticate,
+            check_reachable,
             login,
             remove_user,
             get_default_user,
@@ -77,6 +78,13 @@ pub async fn elyby_auth_authenticate(
         }
     };
     Ok(text)
+}
+
+/// Checks if the authentication servers are reachable.
+#[tauri::command]
+pub async fn check_reachable() -> Result<()> {
+    minecraft_auth::check_reachable().await?;
+    Ok(())
 }
 
 /// Authenticate a user with Hydra - part 1

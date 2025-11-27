@@ -1,12 +1,12 @@
 import { pathToFileURL } from 'node:url'
 
 import { match as matchLocale } from '@formatjs/intl-localematcher'
+import { GenericModrinthClient, type Labrinth } from '@modrinth/api-client'
 import serverSidedVue from '@vitejs/plugin-vue'
 import { consola } from 'consola'
 import { promises as fs } from 'fs'
 import { globIterate } from 'glob'
 import { defineNuxtConfig } from 'nuxt/config'
-import { $fetch } from 'ofetch'
 import { basename, relative, resolve } from 'pathe'
 import svgLoader from 'vite-svg-loader'
 
@@ -133,20 +133,7 @@ export default defineNuxtConfig({
 			// 30 minutes
 			const TTL = 30 * 60 * 1000
 
-			let state: {
-				lastGenerated?: string
-				apiUrl?: string
-				categories?: any[]
-				loaders?: any[]
-				gameVersions?: any[]
-				donationPlatforms?: any[]
-				reportTypes?: any[]
-				homePageProjects?: any[]
-				homePageSearch?: any[]
-				homePageNotifs?: any[]
-				products?: any[]
-				errors?: number[]
-			} = {}
+			let state: Partial<Labrinth.State.GeneratedState & Record<string, any>> = {}
 
 			try {
 				state = JSON.parse(await fs.readFile('./src/generated/state.json', 'utf8'))
@@ -172,66 +159,18 @@ export default defineNuxtConfig({
 				return
 			}
 
+			const client = new GenericModrinthClient({
+				labrinthBaseUrl: API_URL.replace('/v2/', ''),
+				userAgent: 'Knossos generator (support@modrinth.com)',
+			})
+
+			const generatedState = await client.labrinth.state.build()
 			state.lastGenerated = new Date().toISOString()
-
 			state.apiUrl = API_URL
-
-			const headers = {
-				headers: {
-					'user-agent': 'Knossos generator (support@modrinth.com)',
-				},
+			state = {
+				...state,
+				...generatedState,
 			}
-
-			const caughtErrorCodes = new Set<number>()
-
-			function handleFetchError(err: any, defaultValue: any) {
-				console.error('Error generating state: ', err)
-				caughtErrorCodes.add(err.status)
-				return defaultValue
-			}
-
-			const [
-				categories,
-				loaders,
-				gameVersions,
-				donationPlatforms,
-				reportTypes,
-				homePageProjects,
-				homePageSearch,
-				homePageNotifs,
-				products,
-			] = await Promise.all([
-				$fetch(`${API_URL}tag/category`, headers).catch((err) => handleFetchError(err, [])),
-				$fetch(`${API_URL}tag/loader`, headers).catch((err) => handleFetchError(err, [])),
-				$fetch(`${API_URL}tag/game_version`, headers).catch((err) => handleFetchError(err, [])),
-				$fetch(`${API_URL}tag/donation_platform`, headers).catch((err) =>
-					handleFetchError(err, []),
-				),
-				$fetch(`${API_URL}tag/report_type`, headers).catch((err) => handleFetchError(err, [])),
-				$fetch(`${API_URL}projects_random?count=60`, headers).catch((err) =>
-					handleFetchError(err, []),
-				),
-				$fetch(`${API_URL}search?limit=3&query=leave&index=relevance`, headers).catch((err) =>
-					handleFetchError(err, {}),
-				),
-				$fetch(`${API_URL}search?limit=3&query=&index=updated`, headers).catch((err) =>
-					handleFetchError(err, {}),
-				),
-				$fetch(`${API_URL.replace('/v2/', '/_internal/')}billing/products`, headers).catch((err) =>
-					handleFetchError(err, []),
-				),
-			])
-
-			state.categories = categories
-			state.loaders = loaders
-			state.gameVersions = gameVersions
-			state.donationPlatforms = donationPlatforms
-			state.reportTypes = reportTypes
-			state.homePageProjects = homePageProjects
-			state.homePageSearch = homePageSearch
-			state.homePageNotifs = homePageNotifs
-			state.products = products
-			state.errors = [...caughtErrorCodes]
 
 			await fs.writeFile('./src/generated/state.json', JSON.stringify(state))
 
@@ -473,6 +412,12 @@ export default defineNuxtConfig({
 			headers: {
 				'Accept-CH': 'Sec-CH-Prefers-Color-Scheme',
 				'Critical-CH': 'Sec-CH-Prefers-Color-Scheme',
+			},
+		},
+		'/dashboard/revenue/withdraw': {
+			redirect: {
+				to: '/dashboard/revenue',
+				statusCode: 410,
 			},
 		},
 		'/email/**': {

@@ -15,6 +15,7 @@ fn main() {
                         "offline_login",
                         "elyby_login",
                         "elyby_auth_authenticate",
+                        "check_reachable",
                         "login",
                         "remove_user",
                         "get_default_user",

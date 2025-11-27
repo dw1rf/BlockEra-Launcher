@@ -11,6 +11,101 @@ export type VersionEntry = {
 
 const VERSIONS: VersionEntry[] = [
 	{
+		date: `2025-11-14T12:15:00-08:00`,
+		product: 'servers',
+		body: `## Improvements
+- Improved the performance of the servers list.
+- Fixed startup commands not being updated properly.
+- Fixed autocomplete on pardon-ip and ban-ip commands.`,
+	},
+	{
+		date: `2025-11-14T12:15:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Improved contrast, visibility, and consistency of UI elements, especially in light mode.
+- Fixed the chargest page not working properly.
+- Fixed certain icons showing above the mobile navbar.`,
+	},
+	{
+		date: `2025-11-11T12:50:00-08:00`,
+		product: 'app',
+		version: '0.10.19',
+		body: `## Improvements
+- Fixed automatic dependency resolution ignoring the selected mod loader.`,
+	},
+	{
+		date: `2025-11-10T11:20:00-08:00`,
+		product: 'app',
+		version: '0.10.18',
+		body: `No changes.`,
+	},
+	{
+		date: `2025-11-07T21:10:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Enhanced syntax highlighting support for skript, mcfunction, and kubejs code blocks in Markdown descriptions.`,
+	},
+	{
+		date: `2025-11-07T15:45:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Fixed download button pop-up on Resource Pack projects.`,
+	},
+	{
+		date: `2025-11-07T09:30:00-08:00`,
+		product: 'app',
+		version: '0.10.17',
+		body: `## Improvements
+- Sorting and grouping options in the Library page are now persistent.
+- Instance content filters are now remembered until you close the app.
+- Improved performance when 'Advanced rendering' is disabled, especially on Linux.
+- Fixed account list not being scrollable.
+- Fixed glitchy text selection in Logs page.`,
+	},
+	{
+		date: `2025-11-07T09:30:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Fixed 'Advanced rendering' toggle not working properly on many popups.`,
+	},
+	{
+		date: `2025-11-07T08:05:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Fixed some further issues with the new withdrawal experience.`,
+	},
+	{
+		date: `2025-11-04T18:20:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Fixed an issue with PayPal International fees.`,
+	},
+	{
+		date: `2025-11-04T16:20:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Some bugfixes to the new withdrawal experience.`,
+	},
+	{
+		date: `2025-11-03T15:30:00-08:00`,
+		product: 'web',
+		body: `## Improvements
+- Revamped creator revenue page and withdrawal experience.`,
+	},
+	{
+		date: `2025-10-30T16:30:00-07:00`,
+		product: 'app',
+		version: '0.10.16',
+		body: `## Security fixes
+- Fixed a security vulnerability with .mrpack import zip parsing.
+
+## Improvements
+- Fixed stacking multiple instance wrapper commands.
+- Fixed instance-provided filters still showing as locked in the filters bar even when the filter is unlocked.
+- Fixed "Friends" title showing up in the sidebar twice when you have no friends.
+- Fixed the "Add friends" button not working properly.`,
+	},
+	{
 		date: `2025-10-26T18:30:00-07:00`,
 		product: 'app',
 		version: '0.10.15',

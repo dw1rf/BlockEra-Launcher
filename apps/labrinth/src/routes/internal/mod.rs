@@ -7,6 +7,7 @@ pub mod gdpr;
 pub mod gotenberg;
 pub mod medal;
 pub mod moderation;
+pub mod mural;
 pub mod pats;
 pub mod session;
 pub mod statuses;
@@ -24,13 +25,23 @@ pub fn config(cfg: &mut actix_web::web::ServiceConfig) {
             .configure(session::config)
             .configure(flows::config)
             .configure(pats::config)
-            .configure(moderation::config)
             .configure(billing::config)
             .configure(gdpr::config)
             .configure(gotenberg::config)
             .configure(statuses::config)
             .configure(medal::config)
             .configure(external_notifications::config)
-            .configure(affiliate::config),
+            .configure(affiliate::config)
+            .configure(mural::config),
+    );
+}
+
+pub fn utoipa_config(
+    cfg: &mut utoipa_actix_web::service_config::ServiceConfig,
+) {
+    cfg.service(
+        utoipa_actix_web::scope("/_internal/moderation")
+            .wrap(default_cors())
+            .configure(moderation::config),
     );
 }

@@ -47,6 +47,9 @@ importers:
 
   apps/app-frontend:
     dependencies:
+      '@modrinth/api-client':
+        specifier: workspace:^
+        version: link:../../packages/api-client
       '@modrinth/assets':
         specifier: workspace:*
         version: link:../../packages/assets
@@ -62,6 +65,9 @@ importers:
       '@sfirew/minecraft-motd-parser':
         specifier: ^1.1.6
         version: 1.1.6
+      '@tanstack/vue-query':
+        specifier: ^5.90.7
+        version: 5.92.0(vue@3.5.18(typescript@5.9.2))
       '@tauri-apps/api':
         specifier: ^2.5.0
         version: 2.7.0
@@ -218,6 +224,9 @@ importers:
       '@ltd/j-toml':
         specifier: ^1.38.0
         version: 1.38.0
+      '@modrinth/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@modrinth/assets':
         specifier: workspace:*
         version: link:../../packages/assets
@@ -236,6 +245,9 @@ importers:
       '@pinia/nuxt':
         specifier: ^0.5.1
         version: 0.5.5(magicast@0.3.5)(typescript@5.9.2)(vue@3.5.18(typescript@5.9.2))
+      '@tanstack/vue-query':
+        specifier: ^5.90.7
+        version: 5.92.0(vue@3.5.18(typescript@5.9.2))
       '@types/three':
         specifier: ^0.172.0
         version: 0.172.0
@@ -275,9 +287,6 @@ importers:
       highlight.js:
         specifier: ^11.7.0
         version: 11.11.1
-      iso-3166-1:
-        specifier: ^2.1.1
-        version: 2.1.1
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.0
@@ -383,6 +392,19 @@ importers:
         version: 2.2.12(typescript@5.9.2)
 
   apps/labrinth: {}
+
+  packages/api-client:
+    dependencies:
+      '@tauri-apps/plugin-http':
+        specifier: ^2.0.0
+        version: 2.5.1
+      ofetch:
+        specifier: ^1.4.1
+        version: 1.4.1
+    devDependencies:
+      '@modrinth/tooling-config':
+        specifier: workspace:*
+        version: link:../tooling-config
 
   packages/app-lib: {}
 
@@ -525,12 +547,18 @@ importers:
       '@codemirror/view':
         specifier: ^6.22.1
         version: 6.38.1
+      '@modrinth/api-client':
+        specifier: workspace:*
+        version: link:../api-client
       '@modrinth/assets':
         specifier: workspace:*
         version: link:../assets
       '@modrinth/utils':
         specifier: workspace:*
         version: link:../utils
+      '@tanstack/vue-query':
+        specifier: ^5.90.7
+        version: 5.92.0(vue@3.5.18(typescript@5.9.2))
       '@tresjs/cientos':
         specifier: ^4.3.0
         version: 4.3.1(@tresjs/core@4.3.6(three@0.172.0)(typescript@5.9.2)(vue@3.5.18(typescript@5.9.2)))(@types/three@0.172.0)(three@0.172.0)(typescript@5.9.2)(vue@3.5.18(typescript@5.9.2))
@@ -561,6 +589,9 @@ importers:
       floating-vue:
         specifier: ^5.2.2
         version: 5.2.2(@nuxt/kit@3.18.1(magicast@0.3.5))(vue@3.5.18(typescript@5.9.2))
+      fuse.js:
+        specifier: ^6.6.2
+        version: 6.6.2
       highlight.js:
         specifier: ^11.9.0
         version: 11.11.1
@@ -649,6 +680,9 @@ importers:
       highlight.js:
         specifier: ^11.9.0
         version: 11.11.1
+      highlightjs-mcfunction:
+        specifier: github:modrinth/better-highlightjs-mcfunction
+        version: https://codeload.github.com/modrinth/better-highlightjs-mcfunction/tar.gz/aa999b763fd792ffb950d28347eeb6811c83ea8e
       markdown-it:
         specifier: ^14.1.0
         version: 14.1.0
@@ -2690,6 +2724,22 @@ packages:
     resolution: {integrity: sha512-nW3eYHdqRiA1AhhOm2rHxHAQCTww9W3CDHd4DYFniqwy29X1W5HXeNjr/yt+8kysTqJsb5PUv0tN6nghKmPq5w==}
     peerDependencies:
       vue: ^3.0.0
+
+  '@tanstack/match-sorter-utils@8.19.4':
+    resolution: {integrity: sha512-Wo1iKt2b9OT7d+YGhvEPD3DXvPv2etTusIMhMUoG7fbhmxcXCtIjJDEygy91Y2JFlwGyjqiBPRozme7UD8hoqg==}
+    engines: {node: '>=12'}
+
+  '@tanstack/query-core@5.90.11':
+    resolution: {integrity: sha512-f9z/nXhCgWDF4lHqgIE30jxLe4sYv15QodfdPDKYAk7nAEjNcndy4dHz3ezhdUaR23BpWa4I2EH4/DZ0//Uf8A==}
+
+  '@tanstack/vue-query@5.92.0':
+    resolution: {integrity: sha512-4DcB+vkYjYtrysrZLnoPTz2/N/1pPtJm9j1dat+/bp7lvMGAiedJIsIlnrusIlRVV2OeU5SKZy7PhwcX1U4stw==}
+    peerDependencies:
+      '@vue/composition-api': ^1.1.2
+      vue: ^2.6.0 || ^3.3.0
+    peerDependenciesMeta:
+      '@vue/composition-api':
+        optional: true
 
   '@taplo/core@0.2.0':
     resolution: {integrity: sha512-r8bl54Zj1In3QLkiW/ex694bVzpPJ9EhwqT9xkcUVODnVUGirdB1JTsmiIv0o1uwqZiwhi8xNnTOQBRQCpizrQ==}
@@ -5164,6 +5214,10 @@ packages:
     resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
     engines: {node: '>=12.0.0'}
 
+  highlightjs-mcfunction@https://codeload.github.com/modrinth/better-highlightjs-mcfunction/tar.gz/aa999b763fd792ffb950d28347eeb6811c83ea8e:
+    resolution: {tarball: https://codeload.github.com/modrinth/better-highlightjs-mcfunction/tar.gz/aa999b763fd792ffb950d28347eeb6811c83ea8e}
+    version: 1.0.0
+
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
 
@@ -5453,9 +5507,6 @@ packages:
   isexe@3.1.1:
     resolution: {integrity: sha512-LpB/54B+/2J5hqQ7imZHfdU31OlgQqx7ZicVlkm9kzg9/w8GKLEcFfJl/t7DCEDueOyBAD6zCCwTO6Fzs0NoEQ==}
     engines: {node: '>=16'}
-
-  iso-3166-1@2.1.1:
-    resolution: {integrity: sha512-RZxXf8cw5Y8LyHZIwIRvKw8sWTIHh2/txBT+ehO0QroesVfnz3JNFFX4i/OC/Yuv2bDIVYrHna5PMvjtpefq5w==}
 
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
@@ -7044,6 +7095,9 @@ packages:
 
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
+
+  remove-accents@0.5.0:
+    resolution: {integrity: sha512-8g3/Otx1eJaVD12e31UbJj1YzdtVvzH85HV7t+9MJYk/u3XmkOUJ5Ys9wQrf9PCPK8+xn4ymzqYCiZl6QWKn+A==}
 
   remove-trailing-separator@1.1.0:
     resolution: {integrity: sha512-/hS+Y0u3aOfIETiaiirUFwDBDzmXPvO+jAfKTitUngIPzdKc6Z0LoFjM/CK5PL4C+eKwHohlHAb6H0VFfmmUsw==}
@@ -10773,6 +10827,20 @@ snapshots:
     dependencies:
       vue: 3.5.18(typescript@5.9.2)
 
+  '@tanstack/match-sorter-utils@8.19.4':
+    dependencies:
+      remove-accents: 0.5.0
+
+  '@tanstack/query-core@5.90.11': {}
+
+  '@tanstack/vue-query@5.92.0(vue@3.5.18(typescript@5.9.2))':
+    dependencies:
+      '@tanstack/match-sorter-utils': 8.19.4
+      '@tanstack/query-core': 5.90.11
+      '@vue/devtools-api': 6.6.4
+      vue: 3.5.18(typescript@5.9.2)
+      vue-demi: 0.14.10(vue@3.5.18(typescript@5.9.2))
+
   '@taplo/core@0.2.0': {}
 
   '@taplo/lib@0.5.0':
@@ -13862,6 +13930,8 @@ snapshots:
 
   highlight.js@11.11.1: {}
 
+  highlightjs-mcfunction@https://codeload.github.com/modrinth/better-highlightjs-mcfunction/tar.gz/aa999b763fd792ffb950d28347eeb6811c83ea8e: {}
+
   hookable@5.5.3: {}
 
   hosted-git-info@2.8.9: {}
@@ -14120,8 +14190,6 @@ snapshots:
   isexe@2.0.0: {}
 
   isexe@3.1.1: {}
-
-  iso-3166-1@2.1.1: {}
 
   jackspeak@3.4.3:
     dependencies:
@@ -16224,6 +16292,8 @@ snapshots:
       '@types/mdast': 4.0.4
       mdast-util-to-markdown: 2.1.2
       unified: 11.0.5
+
+  remove-accents@0.5.0: {}
 
   remove-trailing-separator@1.1.0: {}
 

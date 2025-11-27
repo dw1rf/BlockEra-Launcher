@@ -1,21 +1,42 @@
 #![doc = include_str!("../README.md")]
 
+macro_rules! mock {
+    ($self:expr, $fn:ident ( $($args:expr),* $(,)? )) => {
+        #[cfg(feature = "mock")]
+        if let Some(mock) = &*($self).mock.load() {
+            return (mock.$fn)($($args),*);
+        }
+    };
+}
+
 mod account;
+mod counterparty;
 mod error;
 mod organization;
 mod payout;
+mod payout_method;
+mod serde_iso3166;
 mod util;
 
-pub use {account::*, error::*, organization::*, payout::*};
+#[cfg(feature = "mock")]
+pub mod mock;
+
+pub use {
+    account::*, counterparty::*, error::*, organization::*, payout::*,
+    payout_method::*,
+};
 
 use rust_decimal::Decimal;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
-use std::ops::Deref;
+use std::{ops::Deref, str::FromStr};
 use uuid::Uuid;
 
 pub const API_URL: &str = "https://api.muralpay.com";
 pub const SANDBOX_API_URL: &str = "https://api-staging.muralpay.com";
+
+/// Default token symbol for [`TokenAmount::token_symbol`] values.
+pub const USDC: &str = "USDC";
 
 #[derive(Debug)]
 pub struct MuralPay {
@@ -23,6 +44,8 @@ pub struct MuralPay {
     pub api_url: String,
     pub api_key: SecretString,
     pub transfer_api_key: Option<SecretString>,
+    #[cfg(feature = "mock")]
+    mock: arc_swap::ArcSwapOption<mock::MuralPayMock>,
 }
 
 impl MuralPay {
@@ -36,11 +59,27 @@ impl MuralPay {
             api_url: api_url.into(),
             api_key: api_key.into(),
             transfer_api_key: transfer_api_key.map(Into::into),
+            #[cfg(feature = "mock")]
+            mock: arc_swap::ArcSwapOption::empty(),
+        }
+    }
+
+    /// Creates a client which mocks responses.
+    #[cfg(feature = "mock")]
+    #[must_use]
+    pub fn from_mock(mock: mock::MuralPayMock) -> Self {
+        Self {
+            http: reqwest::Client::new(),
+            api_url: "".into(),
+            api_key: SecretString::from(String::new()),
+            transfer_api_key: None,
+            mock: arc_swap::ArcSwapOption::from_pointee(mock),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Blockchain {
     Ethereum,
@@ -49,7 +88,10 @@ pub enum Blockchain {
     Celo,
 }
 
+crate::util::display_as_serialize!(Blockchain);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
 pub enum CurrencyCode {
     Usd,
@@ -65,7 +107,20 @@ pub enum CurrencyCode {
     Zar,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+crate::util::display_as_serialize!(CurrencyCode);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[serde(rename_all = "SCREAMING-KEBAB-CASE")]
+pub enum FiatAccountType {
+    Checking,
+    Savings,
+}
+
+crate::util::display_as_serialize!(FiatAccountType);
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, strum::EnumIter)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum FiatAndRailCode {
     Usd,
@@ -84,7 +139,18 @@ pub enum FiatAndRailCode {
     UsdPanama,
 }
 
+crate::util::display_as_serialize!(FiatAndRailCode);
+
+impl FromStr for FiatAndRailCode {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_value(serde_json::Value::String(s.to_owned()))
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct WalletDetails {
     pub blockchain: Blockchain,
@@ -92,15 +158,19 @@ pub struct WalletDetails {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct TokenAmount {
+    #[serde(with = "rust_decimal::serde::float")]
     pub token_amount: Decimal,
     pub token_symbol: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct FiatAmount {
+    #[serde(with = "rust_decimal::serde::float")]
     pub fiat_amount: Decimal,
     pub fiat_currency_code: CurrencyCode,
 }
@@ -126,6 +196,7 @@ impl<Id: Deref<Target = Uuid> + Clone> SearchParams<Id> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResponse<Id, T> {
     pub total: u64,
