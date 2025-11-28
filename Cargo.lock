@@ -5099,10 +5099,13 @@ dependencies = [
  "derive_more 2.0.1",
  "dotenvy",
  "eyre",
+ "rust_decimal",
  "serde",
+ "serde_json",
  "tracing",
  "tracing-ecs",
  "tracing-subscriber",
+ "utoipa",
 ]
 
 [[package]]
