@@ -177,6 +177,9 @@ importers:
       vite:
         specifier: ^5.4.6
         version: 5.4.19(@types/node@20.19.9)(sass@1.90.0)(terser@5.43.1)
+      vue-component-type-helpers:
+        specifier: ^3.1.8
+        version: 3.2.1
       vue-tsc:
         specifier: ^2.1.6
         version: 2.2.12(typescript@5.9.2)
@@ -287,6 +290,9 @@ importers:
       highlight.js:
         specifier: ^11.7.0
         version: 11.11.1
+      iso-3166-2:
+        specifier: 1.0.0
+        version: 1.0.0
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.0
@@ -345,6 +351,9 @@ importers:
       '@types/dompurify':
         specifier: ^3.0.5
         version: 3.2.0
+      '@types/iso-3166-2':
+        specifier: ^1.0.4
+        version: 1.0.4
       '@types/node':
         specifier: ^20.1.0
         version: 20.19.9
@@ -387,6 +396,9 @@ importers:
       vite-svg-loader:
         specifier: ^5.1.0
         version: 5.1.0(vue@3.5.18(typescript@5.9.2))
+      vue-component-type-helpers:
+        specifier: ^3.1.8
+        version: 3.2.1
       vue-tsc:
         specifier: ^2.0.24
         version: 2.2.12(typescript@5.9.2)
@@ -398,6 +410,9 @@ importers:
       '@tauri-apps/plugin-http':
         specifier: ^2.0.0
         version: 2.5.1
+      mitt:
+        specifier: ^3.0.1
+        version: 3.0.1
       ofetch:
         specifier: ^1.4.1
         version: 1.4.1
@@ -464,6 +479,9 @@ importers:
 
   packages/moderation:
     dependencies:
+      '@modrinth/api-client':
+        specifier: workspace:*
+        version: link:../api-client
       '@modrinth/assets':
         specifier: workspace:*
         version: link:../assets
@@ -647,6 +665,9 @@ importers:
       vue:
         specifier: ^3.5.13
         version: 3.5.18(typescript@5.9.2)
+      vue-component-type-helpers:
+        specifier: ^3.1.8
+        version: 3.2.1
       vue-router:
         specifier: 4.3.0
         version: 4.3.0(vue@3.5.18(typescript@5.9.2))
@@ -2900,6 +2921,9 @@ packages:
 
   '@types/html-minifier-terser@7.0.2':
     resolution: {integrity: sha512-mm2HqV22l8lFQh4r2oSsOEVea+m0qqxEmwpc9kC1p/XzmjLWrReR9D/GRs8Pex2NX/imyEH9c5IU/7tMBQCHOA==}
+
+  '@types/iso-3166-2@1.0.4':
+    resolution: {integrity: sha512-tXaeT4FDobC8rAy6LoFvbGA4vhOQQNIdSRC5DAoYfT3D9ohnKHkDFxHzSln6WqTKVeKLrnMiMQubM8m3fqNp/w==}
 
   '@types/js-yaml@4.0.9':
     resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
@@ -5507,6 +5531,9 @@ packages:
   isexe@3.1.1:
     resolution: {integrity: sha512-LpB/54B+/2J5hqQ7imZHfdU31OlgQqx7ZicVlkm9kzg9/w8GKLEcFfJl/t7DCEDueOyBAD6zCCwTO6Fzs0NoEQ==}
     engines: {node: '>=16'}
+
+  iso-3166-2@1.0.0:
+    resolution: {integrity: sha512-xLAazfKZzwlsg/Zz/GQGQk3jJez5/2ORrjD3TjSuqz/arMht/xTK49c0GOE3afO/gEd9tHtBVVlfBla01unUng==}
 
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
@@ -8343,6 +8370,9 @@ packages:
   vue-bundle-renderer@2.1.2:
     resolution: {integrity: sha512-M4WRBO/O/7G9phGaGH9AOwOnYtY9ZpPoDVpBpRzR2jO5rFL9mgIlQIgums2ljCTC2HL1jDXFQc//CzWcAQHgAw==}
 
+  vue-component-type-helpers@3.2.1:
+    resolution: {integrity: sha512-gKV7XOkQl4urSuLHNY1tnVQf7wVgtb/mKbRyxSLWGZUY9RK7aDPhBenTjm+i8ZFe0zC2PZeHMPtOZXZfyaFOzQ==}
+
   vue-confetti-explosion@1.0.2:
     resolution: {integrity: sha512-80OboM3/6BItIoZ6DpNcZFqGpF607kjIVc5af56oKgtFmt5yWehvJeoYhkzYlqxrqdBe0Ko4Ie3bWrmLau+dJw==}
     engines: {node: '>=12'}
@@ -11000,6 +11030,8 @@ snapshots:
       '@types/unist': 3.0.3
 
   '@types/html-minifier-terser@7.0.2': {}
+
+  '@types/iso-3166-2@1.0.4': {}
 
   '@types/js-yaml@4.0.9': {}
 
@@ -14190,6 +14222,8 @@ snapshots:
   isexe@2.0.0: {}
 
   isexe@3.1.1: {}
+
+  iso-3166-2@1.0.0: {}
 
   jackspeak@3.4.3:
     dependencies:
@@ -17631,6 +17665,8 @@ snapshots:
   vue-bundle-renderer@2.1.2:
     dependencies:
       ufo: 1.6.1
+
+  vue-component-type-helpers@3.2.1: {}
 
   vue-confetti-explosion@1.0.2(vue@3.5.18(typescript@5.9.2)):
     dependencies:

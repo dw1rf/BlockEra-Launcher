@@ -4,6 +4,7 @@ import type { ClientConfig } from '../types/client'
 import type { RequestContext, RequestOptions } from '../types/request'
 import type { AbstractFeature } from './abstract-feature'
 import type { AbstractModule } from './abstract-module'
+import type { AbstractWebSocketClient } from './abstract-websocket'
 import { ModrinthApiError, ModrinthServerError } from './errors'
 
 /**
@@ -24,7 +25,7 @@ export abstract class AbstractModrinthClient {
 	private _moduleNamespaces: Map<string, Record<string, AbstractModule>> = new Map()
 
 	public readonly labrinth!: InferredClientModules['labrinth']
-	public readonly archon!: InferredClientModules['archon']
+	public readonly archon!: InferredClientModules['archon'] & { sockets: AbstractWebSocketClient }
 	public readonly kyros!: InferredClientModules['kyros']
 	public readonly iso3166!: InferredClientModules['iso3166']
 
@@ -121,6 +122,11 @@ export abstract class AbstractModrinthClient {
 				...this.buildDefaultHeaders(),
 				...options.headers,
 			},
+		}
+
+		const headers = mergedOptions.headers
+		if (headers && 'Content-Type' in headers && headers['Content-Type'] === '') {
+			delete headers['Content-Type']
 		}
 
 		const context = this.buildContext(url, path, mergedOptions)

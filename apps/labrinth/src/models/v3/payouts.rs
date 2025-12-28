@@ -150,7 +150,7 @@ pub struct TremendousForexResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct MuralPayDetails {
     pub payout_details: MuralPayoutRequest,
-    pub recipient_info: muralpay::PayoutRecipientInfo,
+    pub recipient_info: muralpay::CreatePayoutRecipientInfo,
 }
 
 impl PayoutMethodType {
@@ -239,6 +239,10 @@ pub struct PayoutMethod {
     pub image_logo_url: Option<String>,
     pub interval: PayoutInterval,
     pub fee: PayoutMethodFee,
+    pub currency_code: Option<String>,
+    /// USD to the given `currency_code`.
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub exchange_rate: Option<Decimal>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
