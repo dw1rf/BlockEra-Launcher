@@ -73,7 +73,7 @@ import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { debugAnalytics, initAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user } from '@/helpers/cache.js'
-import { command_listener, warning_listener } from '@/helpers/events.js'
+import { command_listener, warning_listener, info_listener } from '@/helpers/events.js'
 import { useFetch } from '@/helpers/fetch.js'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { list } from '@/helpers/profile.js'
@@ -283,6 +283,15 @@ async function setupApp() {
 			title: 'Warning',
 			text: e.message,
 			type: 'warn',
+		}),
+	)
+
+	// [AR] Info listener
+	await info_listener((e) =>
+		addNotification({
+			title: 'Info',
+			text: e.message,
+			type: 'info',
 		}),
 	)
 

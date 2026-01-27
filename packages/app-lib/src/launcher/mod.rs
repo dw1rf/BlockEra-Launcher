@@ -1,6 +1,6 @@
 //! Logic for launching Minecraft
 use crate::data::ModLoader;
-use crate::event::emit::{emit_loading, init_or_edit_loading};
+use crate::event::emit::{emit_loading, emit_info, init_or_edit_loading};
 use crate::event::{LoadingBarId, LoadingBarType};
 use crate::launcher::download::download_log_config;
 use crate::launcher::io::IOError;
@@ -666,31 +666,35 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
-    // [AR] Patch
+    // This code is modified by AstralRinth
     if credentials.account_type == AccountType::Pirate.as_lowercase_str() {
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
             let invalid_url = "https://invalid.invalid";
-            tracing::info!(
-                "[AR] • The launcher detected the launch of {} on the offline account. Applying offline multiplayer fixes.",
+            let _ = emit_info(&format!(
+                "[AR] • Detected launch of {} on the offline account. Applying 1.16.4/5 multiplayer fixes.",
                 version_jar
-            );
+            	)
+        	).await;
             command.arg("-Dminecraft.api.env=custom");
             command.arg(format!("-Dminecraft.api.auth.host={}", invalid_url));
-            command
-                .arg(format!("-Dminecraft.api.account.host={}", invalid_url));
-            command
-                .arg(format!("-Dminecraft.api.session.host={}", invalid_url));
-            command
-                .arg(format!("-Dminecraft.api.services.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.account.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.session.host={}", invalid_url));
+            command.arg(format!("-Dminecraft.api.services.host={}", invalid_url));
         }
     } else if credentials.account_type == AccountType::ElyBy.as_lowercase_str()
     {
-        tracing::info!(
-            "[AR] • The launcher detected the launch of {} on the Ely.by account. Applying Ely.by Java Injector.",
+        let _ = emit_info(&format!(
+            "[AR] • Detected launch of {} on the Ely.by account. Loading Ely.by AuthLib Injector...",
             version_jar
-        );
+			)
+        ).await;
         let path_buf = utils::get_or_download_elyby_injector().await?;
         let path = path_buf.to_str().unwrap();
+		let _ = emit_info(&format!(
+            "[AR] • Launching minecraft instance with {}",
+            path
+			)
+        ).await;
         command.arg(format!("-javaagent:{}=ely.by", path));
     }
 

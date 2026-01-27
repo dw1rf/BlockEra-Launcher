@@ -200,6 +200,13 @@ pub struct WarningPayload {
     pub message: String,
 }
 
+// This code is modified by AstralRinth
+#[derive(Serialize, Clone)]
+#[cfg(feature = "tauri")]
+pub struct InfoPayload {
+    pub message: String,
+}
+
 #[derive(Serialize, Clone)]
 #[serde(tag = "event")]
 pub enum CommandPayload {

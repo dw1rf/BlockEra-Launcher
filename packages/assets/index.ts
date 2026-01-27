@@ -118,14 +118,12 @@ export const VisaIcon = _VisaIcon
 export const MinecraftServerIcon = _MinecraftServerIcon
 
 // [AR] Styles
-import _PirateIcon from './icons/pirate.svg?component'
-import _MicrosoftIcon from './icons/microsoft.svg?component'
-import _PirateShipIcon from './icons/pirate-ship.svg?component'
 import _AstralRinthLogo from './icons/astralrinth-logo.svg?component'
 import _ElyByIcon from './icons/elyby-icon.svg?component'
-export const PirateIcon = _PirateIcon
+import _MicrosoftIcon from './icons/microsoft.svg?component'
+import _OfflineIcon from './icons/offline.svg?component'
+export const OfflineIcon = _OfflineIcon
 export const MicrosoftIcon = _MicrosoftIcon
-export const PirateShipIcon = _PirateShipIcon
 export const AstralRinthLogo = _AstralRinthLogo
 export const ElyByIcon = _ElyByIcon
 

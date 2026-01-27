@@ -5,7 +5,7 @@ use crate::event::{
 };
 #[cfg(feature = "tauri")]
 use crate::event::{
-    LoadingPayload, ProcessPayload, ProfilePayload, WarningPayload,
+    LoadingPayload, ProcessPayload, ProfilePayload, WarningPayload, InfoPayload
 };
 use futures::prelude::*;
 #[cfg(feature = "tauri")]
@@ -216,6 +216,26 @@ pub async fn emit_warning(message: &str) -> crate::Result<()> {
             .map_err(EventError::from)?;
     }
     tracing::warn!("{}", message);
+    Ok(())
+}
+
+// This code is modified by AstralRinth
+// emit_info(message)
+pub async fn emit_info(message: &str) -> crate::Result<()> {
+    #[cfg(feature = "tauri")]
+    {
+        let event_state = crate::EventState::get()?;
+        event_state
+            .app
+            .emit(
+                "info",
+                InfoPayload {
+                    message: message.to_string(),
+                },
+            )
+            .map_err(EventError::from)?;
+    }
+    tracing::info!("{}", message);
     Ok(())
 }
 
