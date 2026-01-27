@@ -117,7 +117,7 @@ export const USDCColorIcon = _USDCColorIcon
 export const VisaIcon = _VisaIcon
 export const MinecraftServerIcon = _MinecraftServerIcon
 
-// [AR] Styles
+// This code is modified by AstralRinth
 import _AstralRinthLogo from './icons/astralrinth-logo.svg?component'
 import _ElyByIcon from './icons/elyby-icon.svg?component'
 import _MicrosoftIcon from './icons/microsoft.svg?component'

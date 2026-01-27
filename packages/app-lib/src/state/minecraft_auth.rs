@@ -179,7 +179,7 @@ pub async fn login_finish(
     Ok(credentials)
 }
 
-// [AR] Feature
+// This code is modified by AstralRinth
 #[tracing::instrument]
 pub async fn offline_auth(
     name: &str,
@@ -209,7 +209,7 @@ pub async fn offline_auth(
     Ok(credentials)
 }
 
-// [AR] Feature
+// This code is modified by AstralRinth
 #[tracing::instrument]
 pub async fn elyby_auth(
     uuid: Uuid,
@@ -237,7 +237,7 @@ pub async fn elyby_auth(
     Ok(credentials)
 }
 
-/// [AR] • Feature
+// This code is modified by AstralRinth
 #[derive(Deserialize, Debug)]
 pub enum AccountType {
     Unknown,

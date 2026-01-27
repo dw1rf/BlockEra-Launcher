@@ -23,7 +23,8 @@ pub(crate) async fn connect() -> crate::Result<Pool<Sqlite>> {
     Ok(pool)
 }
 
-// [AR] Feature. Implement SQLite3 connection without SQLx migrations.
+// This code is modified by AstralRinth
+// Implement SQLite3 connection without SQLx migrations.
 async fn connect_without_migrate() -> crate::Result<Pool<Sqlite>> {
     let settings_dir = DirectoryInfo::get_initial_settings_dir().ok_or(
         ErrorKind::FSError("Could not find valid config dir".to_string()),
@@ -72,7 +73,7 @@ async fn stale_data_cleanup(pool: &Pool<Sqlite>) -> crate::Result<()> {
     Ok(())
 }
 /*
-// [AR] Patch fix
+// This code is modified by AstralRinth
 Problem files, view detailed information in .gitattributes:
 /packages/app-lib/migrations/20240711194701_init.sql !eol
 CRLF -> 4c47e326f16f2b1efca548076ce638d4c90dd610172fe48c47d6de9bc46ef1c5abeadfdea05041ddd72c3819fa10c040

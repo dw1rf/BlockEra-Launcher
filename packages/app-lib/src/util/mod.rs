@@ -4,7 +4,7 @@ pub mod io;
 pub mod jre;
 pub mod network;
 pub mod platform;
-pub mod utils; // [AR] Feature
+pub mod utils; // This code is modified by AstralRinth
 pub mod protocol_version;
 pub mod rpc;
 pub mod server_ping;

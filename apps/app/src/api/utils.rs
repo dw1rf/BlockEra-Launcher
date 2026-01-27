@@ -31,7 +31,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .build()
 }
 
-/// [AR] Feature. Ely.by
+// This code is modified by AstralRinth
 #[tauri::command]
 pub async fn init_authlib_patching(
     minecraft_version: &str,
@@ -42,14 +42,14 @@ pub async fn init_authlib_patching(
     Ok(result)
 }
 
-/// [AR] Migration. Patch
+// This code is modified by AstralRinth
 #[tauri::command]
 pub async fn apply_migration_fix(eol: &str) -> Result<bool> {
     let result = utils::apply_migration_fix(eol).await?;
     Ok(result)
 }
 
-/// [AR] Feature. Updater
+// This code is modified by AstralRinth
 #[tauri::command]
 pub async fn init_update_launcher(
     download_url: &str,

@@ -13,7 +13,7 @@ pub mod process;
 pub mod profile;
 pub mod server_address;
 pub mod settings;
-pub mod update; // [AR] Feature
+pub mod update; // This code is modified by AstralRinth
 pub mod tags;
 pub mod worlds;
 

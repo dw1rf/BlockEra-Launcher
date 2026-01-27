@@ -26,7 +26,7 @@ import PrivacySettings from '@/components/ui/settings/PrivacySettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import { get, set } from '@/helpers/settings.ts'
 
-// [AR] Imports
+// This code is modified by AstralRinth
 import { installState, getRemote, updateState } from '@/helpers/update.js'
 
 const updateModalView = ref(null)

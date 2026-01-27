@@ -19,7 +19,7 @@ import { install } from '@/helpers/profile.js'
 import { cancel_directory_change } from '@/helpers/settings.ts'
 import { handleSevereError } from '@/store/error.js'
 
-// [AR] Imports
+// This code is modified by AstralRinth
 import { applyMigrationFix } from '@/helpers/utils.js'
 import { restartApp } from '@/helpers/utils.js'
 

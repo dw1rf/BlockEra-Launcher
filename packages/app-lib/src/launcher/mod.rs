@@ -18,7 +18,7 @@ use chrono::Utc;
 use daedalus as d;
 use daedalus::minecraft::{LoggingSide, RuleAction, VersionInfo};
 use daedalus::modded::LoaderVersion;
-use rand::seq::SliceRandom; // [AR] Feature
+use rand::seq::SliceRandom; // This code is modified by AstralRinth
 use regex::Regex;
 use serde::Deserialize;
 use st::Profile;
@@ -796,7 +796,7 @@ pub async fn launch_minecraft(
         }
     }
 
-    // [AR] Feature
+    // This code is modified by AstralRinth
     let selected_phrase = ACTIVE_STATE.choose(&mut rand::thread_rng()).unwrap();
     let _ = state
         .discord_rpc

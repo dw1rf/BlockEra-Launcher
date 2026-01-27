@@ -27,18 +27,18 @@ export async function getOS() {
 	return await invoke('plugin:utils|get_os')
 }
 
-// [AR] Feature. Updater
+// This code is modified by AstralRinth
 export async function initUpdateLauncher(downloadUrl, filename, osType, autoUpdateSupported) {
   console.log('Downloading build', downloadUrl, filename, osType, autoUpdateSupported)
   return await invoke('plugin:utils|init_update_launcher', { downloadUrl, filename, osType, autoUpdateSupported })
 }
 
-// [AR] Migration. Patch
+// This code is modified by AstralRinth
 export async function applyMigrationFix(eol) {
   return await invoke('plugin:utils|apply_migration_fix', { eol })
 }
 
-// [AR] Feature. Ely.by
+// This code is modified by AstralRinth
 export async function initAuthlibPatching(minecraftVersion, isMojang) {
   return await invoke('plugin:utils|init_authlib_patching', { minecraftVersion, isMojang })
 }

@@ -95,7 +95,7 @@ import { generateSkinPreviews } from './helpers/rendering/batch-skin-renderer'
 import { get_available_capes, get_available_skins } from './helpers/skins'
 import { AppNotificationManager } from './providers/app-notifications'
 
-// [AR] Imports
+// This code is modified by AstralRinth
 import { get, set } from '@/helpers/settings.ts'
 import { getRemote, updateState } from '@/helpers/update.js'
 
@@ -164,9 +164,10 @@ const authUnreachable = computed(() => {
 	return false
 })
 
+// This code is modified by AstralRinth
 onMounted(async () => {
 	await useCheckDisableMouseover()
-	await getRemote(false) // [AR] Check for updates
+	await getRemote(false)
 
 	document.querySelector('body').addEventListener('click', handleClick)
 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
@@ -210,8 +211,8 @@ const messages = defineMessages({
 	},
 })
 
+// This code is modified by AstralRinth
 async function setupApp() {
-	// [AR] Patched
 	const settings = await get()
   	settings.personalized_ads = false
   	settings.telemetry = false
@@ -258,7 +259,7 @@ async function setupApp() {
 		isMaximized.value = await getCurrentWindow().isMaximized()
 	})
 
-	// [AR] Patched
+	// This code is modified by AstralRinth
 	if (!telemetry) {
   	  console.info("[AR] • Telemetry disabled by default (Hard patched).")
   	  optOutAnalytics()
@@ -286,7 +287,7 @@ async function setupApp() {
 		}),
 	)
 
-	// [AR] Info listener
+	// This code is modified by AstralRinth
 	await info_listener((e) =>
 		addNotification({
 			title: 'Info',

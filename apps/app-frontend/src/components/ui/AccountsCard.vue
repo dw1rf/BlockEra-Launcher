@@ -286,7 +286,7 @@ const microsoftLoginDisabled = ref(false)
 const elyByLoginDisabled = ref(false)
 const defaultUser = ref()
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 const clientToken = 'astralrinth'
 const addOfflineModal = ref(null)
 const addElyByModal = ref(null)
@@ -304,7 +304,7 @@ const maxOfflinePlayerNameLength = 20
 const nameExp = 'a-zA-Z0-9_'
 const nameRegex = new RegExp(`^[${nameExp}]+$`)
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function getAccountType(account) {
 	switch (account.account_type) {
 		case 'microsoft':
@@ -316,24 +316,24 @@ function getAccountType(account) {
 	}
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function showOfflineLoginModal() {
 	addOfflineModal.value?.show()
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function showElyByLoginModal() {
 	addElyByModal.value?.show()
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function retryAddOfflineProfile() {
 	inputOfflineErrorModal.value?.hide()
 	clearOfflineFields()
 	showOfflineLoginModal()
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function retryAddElyByProfile() {
 	authenticationElyByErrorModal.value?.hide()
 	inputElyByErrorModal.value?.hide()
@@ -342,19 +342,19 @@ function retryAddElyByProfile() {
 	showElyByLoginModal()
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function clearElyByFields() {
 	elyByLogin.value = ''
 	elyByPassword.value = ''
 	elyByTwoFactorCode.value = ''
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function clearOfflineFields() {
 	offlinePlayerName.value = ''
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 async function addOfflineProfile() {
 	const name = offlinePlayerName.value.trim()
 	const isValidName =
@@ -388,7 +388,7 @@ async function addOfflineProfile() {
 	}
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 async function addElyByProfile() {
 	elyByLoginDisabled.value = true
 	if (!elyByLogin.value || !elyByPassword.value) {
@@ -450,7 +450,7 @@ async function addElyByProfile() {
 	}
 }
 
-// [AR] • Feature
+// This code is modified by AstralRinth
 function convertRawStringToUUIDv4(rawId) {
 	if (rawId.length !== 32) {
 		console.warn('Invalid UUID string:', rawId)

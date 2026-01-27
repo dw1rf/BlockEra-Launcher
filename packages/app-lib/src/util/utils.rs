@@ -1,8 +1,8 @@
 use crate::api::update;
 use crate::state::db;
 ///
-/// [AR] Feature Utils
-/// 
+/// This code is modified by AstralRinth
+///
 /// Version: 0.1.1
 ///
 use crate::{Result, State};
@@ -84,7 +84,7 @@ pub async fn get_or_download_elyby_injector() -> Result<PathBuf> {
         Err(err) => {
             if let Some((local_path, _)) = local_authlib_injectors
                 .iter()
-                .max_by(|a, b| a.1.cmp(&b.1)) 
+                .max_by(|a, b| a.1.cmp(&b.1))
             {
                 tracing::info!("[AR] • Found local AuthLib Injector(s):");
                 for (path, time) in &local_authlib_injectors {

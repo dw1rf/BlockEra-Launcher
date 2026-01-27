@@ -1,17 +1,17 @@
-// [AR] Feature
+// This code is modified by AstralRinth
 use std::{
     sync::{atomic::AtomicBool, Arc},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use discord_rich_presence::{
-    activity::{Activity, Assets, Timestamps}, // [AR] Feature
+    activity::{Activity, Assets, Timestamps}, // This code is modified by AstralRinth
     DiscordIpc, DiscordIpcClient,
 };
-use rand::seq::SliceRandom; // [AR] Feature
+use rand::seq::SliceRandom; // This code is modified by AstralRinth
 use tokio::sync::RwLock;
 
-use crate::util::utils; // [AR] Feature
+use crate::util::utils; // This code is modified by AstralRinth
 use crate::State;
 
 pub struct DiscordGuard {
