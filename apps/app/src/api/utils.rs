@@ -16,7 +16,6 @@ use url::Url;
 pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri::plugin::Builder::new("utils")
         .invoke_handler(tauri::generate_handler![
-            init_authlib_patching,
             apply_migration_fix,
             init_update_launcher,
             get_os,
@@ -29,17 +28,6 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             get_opening_command
         ])
         .build()
-}
-
-// This code is modified by AstralRinth
-#[tauri::command]
-pub async fn init_authlib_patching(
-    minecraft_version: &str,
-    is_mojang: bool,
-) -> Result<bool> {
-    let result =
-        utils::init_authlib_patching(minecraft_version, is_mojang).await?;
-    Ok(result)
 }
 
 // This code is modified by AstralRinth

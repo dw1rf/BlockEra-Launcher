@@ -228,7 +228,6 @@ fn main() {
                 "utils",
                 InlinedPlugin::new()
                     .commands(&[
-                        "init_authlib_patching",
                         "apply_migration_fix",
                         "init_update_launcher",
                         "get_os",

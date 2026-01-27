@@ -38,11 +38,6 @@ export async function applyMigrationFix(eol) {
   return await invoke('plugin:utils|apply_migration_fix', { eol })
 }
 
-// This code is modified by AstralRinth
-export async function initAuthlibPatching(minecraftVersion, isMojang) {
-  return await invoke('plugin:utils|init_authlib_patching', { minecraftVersion, isMojang })
-}
-
 export async function isNetworkMetered() {
 	return await invoke('plugin:utils|is_network_metered')
 }
