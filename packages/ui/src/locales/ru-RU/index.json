@@ -66,10 +66,10 @@
     "defaultMessage": "Продолжить"
   },
   "button.copy-id": {
-    "defaultMessage": "Скопировать ID"
+    "defaultMessage": "Копировать ID"
   },
   "button.copy-permalink": {
-    "defaultMessage": "Скопировать постоянную ссылку"
+    "defaultMessage": "Копировать постоянную ссылку"
   },
   "button.create-a-project": {
     "defaultMessage": "Создать проект"
@@ -152,8 +152,8 @@
   "changelog.product.app": {
     "defaultMessage": "App"
   },
-  "changelog.product.servers": {
-    "defaultMessage": "Servers"
+  "changelog.product.hosting": {
+    "defaultMessage": "Hosting"
   },
   "changelog.product.web": {
     "defaultMessage": "Сайт"
@@ -240,16 +240,16 @@
     "defaultMessage": "Введите край/область"
   },
   "icon-select.edit": {
-    "defaultMessage": "Изменить значок"
+    "defaultMessage": "Изменить иконку"
   },
   "icon-select.remove": {
-    "defaultMessage": "Удалить значок"
+    "defaultMessage": "Удалить иконку"
   },
   "icon-select.replace": {
-    "defaultMessage": "Заменить значок"
+    "defaultMessage": "Заменить иконку"
   },
   "icon-select.select": {
-    "defaultMessage": "Выбрать значок"
+    "defaultMessage": "Выбрать иконку"
   },
   "input.search.placeholder": {
     "defaultMessage": "Поиск..."
@@ -258,10 +258,10 @@
     "defaultMessage": "Вид галереи"
   },
   "input.view.grid": {
-    "defaultMessage": "Сетка"
+    "defaultMessage": "Вид сетки"
   },
   "input.view.list": {
-    "defaultMessage": "Список"
+    "defaultMessage": "Вид списка"
   },
   "instance.worlds.game_mode.adventure": {
     "defaultMessage": "Режим приключений"
@@ -276,7 +276,7 @@
     "defaultMessage": "Режим выживания"
   },
   "instance.worlds.game_mode.unknown": {
-    "defaultMessage": "Неизвестный режим"
+    "defaultMessage": "Неизвестный режим игры"
   },
   "label.available": {
     "defaultMessage": "{amount} доступно."
@@ -321,13 +321,13 @@
     "defaultMessage": "Пароль"
   },
   "label.played": {
-    "defaultMessage": "Наиграно {time}"
+    "defaultMessage": "Сыграно {time}"
   },
   "label.public": {
-    "defaultMessage": "Публичный"
+    "defaultMessage": "Публичная"
   },
   "label.rejected": {
-    "defaultMessage": "Отклонён"
+    "defaultMessage": "Отклонена"
   },
   "label.rewards-program-terms-agreement": {
     "defaultMessage": "Я принимаю <terms-link>условия программы вознаграждений</terms-link>"
@@ -354,13 +354,13 @@
     "defaultMessage": "Название"
   },
   "label.unlisted": {
-    "defaultMessage": "Скрыт"
+    "defaultMessage": "Скрыта"
   },
   "label.visibility": {
     "defaultMessage": "Видимость"
   },
   "label.visit-your-profile": {
-    "defaultMessage": "Открыть профиль"
+    "defaultMessage": "Перейти в профиль"
   },
   "modal.add-payment-method.action": {
     "defaultMessage": "Добавить способ оплаты"
@@ -402,7 +402,7 @@
     "defaultMessage": "Команда Modrinth"
   },
   "omorphia.component.badge.label.pending": {
-    "defaultMessage": "В ожидании"
+    "defaultMessage": "В ожидании"
   },
   "omorphia.component.badge.label.private": {
     "defaultMessage": "Приватный"
@@ -416,17 +416,23 @@
   "omorphia.component.badge.label.returned": {
     "defaultMessage": "Возвращён"
   },
+  "omorphia.component.badge.label.safe": {
+    "defaultMessage": "Одобрен"
+  },
   "omorphia.component.badge.label.scheduled": {
     "defaultMessage": "Отложен"
   },
   "omorphia.component.badge.label.under-review": {
-    "defaultMessage": "На рассмотрении"
+    "defaultMessage": "На рассмотрении"
   },
   "omorphia.component.badge.label.unlisted": {
     "defaultMessage": "Скрыт"
   },
+  "omorphia.component.badge.label.unsafe": {
+    "defaultMessage": "Отклонён"
+  },
   "omorphia.component.badge.label.withheld": {
-    "defaultMessage": "На удержании"
+    "defaultMessage": "На удержании"
   },
   "omorphia.component.copy.action.copy": {
     "defaultMessage": "Копировать код"
@@ -435,10 +441,10 @@
     "defaultMessage": "Клиент"
   },
   "omorphia.component.environment-indicator.label.client-and-server": {
-    "defaultMessage": "Клиент и сервер"
+    "defaultMessage": "Клиент и сервер"
   },
   "omorphia.component.environment-indicator.label.client-or-server": {
-    "defaultMessage": "Клиент или сервер"
+    "defaultMessage": "Клиент или сервер"
   },
   "omorphia.component.environment-indicator.label.server": {
     "defaultMessage": "Сервер"
@@ -447,7 +453,7 @@
     "defaultMessage": "Тип: {type}"
   },
   "omorphia.component.environment-indicator.label.unsupported": {
-    "defaultMessage": "Не поддерживается"
+    "defaultMessage": "Не поддерживается"
   },
   "omorphia.component.purchase_modal.payment_method_card_display": {
     "defaultMessage": "{card_brand} ·· {last_four}"
@@ -551,6 +557,12 @@
   "project-type.plugin.lowercase": {
     "defaultMessage": "{count, plural, one {плагин} few {плагина} many {плагинов} other {плагинов}}"
   },
+  "project-type.project.category": {
+    "defaultMessage": "Проекты"
+  },
+  "project-type.project.lowercase": {
+    "defaultMessage": "{count, plural, one {проект} few {проекта} many {проектов} other {проекта}}"
+  },
   "project-type.resourcepack.capital": {
     "defaultMessage": "{count, plural, one {Набор Ресурсов} few {Набора Ресурсов} many {Наборов Ресурсов} other {Наборов Ресурсов}}"
   },
@@ -559,6 +571,15 @@
   },
   "project-type.resourcepack.lowercase": {
     "defaultMessage": "{count, plural, one {набор ресурсов} few {набора ресурсов} many {наборов ресурсов} other {наборов ресурсов}}"
+  },
+  "project-type.server.capital": {
+    "defaultMessage": "{count, plural, one {Сервер} few {Сервера} many {Серверов} other {Сервера}}"
+  },
+  "project-type.server.category": {
+    "defaultMessage": "Серверы"
+  },
+  "project-type.server.lowercase": {
+    "defaultMessage": "{count, plural, one {сервер} few {сервера} many {серверов} other {сервера}}"
   },
   "project-type.shader.capital": {
     "defaultMessage": "{count, plural, one {Шейдер} few {Шейдера} many {Шейдеров} other {Шейдеров}}"
@@ -573,7 +594,7 @@
     "defaultMessage": "Поддерживаемые среды"
   },
   "project.about.compatibility.environments.client-and-server": {
-    "defaultMessage": "Клиент и сервер"
+    "defaultMessage": "Клиент и сервер"
   },
   "project.about.compatibility.environments.client-side": {
     "defaultMessage": "Клиент"
@@ -609,7 +630,7 @@
     "defaultMessage": "Создан {date}"
   },
   "project.about.details.licensed": {
-    "defaultMessage": "Лицензия: {license}"
+    "defaultMessage": "Лицензия {license}"
   },
   "project.about.details.published": {
     "defaultMessage": "Размещён {date}"
@@ -633,19 +654,19 @@
     "defaultMessage": "Поддержать"
   },
   "project.about.links.donate.github": {
-    "defaultMessage": "Спонсировать на GitHub"
+    "defaultMessage": "Спонсировать на GitHub"
   },
   "project.about.links.donate.kofi": {
-    "defaultMessage": "Поддержать на Ko-fi"
+    "defaultMessage": "Поддержать на Ko-fi"
   },
   "project.about.links.donate.patreon": {
-    "defaultMessage": "Поддержать на Patreon"
+    "defaultMessage": "Поддержать на Patreon"
   },
   "project.about.links.donate.paypal": {
-    "defaultMessage": "Поддержать на PayPal"
+    "defaultMessage": "Поддержать на PayPal"
   },
   "project.about.links.issues": {
-    "defaultMessage": "Сообщить о проблеме"
+    "defaultMessage": "Сообщить о проблеме"
   },
   "project.about.links.source": {
     "defaultMessage": "Посмотреть исходники"
@@ -656,6 +677,72 @@
   "project.about.links.wiki": {
     "defaultMessage": "Открыть вики"
   },
+  "project.environment.client-and-server.description": {
+    "defaultMessage": "Содержит функциональность как для клиента, так и для сервера, пусть даже частично."
+  },
+  "project.environment.client-and-server.title": {
+    "defaultMessage": "Клиент и сервер, обязателен для обоих"
+  },
+  "project.environment.client-only-server-optional.description": {
+    "defaultMessage": "Содержит функциональность как для клиента, так и для сервера, пусть даже частично."
+  },
+  "project.environment.client-only-server-optional.title": {
+    "defaultMessage": "Клиент и сервер, необязателен для сервера"
+  },
+  "project.environment.client-only.description": {
+    "defaultMessage": "Вся функциональность сделана для клиента и совместима с немодифицированными серверами."
+  },
+  "project.environment.client-only.title": {
+    "defaultMessage": "Только для клиента"
+  },
+  "project.environment.client-or-server-prefers-both.description": {
+    "defaultMessage": "Содержит функциональность как для клиента, так и для сервера, пусть даже частично."
+  },
+  "project.environment.client-or-server-prefers-both.title": {
+    "defaultMessage": "Клиент и сервер, лучше при установке на оба"
+  },
+  "project.environment.client-or-server.description": {
+    "defaultMessage": "Содержит функциональность как для клиента, так и для сервера, пусть даже частично."
+  },
+  "project.environment.client-or-server.title": {
+    "defaultMessage": "Клиент и сервер, необязателен для обоих"
+  },
+  "project.environment.dedicated-server-only.description": {
+    "defaultMessage": "Вся функциональность сделана для сервера и совместима с немодифицированными клиентами."
+  },
+  "project.environment.dedicated-server-only.title": {
+    "defaultMessage": "Только для сервера"
+  },
+  "project.environment.server-only-client-optional.description": {
+    "defaultMessage": "Содержит функциональность как для клиента, так и для сервера, пусть даже частично."
+  },
+  "project.environment.server-only-client-optional.title": {
+    "defaultMessage": "Клиент и сервер, необязателен для клиента"
+  },
+  "project.environment.server-only.description": {
+    "defaultMessage": "Вся функциональность сделана для сервера и совместима с немодифицированными клиентами."
+  },
+  "project.environment.server-only.title": {
+    "defaultMessage": "Только для сервера, также работает в одиночной игре"
+  },
+  "project.environment.singleplayer-only.description": {
+    "defaultMessage": "Работает только в одиночной игре или без подключения к сетевой игре."
+  },
+  "project.environment.singleplayer-only.title": {
+    "defaultMessage": "Только для одиночной игры"
+  },
+  "project.environment.tag.not-applicable": {
+    "defaultMessage": "Н/Д"
+  },
+  "project.environment.tag.unknown": {
+    "defaultMessage": "Неизвестно"
+  },
+  "project.environment.unknown.description": {
+    "defaultMessage": "Не удалось определить среду этой версии."
+  },
+  "project.environment.unknown.title": {
+    "defaultMessage": "Неизвестная среда"
+  },
   "project.settings.analytics.title": {
     "defaultMessage": "Аналитика"
   },
@@ -663,64 +750,94 @@
     "defaultMessage": "Описание"
   },
   "project.settings.environment.client_and_server.description": {
-    "defaultMessage": "Содержит функциональность как для клиента, так и для сервера, пусть даже частично."
+    "defaultMessage": "Содержит функциональность как для клиента, так и для сервера, пусть даже частично."
   },
   "project.settings.environment.client_and_server.optional_both.title": {
-    "defaultMessage": "Необязателен для обоих; работает одинаково при установке на любую сторону"
+    "defaultMessage": "Необязателен для обоих, работает одинаково при установке на любую сторону"
   },
   "project.settings.environment.client_and_server.optional_both_prefers_both.title": {
-    "defaultMessage": "Необязателен для обоих; работает лучше при установке на обе стороны"
+    "defaultMessage": "Необязателен для обоих, работает лучше при установке на обе стороны"
   },
   "project.settings.environment.client_and_server.optional_client.title": {
-    "defaultMessage": "Необязателен для клиента"
+    "defaultMessage": "Необязателен для клиента"
   },
   "project.settings.environment.client_and_server.optional_server.title": {
-    "defaultMessage": "Необязателен для сервера"
+    "defaultMessage": "Необязателен для сервера"
   },
   "project.settings.environment.client_and_server.required_both.title": {
-    "defaultMessage": "Обязателен для обоих"
+    "defaultMessage": "Обязателен для обоих"
   },
   "project.settings.environment.client_and_server.title": {
-    "defaultMessage": "Клиент и сервер"
+    "defaultMessage": "Клиент и сервер"
   },
   "project.settings.environment.client_only.description": {
-    "defaultMessage": "Вся функциональность сделана для клиента и совместима с немодифицированными серверами."
+    "defaultMessage": "Вся функциональность сделана для клиента и совместима с немодифицированными серверами."
   },
   "project.settings.environment.client_only.title": {
-    "defaultMessage": "Только для клиента"
+    "defaultMessage": "Только для клиента"
+  },
+  "project.settings.environment.notice.missing-env.description": {
+    "defaultMessage": "В проекте отсутствуют метаданные среды. Выберите подходящий вариант ниже."
+  },
+  "project.settings.environment.notice.missing-env.title": {
+    "defaultMessage": "Укажите среду проекта"
+  },
+  "project.settings.environment.notice.multiple-environments.description": {
+    "defaultMessage": "В разных версиях проекта указаны разные среды — глобальное изменение сред невозможно."
+  },
+  "project.settings.environment.notice.multiple-environments.title": {
+    "defaultMessage": "У проекта несколько сред"
+  },
+  "project.settings.environment.notice.review-options.description": {
+    "defaultMessage": "Мы переработали систему сред на Modrinth, и теперь доступны новые варианты. Убедитесь, что выбран подходящий вариант, и подтвердите его."
+  },
+  "project.settings.environment.notice.review-options.title": {
+    "defaultMessage": "Подтвердите выбранный вариант"
+  },
+  "project.settings.environment.notice.wrong-project-type.description": {
+    "defaultMessage": "Только моды и сборки могут иметь метаданные среды."
+  },
+  "project.settings.environment.notice.wrong-project-type.title": {
+    "defaultMessage": "Тип проекта не поддерживает метаданные среды"
   },
   "project.settings.environment.server_only.dedicated_only.title": {
-    "defaultMessage": "Только для выделенного сервера"
+    "defaultMessage": "Только для выделенного сервера"
   },
   "project.settings.environment.server_only.description": {
-    "defaultMessage": "Вся функциональность сделана для сервера и совместима с немодифицированными клиентами."
+    "defaultMessage": "Вся функциональность сделана для сервера и совместима с немодифицированными клиентами."
   },
   "project.settings.environment.server_only.supports_singleplayer.title": {
-    "defaultMessage": "Также работает в одиночной игре"
+    "defaultMessage": "Также работает в одиночной игре"
   },
   "project.settings.environment.server_only.title": {
-    "defaultMessage": "Только для сервера"
+    "defaultMessage": "Только для сервера"
   },
   "project.settings.environment.singleplayer.description": {
-    "defaultMessage": "Работает только в одиночной игре или без подключения к сетевой игре."
+    "defaultMessage": "Работает только в одиночной игре или без подключения к сетевой игре."
   },
   "project.settings.environment.singleplayer.title": {
-    "defaultMessage": "Только для одиночной игры"
+    "defaultMessage": "Только для одиночной игры"
   },
   "project.settings.environment.suboption.accessibility-option-label": {
     "defaultMessage": "{title}: {description}"
   },
   "project.settings.environment.suboption.accessibility-suboption-group-label": {
-    "defaultMessage": "Подпункты варианта «{option}»"
+    "defaultMessage": "Подварианты пункта «{option}»"
   },
   "project.settings.environment.title": {
     "defaultMessage": "Среда"
+  },
+  "project.settings.environment.verification.verify-button": {
+    "defaultMessage": "Подтвердить"
+  },
+  "project.settings.environment.verification.verify-text": {
+    "defaultMessage": "Подтвердите, что среда проекта указана верно."
   },
   "project.settings.gallery.title": {
     "defaultMessage": "Галерея"
   },
   "project.settings.general.title": {
-    "defaultMessage": "Общие"
+    "defaultMessage": "Основные"
   },
   "project.settings.license.title": {
     "defaultMessage": "Лицензия"
@@ -732,7 +849,7 @@
     "defaultMessage": "Участники"
   },
   "project.settings.notice.no-permission.description": {
-    "defaultMessage": "У вас нет разрешения на изменение этих настроек."
+    "defaultMessage": "У вас нет разрешения на изменение этих настроек."
   },
   "project.settings.notice.no-permission.title": {
     "defaultMessage": "Недостаточно разрешений"
@@ -777,7 +894,7 @@
     "defaultMessage": "Отложен"
   },
   "project.visibility.under-review": {
-    "defaultMessage": "На рассмотрении"
+    "defaultMessage": "На рассмотрении"
   },
   "project.visibility.unknown": {
     "defaultMessage": "Неизвестно"
@@ -786,7 +903,7 @@
     "defaultMessage": "Скрыт"
   },
   "project.visibility.unlisted-by-staff": {
-    "defaultMessage": "Скрыт персоналом"
+    "defaultMessage": "Скрыт модерацией"
   },
   "search.filter.locked.default": {
     "defaultMessage": "Фильтр заблокирован"
@@ -801,7 +918,22 @@
     "defaultMessage": "Фильтр заблокирован"
   },
   "search.filter.locked.default.unlock": {
-    "defaultMessage": "Разблокировать фильтр"
+    "defaultMessage": "Разблокировать"
+  },
+  "search.filter.option.exclusion.add.tooltip": {
+    "defaultMessage": "Исключить"
+  },
+  "search.filter.option.search.clear.aria_label": {
+    "defaultMessage": "Очистить поиск"
+  },
+  "search.filter.option.search.placeholder": {
+    "defaultMessage": "Поиск..."
+  },
+  "search.filter.option.show_fewer": {
+    "defaultMessage": "Показать меньше"
+  },
+  "search.filter.option.show_more": {
+    "defaultMessage": "Показать больше"
   },
   "search.filter_type.environment": {
     "defaultMessage": "Среда"
@@ -841,6 +973,42 @@
   },
   "search.filter_type.shader_loader": {
     "defaultMessage": "Загрузчик"
+  },
+  "servers.backups.item.auto": {
+    "defaultMessage": "Авто"
+  },
+  "servers.backups.item.backup-schedule": {
+    "defaultMessage": "Автоматическая резервная копия"
+  },
+  "servers.backups.item.creating-backup": {
+    "defaultMessage": "Создание резервной копии..."
+  },
+  "servers.backups.item.failed-to-create-backup": {
+    "defaultMessage": "Не удалось создать"
+  },
+  "servers.backups.item.failed-to-restore-backup": {
+    "defaultMessage": "Не удалось восстановить"
+  },
+  "servers.backups.item.manual-backup": {
+    "defaultMessage": "Ручная резервная копия"
+  },
+  "servers.backups.item.queued-for-backup": {
+    "defaultMessage": "В очереди на создание"
+  },
+  "servers.backups.item.queued-for-restore": {
+    "defaultMessage": "В очереди на восстановление"
+  },
+  "servers.backups.item.rename": {
+    "defaultMessage": "Переименовать"
+  },
+  "servers.backups.item.restore": {
+    "defaultMessage": "Восстановить"
+  },
+  "servers.backups.item.restoring-backup": {
+    "defaultMessage": "Восстановление из резервной копии..."
+  },
+  "servers.backups.item.retry": {
+    "defaultMessage": "Повторить"
   },
   "servers.notice.dismiss": {
     "defaultMessage": "Закрыть"
@@ -882,7 +1050,7 @@
     "defaultMessage": "{interval, select, monthly {ежемесячно} quarterly {ежеквартально} yearly {ежегодно} other {{interval}}}"
   },
   "servers.purchase.step.plan.custom.desc": {
-    "defaultMessage": "Создайте свой план с нужными характеристиками."
+    "defaultMessage": "Соберите свой план с нужными характеристиками."
   },
   "servers.purchase.step.plan.get-started": {
     "defaultMessage": "Настроить план"
@@ -915,13 +1083,13 @@
     "defaultMessage": "Регион"
   },
   "servers.purchase.step.review.title": {
-    "defaultMessage": "Проверка"
+    "defaultMessage": "Подтверждение"
   },
   "servers.region.central-europe": {
     "defaultMessage": "Центральная Европа"
   },
   "servers.region.custom.prompt": {
-    "defaultMessage": "Сколько оперативной памяти вы хотите на сервере?"
+    "defaultMessage": "Сколько оперативной памяти вы хотите на сервере?"
   },
   "servers.region.north-america": {
     "defaultMessage": "Северная Америка"
@@ -930,7 +1098,7 @@
     "defaultMessage": "Где вы хотите разместить свой сервер?"
   },
   "servers.region.region-unsupported": {
-    "defaultMessage": "Нет нужного региона? <link>Расскажите, где запустить Modrinth Servers дальше!</link>"
+    "defaultMessage": "Нет нужного региона? <link>Расскажите, где запустить Modrinth Hosting дальше!</link>"
   },
   "servers.region.southeast-asia": {
     "defaultMessage": "Юго-Восточная Азия"
@@ -939,7 +1107,7 @@
     "defaultMessage": "Западная Европа"
   },
   "settings.account.title": {
-    "defaultMessage": "Данные и безопасность"
+    "defaultMessage": "Аккаунт и безопасность"
   },
   "settings.appearance.title": {
     "defaultMessage": "Внешний вид"
@@ -948,7 +1116,7 @@
     "defaultMessage": "Ваши приложения"
   },
   "settings.authorized-apps.title": {
-    "defaultMessage": "Приложения с доступом"
+    "defaultMessage": "Связанные приложения"
   },
   "settings.billing.title": {
     "defaultMessage": "Платежи и подписки"
@@ -957,7 +1125,7 @@
     "defaultMessage": "Тёмная"
   },
   "settings.display.theme.description": {
-    "defaultMessage": "Выберите тему для Modrinth на этом устройстве."
+    "defaultMessage": "Выберите тему для Modrinth на этом устройстве."
   },
   "settings.display.theme.light": {
     "defaultMessage": "Светлая"
@@ -975,16 +1143,43 @@
     "defaultMessage": "Ретро"
   },
   "settings.display.theme.system": {
-    "defaultMessage": "Как в системе"
+    "defaultMessage": "Системная"
   },
   "settings.display.theme.title": {
     "defaultMessage": "Тема"
   },
+  "settings.language.categories.default": {
+    "defaultMessage": "Стандартные языки"
+  },
+  "settings.language.categories.search-result": {
+    "defaultMessage": "Результаты поиска"
+  },
+  "settings.language.description": {
+    "defaultMessage": "Выберите основной язык {platform}. Переводы выполнены сообществом <crowdin-link>на Crowdin</crowdin-link>."
+  },
+  "settings.language.languages.search-field.placeholder": {
+    "defaultMessage": "Поиск языка..."
+  },
+  "settings.language.languages.search-results-announcement": {
+    "defaultMessage": "{matches, plural, =0 {Не найдены языки, соответствующие} one {Найден # язык, соответствующий} few {Найдено # языка, соответствующих} other {Найдено # языков, соответствующих}} запросу."
+  },
+  "settings.language.languages.search.no-results": {
+    "defaultMessage": "Не найдены языки, соответствующие запросу."
+  },
+  "settings.language.platform.app": {
+    "defaultMessage": "приложения"
+  },
+  "settings.language.platform.site": {
+    "defaultMessage": "сайта"
+  },
   "settings.language.title": {
     "defaultMessage": "Язык"
   },
+  "settings.language.warning": {
+    "defaultMessage": "При смене языка некоторые элементы {platform} могут отображаться на английском, если их перевод недоступен или пока невозможен."
+  },
   "settings.pats.title": {
-    "defaultMessage": "Токены доступа"
+    "defaultMessage": "Личные токены доступа"
   },
   "settings.profile.title": {
     "defaultMessage": "Публичный профиль"
@@ -993,7 +1188,7 @@
     "defaultMessage": "Сеансы"
   },
   "tooltip.date-at-time": {
-    "defaultMessage": "{date, date, long} в {time, time, short}"
+    "defaultMessage": "{date, date, long} в {time, time, short}"
   },
   "ui.component.unsaved-changes-popup.body": {
     "defaultMessage": "Имеются несохранённые изменения."

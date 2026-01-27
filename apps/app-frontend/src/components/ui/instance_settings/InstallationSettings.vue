@@ -16,7 +16,9 @@ import {
 	Checkbox,
 	Chips,
 	Combobox,
+	defineMessages,
 	injectNotificationManager,
+	useVIntl,
 } from '@modrinth/ui'
 import {
 	formatCategory,
@@ -25,8 +27,6 @@ import {
 	type Project,
 	type Version,
 } from '@modrinth/utils'
-import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
-import { defineMessages, useVIntl } from '@vintl/vintl'
 import dayjs from 'dayjs'
 import { computed, type ComputedRef, type Ref, ref, shallowRef, watch } from 'vue'
 
@@ -44,10 +44,6 @@ import type {
 	ManifestLoaderVersion,
 } from '../../../helpers/types'
 
-import { initAuthlibPatching } from '@/helpers/utils.js'
-const authLibPatchingModal = ref(null)
-const isAuthLibPatchedSuccess = ref(false)
-const isAuthLibPatching = ref(false)
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
@@ -477,43 +473,9 @@ const messages = defineMessages({
 		defaultMessage: 'reinstall',
 	},
 })
-
-async function handleInitAuthLibPatching(ismojang: boolean) {
-  isAuthLibPatching.value = true
-  let state = false
-  let instance_path =  props.instance.loader_version != null ? props.instance.game_version + "-" + props.instance.loader_version : props.instance.game_version
-  try {
-    state = await initAuthlibPatching(instance_path, ismojang)
-  } catch (err) {
-    console.error(err)
-  }
-  isAuthLibPatching.value = false
-  isAuthLibPatchedSuccess.value = state
-  authLibPatchingModal.value.show()
-}
 </script>
 
 <template>
-	<ModalWrapper
-  	  ref="authLibPatchingModal"
-  	  :header="'AuthLib installation report'"
-  	  :closable="true"
-  	  @close="authLibPatchingModal.hide()"
-  	>
-  	  <div class="modal-body">
-  	    <h2 class="text-lg font-bold text-contrast space-y-2">
-  	      <p class="flex items-center gap-2 neon-text">
-  	        <span v-if="isAuthLibPatchedSuccess" class="neon-text">
-  	          AuthLib installation completed successfully! Now you can log in and play!
-  	        </span>
-  	        <span v-else class="neon-text">
-  	          Failed to install AuthLib. It's possible that no compatible AuthLib version was found for the selected game and/or mod loader version.
-  	          There may also be a problem with accessing resources behind CloudFlare.
-  	        </span>
-  	      </p>
-  	    </h2>
-  	  </div>
-  	</ModalWrapper>
 	<ConfirmModalWrapper
 		ref="repairConfirmModal"
 		:title="formatMessage(messages.repairConfirmTitle)"
@@ -791,24 +753,6 @@ async function handleInitAuthLibPatching(ismojang: boolean) {
 					</button>
 				</ButtonStyled>
 			</div>
-			<h2 class="m-0 mt-4 text-lg font-extrabold text-contrast block">
-      		  <div v-if="isAuthLibPatching" class="w-6 h-6 cursor-pointer hover:brightness-75 neon-icon pulse">
-      		    <SpinnerIcon class="size-4 animate-spin" />
-      		  </div>
-      		  Auth system (Skins) <span class="text-sm font-bold px-2 bg-brand-highlight text-brand rounded-full">Beta</span>
-      		</h2>
-      		<div class="mt-4 flex gap-2">
-      		  <ButtonStyled class="neon-button neon">
-      		    <button :disabled="isAuthLibPatching" @click="handleInitAuthLibPatching(true)">
-      		      Install Microsoft
-      		    </button>
-      		  </ButtonStyled>
-      		  <ButtonStyled class="neon-button neon">
-      		    <button :disabled="isAuthLibPatching" @click="handleInitAuthLibPatching(false) ">
-      		      Install Ely.By
-      		    </button>
-      		  </ButtonStyled>
-      		</div>
 		</template>
 		<template v-else>
 			<template v-if="instance.linked_data && instance.linked_data.locked">

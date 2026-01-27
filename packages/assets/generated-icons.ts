@@ -8,6 +8,7 @@ import _ArrowBigRightDashIcon from './icons/arrow-big-right-dash.svg?component'
 import _ArrowBigUpDashIcon from './icons/arrow-big-up-dash.svg?component'
 import _ArrowDownIcon from './icons/arrow-down.svg?component'
 import _ArrowDownLeftIcon from './icons/arrow-down-left.svg?component'
+import _ArrowLeftIcon from './icons/arrow-left.svg?component'
 import _ArrowLeftRightIcon from './icons/arrow-left-right.svg?component'
 import _ArrowUpIcon from './icons/arrow-up.svg?component'
 import _ArrowUpRightIcon from './icons/arrow-up-right.svg?component'
@@ -17,6 +18,7 @@ import _BadgeDollarSignIcon from './icons/badge-dollar-sign.svg?component'
 import _BanIcon from './icons/ban.svg?component'
 import _BellIcon from './icons/bell.svg?component'
 import _BellRingIcon from './icons/bell-ring.svg?component'
+import _BlendIcon from './icons/blend.svg?component'
 import _BlocksIcon from './icons/blocks.svg?component'
 import _BoldIcon from './icons/bold.svg?component'
 import _BookIcon from './icons/book.svg?component'
@@ -26,6 +28,7 @@ import _BookmarkIcon from './icons/bookmark.svg?component'
 import _BotIcon from './icons/bot.svg?component'
 import _BoxIcon from './icons/box.svg?component'
 import _BoxImportIcon from './icons/box-import.svg?component'
+import _BoxesIcon from './icons/boxes.svg?component'
 import _BracesIcon from './icons/braces.svg?component'
 import _BrushCleaningIcon from './icons/brush-cleaning.svg?component'
 import _BugIcon from './icons/bug.svg?component'
@@ -39,6 +42,7 @@ import _CheckCircleIcon from './icons/check-circle.svg?component'
 import _ChevronDownIcon from './icons/chevron-down.svg?component'
 import _ChevronLeftIcon from './icons/chevron-left.svg?component'
 import _ChevronRightIcon from './icons/chevron-right.svg?component'
+import _ChevronUpIcon from './icons/chevron-up.svg?component'
 import _CircleUserIcon from './icons/circle-user.svg?component'
 import _ClearIcon from './icons/clear.svg?component'
 import _ClientIcon from './icons/client.svg?component'
@@ -61,6 +65,7 @@ import _CubeIcon from './icons/cube.svg?component'
 import _CurrencyIcon from './icons/currency.svg?component'
 import _DashboardIcon from './icons/dashboard.svg?component'
 import _DatabaseIcon from './icons/database.svg?component'
+import _DatabaseBackupIcon from './icons/database-backup.svg?component'
 import _DownloadIcon from './icons/download.svg?component'
 import _DropdownIcon from './icons/dropdown.svg?component'
 import _EditIcon from './icons/edit.svg?component'
@@ -73,11 +78,13 @@ import _FileIcon from './icons/file.svg?component'
 import _FileArchiveIcon from './icons/file-archive.svg?component'
 import _FileCodeIcon from './icons/file-code.svg?component'
 import _FileImageIcon from './icons/file-image.svg?component'
+import _FilePlusIcon from './icons/file-plus.svg?component'
 import _FileTextIcon from './icons/file-text.svg?component'
 import _FilterIcon from './icons/filter.svg?component'
 import _FilterXIcon from './icons/filter-x.svg?component'
 import _FolderIcon from './icons/folder.svg?component'
 import _FolderArchiveIcon from './icons/folder-archive.svg?component'
+import _FolderCogIcon from './icons/folder-cog.svg?component'
 import _FolderOpenIcon from './icons/folder-open.svg?component'
 import _FolderSearchIcon from './icons/folder-search.svg?component'
 import _FolderUpIcon from './icons/folder-up.svg?component'
@@ -112,6 +119,7 @@ import _KeyIcon from './icons/key.svg?component'
 import _KeyboardIcon from './icons/keyboard.svg?component'
 import _LandmarkIcon from './icons/landmark.svg?component'
 import _LanguagesIcon from './icons/languages.svg?component'
+import _LayoutTemplateIcon from './icons/layout-template.svg?component'
 import _LeftArrowIcon from './icons/left-arrow.svg?component'
 import _LibraryIcon from './icons/library.svg?component'
 import _LightBulbIcon from './icons/light-bulb.svg?component'
@@ -149,6 +157,7 @@ import _PackageIcon from './icons/package.svg?component'
 import _PackageClosedIcon from './icons/package-closed.svg?component'
 import _PackageOpenIcon from './icons/package-open.svg?component'
 import _PaintbrushIcon from './icons/paintbrush.svg?component'
+import _PaletteIcon from './icons/palette.svg?component'
 import _PickaxeIcon from './icons/pickaxe.svg?component'
 import _PlayIcon from './icons/play.svg?component'
 import _PlugIcon from './icons/plug.svg?component'
@@ -232,26 +241,29 @@ export const AlignLeftIcon = _AlignLeftIcon
 export const ArchiveIcon = _ArchiveIcon
 export const ArrowBigRightDashIcon = _ArrowBigRightDashIcon
 export const ArrowBigUpDashIcon = _ArrowBigUpDashIcon
-export const ArrowDownLeftIcon = _ArrowDownLeftIcon
 export const ArrowDownIcon = _ArrowDownIcon
+export const ArrowDownLeftIcon = _ArrowDownLeftIcon
+export const ArrowLeftIcon = _ArrowLeftIcon
 export const ArrowLeftRightIcon = _ArrowLeftRightIcon
-export const ArrowUpRightIcon = _ArrowUpRightIcon
 export const ArrowUpIcon = _ArrowUpIcon
+export const ArrowUpRightIcon = _ArrowUpRightIcon
 export const AsteriskIcon = _AsteriskIcon
 export const BadgeCheckIcon = _BadgeCheckIcon
 export const BadgeDollarSignIcon = _BadgeDollarSignIcon
 export const BanIcon = _BanIcon
-export const BellRingIcon = _BellRingIcon
 export const BellIcon = _BellIcon
+export const BellRingIcon = _BellRingIcon
+export const BlendIcon = _BlendIcon
 export const BlocksIcon = _BlocksIcon
 export const BoldIcon = _BoldIcon
+export const BookIcon = _BookIcon
 export const BookOpenIcon = _BookOpenIcon
 export const BookTextIcon = _BookTextIcon
-export const BookIcon = _BookIcon
 export const BookmarkIcon = _BookmarkIcon
 export const BotIcon = _BotIcon
-export const BoxImportIcon = _BoxImportIcon
 export const BoxIcon = _BoxIcon
+export const BoxImportIcon = _BoxImportIcon
+export const BoxesIcon = _BoxesIcon
 export const BracesIcon = _BracesIcon
 export const BrushCleaningIcon = _BrushCleaningIcon
 export const BugIcon = _BugIcon
@@ -259,12 +271,13 @@ export const CalendarIcon = _CalendarIcon
 export const CardIcon = _CardIcon
 export const ChangeSkinIcon = _ChangeSkinIcon
 export const ChartIcon = _ChartIcon
+export const CheckIcon = _CheckIcon
 export const CheckCheckIcon = _CheckCheckIcon
 export const CheckCircleIcon = _CheckCircleIcon
-export const CheckIcon = _CheckIcon
 export const ChevronDownIcon = _ChevronDownIcon
 export const ChevronLeftIcon = _ChevronLeftIcon
 export const ChevronRightIcon = _ChevronRightIcon
+export const ChevronUpIcon = _ChevronUpIcon
 export const CircleUserIcon = _CircleUserIcon
 export const ClearIcon = _ClearIcon
 export const ClientIcon = _ClientIcon
@@ -287,25 +300,28 @@ export const CubeIcon = _CubeIcon
 export const CurrencyIcon = _CurrencyIcon
 export const DashboardIcon = _DashboardIcon
 export const DatabaseIcon = _DatabaseIcon
+export const DatabaseBackupIcon = _DatabaseBackupIcon
 export const DownloadIcon = _DownloadIcon
 export const DropdownIcon = _DropdownIcon
 export const EditIcon = _EditIcon
 export const EllipsisVerticalIcon = _EllipsisVerticalIcon
 export const ExpandIcon = _ExpandIcon
 export const ExternalIcon = _ExternalIcon
-export const EyeOffIcon = _EyeOffIcon
 export const EyeIcon = _EyeIcon
+export const EyeOffIcon = _EyeOffIcon
+export const FileIcon = _FileIcon
 export const FileArchiveIcon = _FileArchiveIcon
 export const FileCodeIcon = _FileCodeIcon
 export const FileImageIcon = _FileImageIcon
+export const FilePlusIcon = _FilePlusIcon
 export const FileTextIcon = _FileTextIcon
-export const FileIcon = _FileIcon
-export const FilterXIcon = _FilterXIcon
 export const FilterIcon = _FilterIcon
+export const FilterXIcon = _FilterXIcon
+export const FolderIcon = _FolderIcon
 export const FolderArchiveIcon = _FolderArchiveIcon
+export const FolderCogIcon = _FolderCogIcon
 export const FolderOpenIcon = _FolderOpenIcon
 export const FolderSearchIcon = _FolderSearchIcon
-export const FolderIcon = _FolderIcon
 export const FolderUpIcon = _FolderUpIcon
 export const GameIcon = _GameIcon
 export const GapIcon = _GapIcon
@@ -323,9 +339,9 @@ export const HashIcon = _HashIcon
 export const Heading1Icon = _Heading1Icon
 export const Heading2Icon = _Heading2Icon
 export const Heading3Icon = _Heading3Icon
+export const HeartIcon = _HeartIcon
 export const HeartHandshakeIcon = _HeartHandshakeIcon
 export const HeartMinusIcon = _HeartMinusIcon
-export const HeartIcon = _HeartIcon
 export const HistoryIcon = _HistoryIcon
 export const HomeIcon = _HomeIcon
 export const ImageIcon = _ImageIcon
@@ -338,19 +354,20 @@ export const KeyIcon = _KeyIcon
 export const KeyboardIcon = _KeyboardIcon
 export const LandmarkIcon = _LandmarkIcon
 export const LanguagesIcon = _LanguagesIcon
+export const LayoutTemplateIcon = _LayoutTemplateIcon
 export const LeftArrowIcon = _LeftArrowIcon
 export const LibraryIcon = _LibraryIcon
 export const LightBulbIcon = _LightBulbIcon
 export const LinkIcon = _LinkIcon
+export const ListIcon = _ListIcon
 export const ListBulletedIcon = _ListBulletedIcon
 export const ListEndIcon = _ListEndIcon
 export const ListFilterIcon = _ListFilterIcon
 export const ListOrderedIcon = _ListOrderedIcon
-export const ListIcon = _ListIcon
-export const LoaderCircleIcon = _LoaderCircleIcon
 export const LoaderIcon = _LoaderIcon
-export const LockOpenIcon = _LockOpenIcon
+export const LoaderCircleIcon = _LoaderCircleIcon
 export const LockIcon = _LockIcon
+export const LockOpenIcon = _LockOpenIcon
 export const LogInIcon = _LogInIcon
 export const LogOutIcon = _LogOutIcon
 export const MailIcon = _MailIcon
@@ -361,8 +378,8 @@ export const MessageIcon = _MessageIcon
 export const MicrophoneIcon = _MicrophoneIcon
 export const MinimizeIcon = _MinimizeIcon
 export const MinusIcon = _MinusIcon
-export const MonitorSmartphoneIcon = _MonitorSmartphoneIcon
 export const MonitorIcon = _MonitorIcon
+export const MonitorSmartphoneIcon = _MonitorSmartphoneIcon
 export const MoonIcon = _MoonIcon
 export const MoreHorizontalIcon = _MoreHorizontalIcon
 export const MoreVerticalIcon = _MoreVerticalIcon
@@ -371,16 +388,17 @@ export const NoSignalIcon = _NoSignalIcon
 export const NotepadTextIcon = _NotepadTextIcon
 export const OmorphiaIcon = _OmorphiaIcon
 export const OrganizationIcon = _OrganizationIcon
+export const PackageIcon = _PackageIcon
 export const PackageClosedIcon = _PackageClosedIcon
 export const PackageOpenIcon = _PackageOpenIcon
-export const PackageIcon = _PackageIcon
 export const PaintbrushIcon = _PaintbrushIcon
+export const PaletteIcon = _PaletteIcon
 export const PickaxeIcon = _PickaxeIcon
 export const PlayIcon = _PlayIcon
 export const PlugIcon = _PlugIcon
 export const PlusIcon = _PlusIcon
-export const RadioButtonCheckedIcon = _RadioButtonCheckedIcon
 export const RadioButtonIcon = _RadioButtonIcon
+export const RadioButtonCheckedIcon = _RadioButtonCheckedIcon
 export const ReceiptTextIcon = _ReceiptTextIcon
 export const RedoIcon = _RedoIcon
 export const RefreshCwIcon = _RefreshCwIcon
@@ -397,13 +415,13 @@ export const ScaleIcon = _ScaleIcon
 export const ScanEyeIcon = _ScanEyeIcon
 export const SearchIcon = _SearchIcon
 export const SendIcon = _SendIcon
-export const ServerPlusIcon = _ServerPlusIcon
 export const ServerIcon = _ServerIcon
+export const ServerPlusIcon = _ServerPlusIcon
 export const SettingsIcon = _SettingsIcon
 export const ShareIcon = _ShareIcon
+export const ShieldIcon = _ShieldIcon
 export const ShieldAlertIcon = _ShieldAlertIcon
 export const ShieldCheckIcon = _ShieldCheckIcon
-export const ShieldIcon = _ShieldIcon
 export const SignalIcon = _SignalIcon
 export const SkullIcon = _SkullIcon
 export const SlashIcon = _SlashIcon
@@ -430,25 +448,25 @@ export const TrashIcon = _TrashIcon
 export const TriangleAlertIcon = _TriangleAlertIcon
 export const UnderlineIcon = _UnderlineIcon
 export const UndoIcon = _UndoIcon
-export const UnknownDonationIcon = _UnknownDonationIcon
 export const UnknownIcon = _UnknownIcon
+export const UnknownDonationIcon = _UnknownDonationIcon
 export const UnlinkIcon = _UnlinkIcon
 export const UnplugIcon = _UnplugIcon
 export const UpdatedIcon = _UpdatedIcon
 export const UploadIcon = _UploadIcon
+export const UserIcon = _UserIcon
 export const UserCogIcon = _UserCogIcon
 export const UserPlusIcon = _UserPlusIcon
 export const UserRoundIcon = _UserRoundIcon
 export const UserSearchIcon = _UserSearchIcon
 export const UserXIcon = _UserXIcon
-export const UserIcon = _UserIcon
 export const UsersIcon = _UsersIcon
 export const VersionIcon = _VersionIcon
 export const WikiIcon = _WikiIcon
 export const WindowIcon = _WindowIcon
 export const WorldIcon = _WorldIcon
 export const WrenchIcon = _WrenchIcon
-export const XCircleIcon = _XCircleIcon
 export const XIcon = _XIcon
+export const XCircleIcon = _XCircleIcon
 export const ZoomInIcon = _ZoomInIcon
 export const ZoomOutIcon = _ZoomOutIcon

@@ -12,6 +12,7 @@ import {
 	SearchIcon,
 	XIcon,
 } from '@modrinth/assets'
+import { defineMessages, useVIntl } from '@modrinth/ui'
 import {
 	Avatar,
 	Button,
@@ -31,7 +32,7 @@ import { useThrottleFn } from '@vueuse/core'
 import { computed, type Reactive, watch } from 'vue'
 
 import LogoAnimated from '~/components/brand/LogoAnimated.vue'
-import AdPlaceholder from '~/components/ui/AdPlaceholder.vue'
+// import AdPlaceholder from '~/components/ui/AdPlaceholder.vue'
 import ProjectCard from '~/components/ui/ProjectCard.vue'
 import type { ModrinthServer } from '~/composables/servers/modrinth-servers.ts'
 import { useModrinthServers } from '~/composables/servers/modrinth-servers.ts'
@@ -424,7 +425,7 @@ useSeoMeta({
 		}"
 		aria-label="Filters"
 	>
-		<AdPlaceholder v-if="!auth.user && !server" />
+		<!-- <AdPlaceholder v-if="!auth.user && !server" /> -->
 		<div v-if="filtersMenuOpen" class="fixed inset-0 z-40 bg-bg"></div>
 		<div
 			class="flex flex-col gap-3"

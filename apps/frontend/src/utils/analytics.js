@@ -1,3 +1,4 @@
+import { injectI18n } from '@modrinth/ui'
 import dayjs from 'dayjs'
 import { computed, ref, watch } from 'vue'
 
@@ -7,10 +8,16 @@ import { computed, ref, watch } from 'vue'
 const { unix } = dayjs
 
 export function useCountryNames(style = 'long') {
-	const formattingOptions = { type: 'region', style }
-	const { formats } = useVIntl()
+	const { locale } = injectI18n()
+	const displayNames = computed(
+		() => new Intl.DisplayNames([locale.value], { type: 'region', style }),
+	)
 	return function formatCountryName(code) {
-		return formats.displayName(code, formattingOptions)
+		try {
+			return displayNames.value.of(code) ?? code
+		} catch {
+			return code
+		}
 	}
 }
 

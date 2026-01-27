@@ -16,7 +16,7 @@
 		/>
 
 		<ProjectPageVersions
-			v-if="versions.length > 0"
+			v-if="versions?.length"
 			:project="project"
 			:versions="versionsWithDisplayUrl"
 			:show-files="flags.showVersionFilesInTable"
@@ -40,18 +40,12 @@
 						:dropdown-id="`${baseDropdownId}-edit-${version.id}`"
 						:options="[
 							{
+								id: 'edit-metadata',
+								action: () => handleOpenEditVersionModal(version.id, project.id, 'metadata'),
+							},
+							{
 								id: 'edit-details',
 								action: () => handleOpenEditVersionModal(version.id, project.id, 'add-details'),
-							},
-							{
-								id: 'edit-changelog',
-								action: () => handleOpenEditVersionModal(version.id, project.id, 'add-changelog'),
-							},
-							{
-								id: 'edit-dependencies',
-								action: () =>
-									handleOpenEditVersionModal(version.id, project.id, 'add-dependencies'),
-								shown: project.project_type !== 'modpack',
 							},
 							{
 								id: 'edit-files',
@@ -69,13 +63,9 @@
 							<InfoIcon aria-hidden="true" />
 							Edit details
 						</template>
-						<template #edit-dependencies>
+						<template #edit-metadata>
 							<BoxIcon aria-hidden="true" />
-							Edit dependencies
-						</template>
-						<template #edit-changelog>
-							<AlignLeftIcon aria-hidden="true" />
-							Edit changelog
+							Edit metadata
 						</template>
 					</OverflowMenu>
 				</ButtonStyled>
@@ -145,15 +135,9 @@
 								shown: !!currentMember,
 							},
 							{
-								id: 'edit-changelog',
-								action: () => handleOpenEditVersionModal(version.id, project.id, 'add-changelog'),
+								id: 'edit-metadata',
+								action: () => handleOpenEditVersionModal(version.id, project.id, 'metadata'),
 								shown: !!currentMember,
-							},
-							{
-								id: 'edit-dependencies',
-								action: () =>
-									handleOpenEditVersionModal(version.id, project.id, 'add-dependencies'),
-								shown: !!currentMember && project.project_type !== 'modpack',
 							},
 							{
 								id: 'edit-files',
@@ -202,13 +186,9 @@
 							<InfoIcon aria-hidden="true" />
 							Edit details
 						</template>
-						<template #edit-dependencies>
+						<template #edit-metadata>
 							<BoxIcon aria-hidden="true" />
-							Edit dependencies
-						</template>
-						<template #edit-changelog>
-							<AlignLeftIcon aria-hidden="true" />
-							Edit changelog
+							Edit metadata
 						</template>
 						<template #delete>
 							<TrashIcon aria-hidden="true" />
@@ -227,7 +207,7 @@
 			</template>
 		</ProjectPageVersions>
 
-		<template v-if="!versions.length">
+		<template v-if="!versions?.length">
 			<div class="grid place-content-center py-10">
 				<svg
 					width="250"
@@ -301,7 +281,6 @@
 <script lang="ts" setup>
 import type { Labrinth } from '@modrinth/api-client'
 import {
-	AlignLeftIcon,
 	BoxIcon,
 	ClipboardCopyIcon,
 	DownloadIcon,
@@ -330,18 +309,9 @@ import { useTemplateRef } from 'vue'
 import CreateProjectVersionModal from '~/components/ui/create-project-version/CreateProjectVersionModal.vue'
 import { reportVersion } from '~/utils/report-helpers.ts'
 
-interface Props {
-	project: Labrinth.Projects.v2.Project
-	currentMember?: object
-}
-
-const { project, currentMember } = defineProps<Props>()
-
-const versions = defineModel<Labrinth.Versions.v3.Version[]>('versions', { required: true })
-
 const client = injectModrinthClient()
 const { addNotification } = injectNotificationManager()
-const { refreshVersions } = injectProjectPageContext()
+const { projectV2: project, currentMember, versions, refreshVersions } = injectProjectPageContext()
 
 const tags = useGeneratedState()
 const flags = useFeatureFlags()
@@ -352,7 +322,7 @@ const deleteVersionModal = ref<InstanceType<typeof ConfirmModal>>()
 const selectedVersion = ref<string | null>(null)
 
 const handleOpenCreateVersionModal = () => {
-	if (!currentMember) return
+	if (!currentMember.value) return
 	createProjectVersionModal.value?.openCreateVersionModal()
 }
 
@@ -361,12 +331,12 @@ const handleOpenEditVersionModal = (
 	projectId: string,
 	stageId?: string | null,
 ) => {
-	if (!currentMember) return
+	if (!currentMember.value) return
 	createProjectVersionModal.value?.openEditVersionModal(versionId, projectId, stageId)
 }
 
 const versionsWithDisplayUrl = computed(() =>
-	versions.value.map((v) => ({
+	(versions.value ?? []).map((v) => ({
 		...v,
 		displayUrlEnding: v.id,
 	})),

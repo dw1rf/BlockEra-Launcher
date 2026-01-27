@@ -1,4 +1,4 @@
-import { defineMessage, useVIntl } from '@vintl/vintl'
+import { defineMessage, useVIntl } from '@modrinth/ui'
 
 import type { Nag, NagContext } from '../../types/nags'
 
@@ -200,7 +200,7 @@ export const coreNags: Nag[] = [
 				context.project.source_url ||
 				context.project.wiki_url ||
 				context.project.discord_url ||
-				context.project.donation_urls.length > 0
+				context.project.donation_urls?.length
 			),
 		link: {
 			path: 'settings/links',

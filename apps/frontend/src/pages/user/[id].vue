@@ -482,14 +482,16 @@ import {
 	Combobox,
 	commonMessages,
 	ContentPageHeader,
+	defineMessages,
 	injectNotificationManager,
+	IntlFormatted,
 	NewModal,
 	OverflowMenu,
 	TagItem,
 	useRelativeTime,
+	useVIntl,
 } from '@modrinth/ui'
 import { isAdmin, isStaff, UserBadge } from '@modrinth/utils'
-import { IntlFormatted } from '@vintl/vintl/components'
 
 import TenMClubBadge from '~/assets/images/badges/10m-club.svg?component'
 import AlphaTesterBadge from '~/assets/images/badges/alpha-tester.svg?component'
@@ -754,11 +756,11 @@ useSeoMeta({
 const projectTypes = computed(() => {
 	const obj = {}
 
-	if (collections.value.length > 0) {
+	if (collections.value?.length > 0) {
 		obj.collection = true
 	}
 
-	for (const project of projects.value) {
+	for (const project of projects.value ?? []) {
 		obj[project.project_type] = true
 	}
 
@@ -769,7 +771,7 @@ const projectTypes = computed(() => {
 const sumDownloads = computed(() => {
 	let sum = 0
 
-	for (const project of projects.value) {
+	for (const project of projects.value ?? []) {
 		sum += project.downloads
 	}
 
