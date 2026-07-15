@@ -517,17 +517,17 @@ function handleClick(e) {
 	let target = e.target
 	while (target != null) {
 		if (target.matches('a')) {
-			if (
+			const isExternal =
 				target.href &&
 				['http://', 'https://', 'mailto:', 'tel:'].some((v) => target.href.startsWith(v)) &&
 				!target.classList.contains('router-link-active') &&
 				!target.href.startsWith('http://localhost') &&
 				!target.href.startsWith('https://tauri.localhost') &&
 				!target.href.startsWith('http://tauri.localhost')
-			) {
-				openUrl(target.href)
+			if (isExternal) {
+				e.preventDefault()
+				void openUrl(target.href)
 			}
-			e.preventDefault()
 			break
 		}
 		target = target.parentElement

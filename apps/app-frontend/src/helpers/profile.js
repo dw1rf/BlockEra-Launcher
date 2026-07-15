@@ -193,8 +193,9 @@ export async function edit_icon(path, iconPath) {
 }
 
 export async function finish_install(instance) {
-	if (instance.install_stage !== 'pack_installed') {
-		let linkedData = instance.linked_data
+	const linkedData = instance.linked_data
+	const needsPackInstall = ['not_installed', 'pack_installing'].includes(instance.install_stage)
+	if (linkedData && needsPackInstall) {
 		await install_to_existing_profile(
 			linkedData.project_id,
 			linkedData.version_id,

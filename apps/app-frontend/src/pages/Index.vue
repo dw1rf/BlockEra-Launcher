@@ -65,6 +65,7 @@ const instances = ref<GameInstance[]>([])
 const selectedPath = ref(localStorage.getItem('blockera-selected-instance') ?? '')
 const playing = ref(false)
 const actionPending = ref(false)
+const installingPaths = ref(new Set<string>())
 const loadingBars = ref<LoadingBar[]>([])
 const instanceFolderMenu = ref<InstanceType<typeof ContextMenu> | null>(null)
 const activeSkin = ref<Skin | null>(null)
@@ -77,9 +78,16 @@ const selectedInstance = computed(() => {
 
 const visibleInstances = computed(() => instances.value.slice(0, 8))
 const installed = computed(() => selectedInstance.value?.install_stage === 'installed')
+const installing = computed(() =>
+	selectedInstance.value
+		? installingPaths.value.has(selectedInstance.value.path) ||
+			selectedInstance.value.install_stage.includes('installing')
+		: false,
+)
 
 const primaryActionLabel = computed(() => {
 	if (actionPending.value) return 'Подготовка...'
+	if (installing.value) return 'Установка в фоне...'
 	if (playing.value) return 'Остановить'
 	if (!installed.value) return 'Завершить установку'
 	return 'Играть'
@@ -211,7 +219,21 @@ async function handleFolderMenu({ item, option }: { item: GameInstance; option: 
 
 async function runPrimaryAction() {
 	const instance = selectedInstance.value
-	if (!instance || actionPending.value) return
+	if (!instance || actionPending.value || installingPaths.value.has(instance.path)) return
+
+	if (!installed.value) {
+		installingPaths.value = new Set(installingPaths.value).add(instance.path)
+		void finish_install(instance)
+			.catch((error) => handleSevereError(error, { profilePath: instance.path }))
+			.finally(async () => {
+				const nextInstallingPaths = new Set(installingPaths.value)
+				nextInstallingPaths.delete(instance.path)
+				installingPaths.value = nextInstallingPaths
+				await Promise.allSettled([fetchInstances(), refreshPlaying(), refreshDownloads()])
+			})
+		await refreshDownloads()
+		return
+	}
 
 	actionPending.value = true
 	try {
@@ -223,10 +245,6 @@ async function runPrimaryAction() {
 				game_version: instance.game_version,
 				source: 'CinematicHome',
 			})
-		} else if (!installed.value) {
-			await finish_install(instance).catch((error) =>
-				handleSevereError(error, { profilePath: instance.path }),
-			)
 		} else {
 			await run(instance.path).catch((error) =>
 				handleSevereError(error, { profilePath: instance.path }),
@@ -239,7 +257,7 @@ async function runPrimaryAction() {
 		}
 	} finally {
 		actionPending.value = false
-		await Promise.all([fetchInstances(), refreshPlaying(), refreshDownloads()])
+		await Promise.allSettled([fetchInstances(), refreshPlaying(), refreshDownloads()])
 	}
 }
 
@@ -301,11 +319,12 @@ onUnmounted(() => {
 				<button
 					class="play-button"
 					:class="{ danger: playing }"
-					:disabled="actionPending"
+					:disabled="actionPending || installing"
 					@click="runPrimaryAction"
 				>
 					<span>{{ primaryActionLabel }}</span>
 					<SpinnerIcon v-if="actionPending" class="spin" />
+					<DownloadIcon v-else-if="installing" />
 					<StopCircleIcon v-else-if="playing" />
 					<DownloadIcon v-else-if="!installed" />
 					<PlayIcon v-else />

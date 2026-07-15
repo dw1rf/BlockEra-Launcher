@@ -377,7 +377,7 @@ const initProjects = async (cacheBehaviour?: CacheBehaviour) => {
 	const fetchVersions = []
 
 	for (const value of Object.values(profileProjects)) {
-		if (value.metadata) {
+		if (value?.metadata) {
 			fetchProjects.push(value.metadata.project_id)
 			fetchVersions.push(value.metadata.version_id)
 		}

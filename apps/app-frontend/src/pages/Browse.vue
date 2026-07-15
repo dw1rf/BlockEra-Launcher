@@ -167,7 +167,7 @@ const instanceFilters = computed(() => {
 
 		if (instanceHideInstalled.value && instanceProjects.value) {
 			const installedMods = Object.values(instanceProjects.value)
-				.filter((x) => x.metadata)
+				.filter((x) => x?.metadata?.project_id)
 				.map((x) => x.metadata.project_id)
 
 			installedMods.push(...newlyInstalled.value)
@@ -273,7 +273,7 @@ async function refreshSearch() {
 			val.installed =
 				newlyInstalled.value.includes(val.project_id) ||
 				Object.values(instanceProjects.value ?? {}).some(
-					(x) => x.metadata && x.metadata.project_id === val.project_id,
+					(x) => x?.metadata?.project_id === val.project_id,
 				)
 		}
 	}
@@ -311,6 +311,8 @@ async function refreshSearch() {
 		...persistentParams,
 		...createPageParams(),
 	}
+	delete params.page
+	delete params.o
 
 	breadcrumbs.setContext({
 		name: 'Discover content',
@@ -326,6 +328,8 @@ async function refreshSearch() {
 }
 
 async function setPage(newPageNumber: number) {
+	if (newPageNumber === currentPage.value || loading.value) return
+	loading.value = true
 	currentPage.value = newPageNumber
 
 	await onSearchChangeToTop()
@@ -336,7 +340,7 @@ const searchWrapper: Ref<HTMLElement | null> = ref(null)
 async function onSearchChangeToTop() {
 	await nextTick()
 
-	window.scrollTo({ top: 0, behavior: 'smooth' })
+	searchWrapper.value?.scrollTo({ top: 0, behavior: 'auto' })
 }
 
 function clearSearch() {

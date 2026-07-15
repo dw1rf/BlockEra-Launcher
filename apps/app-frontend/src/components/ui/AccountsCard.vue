@@ -55,13 +55,14 @@
 					<strong>Аккаунты не добавлены</strong>
 					<span>Добавьте Microsoft, Ely.by или офлайн-профиль.</span>
 				</div>
-				<button type="button" class="manage-accounts" @click.stop="showAccountManager($event)">
+				<button type="button" class="manage-accounts" @click.stop="showAccountManager">
 					Управление аккаунтами
 					<DropdownIcon />
 				</button>
 			</div>
 		</transition>
 	</Teleport>
+	<Teleport to="body">
 	<ModalWrapper ref="accountManagerModal" class="account-manager-modal" header="Аккаунты BlockEra">
 		<div class="account-manager-body">
 			<div class="account-manager-intro">
@@ -234,6 +235,7 @@
 			<label class="label">An unexpected error has occurred. Please try again later.</label>
 		</div>
 	</ModalWrapper>
+	</Teleport>
 </template>
 
 <script setup>
@@ -578,10 +580,10 @@ async function selectAndClose(account) {
 	showCard.value = false
 }
 
-async function showAccountManager(event) {
+async function showAccountManager() {
 	showCard.value = false
 	await nextTick()
-	accountManagerModal.value?.show(event)
+	requestAnimationFrame(() => accountManagerModal.value?.show())
 }
 
 function handleKeydown(event) {
