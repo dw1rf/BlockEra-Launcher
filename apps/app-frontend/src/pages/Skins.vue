@@ -327,163 +327,194 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 			<div>
 				<p class="studio-eyebrow">ПЕРСОНАЛИЗАЦИЯ</p>
 				<h1>Гардероб</h1>
-				<p>Меняйте скин и плащ, сохраняйте любимые образы и переключайтесь между ними в один клик.</p>
+				<p>
+					Меняйте скин и плащ, сохраняйте любимые образы и переключайтесь между ними в один клик.
+				</p>
 			</div>
 			<button v-if="currentUser" class="upload-action" @click="openUploadSkinModal">
 				<PlusIcon /> Добавить скин
 			</button>
 		</header>
-
-	<div v-if="currentUser" class="skin-layout">
-		<div class="preview-panel">
-			<div class="panel-heading">
-				<div><p>ТЕКУЩИЙ ОБРАЗ</p><h2>{{ username || 'Игрок' }}</h2></div>
-				<span class="equipped-pill"><UpdatedIcon /> Активен</span>
-			</div>
-			<div class="preview-container">
-				<SkinPreviewRenderer
-					:cape-src="capeTexture"
-					:texture-src="skinTexture || steveSkin"
-					:variant="skinVariant || 'CLASSIC'"
-					:nametag="skinNametag"
-					:initial-rotation="Math.PI / 8"
-					:scale="1.08"
-					:fov="36"
-					hint="Потяните, чтобы повернуть"
+		<div v-if="currentUser && offlineAccount" class="offline-skin-notice">
+			<UpdatedIcon />
+			<div>
+				<strong>Сетевые скины работают через Ely.by</strong>
+				<span
+					>В мультиплеере BlockEra загружает скин Ely.by по вашему offline-нику. Локальные PNG из
+					гардероба остаются доступны для выбора и предпросмотра.</span
 				>
-					<template v-if="!offlineAccount" #subtitle>
-						<ButtonStyled :disabled="!!selectedSkin?.cape_id">
-							<button
-								v-tooltip="
-									selectedSkin?.cape_id
-										? 'Для этого скина уже выбран отдельный плащ.'
-										: undefined
-								"
-								:disabled="!!selectedSkin?.cape_id"
-								@click="
-									(e: MouseEvent) =>
-										selectCapeModal?.show(
-											e,
-											selectedSkin?.texture_key,
-											currentCape,
-											skinTexture,
-											skinVariant,
-										)
-								"
-							>
-								<UpdatedIcon />
-								Настроить плащ
-							</button>
-						</ButtonStyled>
-					</template>
-				</SkinPreviewRenderer>
-			</div>
-			<div class="preview-footer">
-				<div><span>Модель</span><strong>{{ skinVariant === 'SLIM' ? 'Тонкие руки' : 'Классическая' }}</strong></div>
-				<div><span>{{ offlineAccount ? 'Аккаунт' : 'Плащ' }}</span><strong>{{ offlineAccount ? 'Offline' : currentCape?.name || 'Не выбран' }}</strong></div>
 			</div>
 		</div>
 
-		<div class="skins-container">
-			<section class="skin-section">
-				<div class="library-heading"><div><p>ВАША КОЛЛЕКЦИЯ</p><h2>Сохранённые скины</h2></div><span>{{ savedSkins.length }} сохранено</span></div>
-				<div class="skin-card-grid">
-					<SkinLikeTextButton class="skin-card" @click="openUploadSkinModal">
-						<template #icon>
-							<PlusIcon class="size-8" />
-						</template>
-						<span>Новый скин</span>
-					</SkinLikeTextButton>
-
-					<SkinButton
-						v-for="skin in savedSkins"
-						:key="`saved-skin-${skin.texture_key}`"
-						class="skin-card"
-						:forward-image-src="getBakedSkinTextures(skin)?.forwards"
-						:backward-image-src="getBakedSkinTextures(skin)?.backwards"
-						:selected="selectedSkin === skin"
-						@select="changeSkin(skin)"
+		<div v-if="currentUser" class="skin-layout">
+			<div class="preview-panel">
+				<div class="panel-heading">
+					<div>
+						<p>ТЕКУЩИЙ ОБРАЗ</p>
+						<h2>{{ username || 'Игрок' }}</h2>
+					</div>
+					<span class="equipped-pill"><UpdatedIcon /> Активен</span>
+				</div>
+				<div class="preview-container">
+					<SkinPreviewRenderer
+						:cape-src="capeTexture"
+						:texture-src="skinTexture || steveSkin"
+						:variant="skinVariant || 'CLASSIC'"
+						:nametag="skinNametag"
+						:initial-rotation="Math.PI / 8"
+						:scale="1.08"
+						:fov="36"
+						hint="Потяните, чтобы повернуть"
 					>
-						<template #overlay-buttons>
-							<Button
-								color="green"
-								aria-label="Изменить скин"
-								class="pointer-events-auto"
-								@click.stop="(e: MouseEvent) => editSkinModal?.show(e, skin)"
-							>
-								<EditIcon /> Изменить
-							</Button>
-							<Button
-								v-show="!skin.is_equipped"
-								v-tooltip="'Удалить скин'"
-								aria-label="Удалить скин"
-								color="red"
-								class="!rounded-[100%] pointer-events-auto"
-								icon-only
-								@click.stop="() => confirmDeleteSkin(skin)"
-							>
-								<TrashIcon />
-							</Button>
+						<template v-if="!offlineAccount" #subtitle>
+							<ButtonStyled :disabled="!!selectedSkin?.cape_id">
+								<button
+									v-tooltip="
+										selectedSkin?.cape_id ? 'Для этого скина уже выбран отдельный плащ.' : undefined
+									"
+									:disabled="!!selectedSkin?.cape_id"
+									@click="
+										(e: MouseEvent) =>
+											selectCapeModal?.show(
+												e,
+												selectedSkin?.texture_key,
+												currentCape,
+												skinTexture,
+												skinVariant,
+											)
+									"
+								>
+									<UpdatedIcon />
+									Настроить плащ
+								</button>
+							</ButtonStyled>
 						</template>
-					</SkinButton>
+					</SkinPreviewRenderer>
 				</div>
-			</section>
-
-			<section class="skin-section defaults-section">
-				<div class="library-heading"><div><p>БАЗОВЫЕ ОБРАЗЫ</p><h2>Стандартные скины</h2></div><span>{{ defaultSkins.length }} доступно</span></div>
-				<div class="skin-card-grid">
-					<SkinButton
-						v-for="skin in defaultSkins"
-						:key="`default-skin-${skin.texture_key}`"
-						class="skin-card"
-						:forward-image-src="getBakedSkinTextures(skin)?.forwards"
-						:backward-image-src="getBakedSkinTextures(skin)?.backwards"
-						:selected="selectedSkin === skin"
-						:tooltip="skin.name"
-						@select="changeSkin(skin)"
-					/>
+				<div class="preview-footer">
+					<div>
+						<span>Модель</span
+						><strong>{{ skinVariant === 'SLIM' ? 'Тонкие руки' : 'Классическая' }}</strong>
+					</div>
+					<div>
+						<span>{{ offlineAccount ? 'Аккаунт' : 'Плащ' }}</span
+						><strong>{{ offlineAccount ? 'Offline' : currentCape?.name || 'Не выбран' }}</strong>
+					</div>
 				</div>
-			</section>
-		</div>
-	</div>
+			</div>
 
-	<div v-else class="signin-panel">
-		<div
-			class="bg-bg-raised card-shadow rounded-lg p-7 flex flex-col gap-5 shadow-md relative max-w-xl w-full mx-auto"
-		>
-			<img
-				:src="ExcitedRinthbot"
-				alt=""
-				class="absolute -top-28 right-8 md:right-20 h-28 w-auto"
-			/>
-			<div
-				class="absolute top-0 left-0 w-full h-[1px] opacity-40 bg-gradient-to-r from-transparent via-brand to-transparent"
-				style="
-					background: linear-gradient(
-						to right,
-						transparent 2rem,
-						var(--color-brand) calc(100% - 13rem),
-						var(--color-brand) calc(100% - 5rem),
-						transparent calc(100% - 2rem)
-					);
-				"
-			></div>
+			<div class="skins-container">
+				<section class="skin-section">
+					<div class="library-heading">
+						<div>
+							<p>ВАША КОЛЛЕКЦИЯ</p>
+							<h2>Сохранённые скины</h2>
+						</div>
+						<span>{{ savedSkins.length }} сохранено</span>
+					</div>
+					<div class="skin-card-grid">
+						<SkinLikeTextButton class="skin-card" @click="openUploadSkinModal">
+							<template #icon>
+								<PlusIcon class="size-8" />
+							</template>
+							<span>Новый скин</span>
+						</SkinLikeTextButton>
 
-			<div class="flex flex-col gap-5">
-				<h1 class="text-3xl font-extrabold m-0">Войдите в Minecraft</h1>
-				<p class="text-lg m-0">
-					После входа здесь появятся ваши скины, плащи и стандартная коллекция Minecraft.
-				</p>
-				<ButtonStyled v-show="accountsCard" color="brand" :disabled="accountsCard.loginDisabled">
-					<button :disabled="accountsCard.loginDisabled" @click="login">
-						<LogInIcon v-if="!accountsCard.loginDisabled" />
-						<SpinnerIcon v-else class="animate-spin" />
-						Войти в аккаунт
-					</button>
-				</ButtonStyled>
+						<SkinButton
+							v-for="skin in savedSkins"
+							:key="`saved-skin-${skin.texture_key}`"
+							class="skin-card"
+							:forward-image-src="getBakedSkinTextures(skin)?.forwards"
+							:backward-image-src="getBakedSkinTextures(skin)?.backwards"
+							:selected="selectedSkin === skin"
+							@select="changeSkin(skin)"
+						>
+							<template #overlay-buttons>
+								<Button
+									color="green"
+									aria-label="Изменить скин"
+									class="pointer-events-auto"
+									@click.stop="(e: MouseEvent) => editSkinModal?.show(e, skin)"
+								>
+									<EditIcon /> Изменить
+								</Button>
+								<Button
+									v-show="!skin.is_equipped"
+									v-tooltip="'Удалить скин'"
+									aria-label="Удалить скин"
+									color="red"
+									class="!rounded-[100%] pointer-events-auto"
+									icon-only
+									@click.stop="() => confirmDeleteSkin(skin)"
+								>
+									<TrashIcon />
+								</Button>
+							</template>
+						</SkinButton>
+					</div>
+				</section>
+
+				<section class="skin-section defaults-section">
+					<div class="library-heading">
+						<div>
+							<p>БАЗОВЫЕ ОБРАЗЫ</p>
+							<h2>Стандартные скины</h2>
+						</div>
+						<span>{{ defaultSkins.length }} доступно</span>
+					</div>
+					<div class="skin-card-grid">
+						<SkinButton
+							v-for="skin in defaultSkins"
+							:key="`default-skin-${skin.texture_key}`"
+							class="skin-card"
+							:forward-image-src="getBakedSkinTextures(skin)?.forwards"
+							:backward-image-src="getBakedSkinTextures(skin)?.backwards"
+							:selected="selectedSkin === skin"
+							:tooltip="skin.name"
+							@select="changeSkin(skin)"
+						/>
+					</div>
+				</section>
 			</div>
 		</div>
-	</div>
+
+		<div v-else class="signin-panel">
+			<div
+				class="bg-bg-raised card-shadow rounded-lg p-7 flex flex-col gap-5 shadow-md relative max-w-xl w-full mx-auto"
+			>
+				<img
+					:src="ExcitedRinthbot"
+					alt=""
+					class="absolute -top-28 right-8 md:right-20 h-28 w-auto"
+				/>
+				<div
+					class="absolute top-0 left-0 w-full h-[1px] opacity-40 bg-gradient-to-r from-transparent via-brand to-transparent"
+					style="
+						background: linear-gradient(
+							to right,
+							transparent 2rem,
+							var(--color-brand) calc(100% - 13rem),
+							var(--color-brand) calc(100% - 5rem),
+							transparent calc(100% - 2rem)
+						);
+					"
+				></div>
+
+				<div class="flex flex-col gap-5">
+					<h1 class="text-3xl font-extrabold m-0">Войдите в Minecraft</h1>
+					<p class="text-lg m-0">
+						После входа здесь появятся ваши скины, плащи и стандартная коллекция Minecraft.
+					</p>
+					<ButtonStyled v-show="accountsCard" color="brand" :disabled="accountsCard.loginDisabled">
+						<button :disabled="accountsCard.loginDisabled" @click="login">
+							<LogInIcon v-if="!accountsCard.loginDisabled" />
+							<SpinnerIcon v-else class="animate-spin" />
+							Войти в аккаунт
+						</button>
+					</ButtonStyled>
+				</div>
+			</div>
+		</div>
 	</main>
 </template>
 
@@ -494,8 +525,7 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 	box-sizing: border-box;
 	overflow-y: auto;
 	background:
-		radial-gradient(circle at 78% 0%, rgba(126, 34, 206, 0.17), transparent 31rem),
-		#060a12;
+		radial-gradient(circle at 78% 0%, rgba(126, 34, 206, 0.17), transparent 31rem), #060a12;
 	color: #f8fafc;
 	--smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -552,11 +582,44 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 	font: inherit;
 	font-weight: 700;
 	cursor: pointer;
-	transition: transform 180ms var(--smooth), filter 180ms ease;
+	transition:
+		transform 180ms var(--smooth),
+		filter 180ms ease;
 }
 
-.upload-action:hover { transform: translateY(-2px); filter: brightness(1.08); }
-.upload-action svg { width: 1.15rem; }
+.upload-action:hover {
+	transform: translateY(-2px);
+	filter: brightness(1.08);
+}
+.upload-action svg {
+	width: 1.15rem;
+}
+
+.offline-skin-notice {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.8rem;
+	margin-top: 1rem;
+	padding: 0.9rem 1rem;
+	border: 1px solid rgba(192, 132, 252, 0.24);
+	border-radius: 0.85rem;
+	background: rgba(91, 33, 182, 0.14);
+	color: #e9d5ff;
+}
+.offline-skin-notice > svg {
+	width: 1.2rem;
+	flex: 0 0 auto;
+}
+.offline-skin-notice div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+.offline-skin-notice span {
+	color: rgba(226, 232, 240, 0.68);
+	font-size: 0.8rem;
+	line-height: 1.45;
+}
 
 .skin-layout {
 	display: grid;
@@ -613,7 +676,9 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 	font-weight: 700;
 }
 
-.equipped-pill svg { width: 0.9rem; }
+.equipped-pill svg {
+	width: 0.9rem;
+}
 
 .preview-container {
 	height: calc(100% - 7.4rem);
@@ -642,8 +707,13 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 	background: rgba(4, 8, 15, 0.48);
 }
 
-.preview-footer span { color: rgba(148, 163, 184, 0.72); font-size: 0.62rem; }
-.preview-footer strong { font-size: 0.74rem; }
+.preview-footer span {
+	color: rgba(148, 163, 184, 0.72);
+	font-size: 0.62rem;
+}
+.preview-footer strong {
+	font-size: 0.74rem;
+}
 
 .skins-container {
 	padding: 1.2rem;
@@ -681,7 +751,9 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 	overflow: hidden;
 	border: 1px solid rgba(255, 255, 255, 0.08) !important;
 	background: rgba(6, 10, 18, 0.72) !important;
-	transition: transform 180ms var(--smooth), border-color 180ms ease !important;
+	transition:
+		transform 180ms var(--smooth),
+		border-color 180ms ease !important;
 }
 
 :deep(.skin-card:hover) {
@@ -707,20 +779,38 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 }
 
 @media (max-width: 1050px) {
-	.skin-layout { grid-template-columns: 1fr; }
-	.preview-panel { position: relative; top: 0; height: 37rem; }
+	.skin-layout {
+		grid-template-columns: 1fr;
+	}
+	.preview-panel {
+		position: relative;
+		top: 0;
+		height: 37rem;
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
 	.studio-hero,
 	.preview-panel,
-	.skins-container { animation: studio-enter 350ms var(--smooth) both; }
-	.preview-panel { animation-delay: 60ms; }
-	.skins-container { animation-delay: 100ms; }
+	.skins-container {
+		animation: studio-enter 350ms var(--smooth) both;
+	}
+	.preview-panel {
+		animation-delay: 60ms;
+	}
+	.skins-container {
+		animation-delay: 100ms;
+	}
 }
 
 @keyframes studio-enter {
-	from { opacity: 0; transform: translateY(8px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 </style>

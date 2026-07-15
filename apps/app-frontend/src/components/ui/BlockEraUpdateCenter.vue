@@ -7,11 +7,32 @@
 		<transition name="update-popover">
 			<section v-if="open" class="update-center-popover">
 				<header>
-					<div><span>ЦЕНТР ОБНОВЛЕНИЙ</span><h3>Сборки BlockEra</h3></div>
+					<div><span>ЦЕНТР ОБНОВЛЕНИЙ</span><h3>BlockEra</h3></div>
 					<button type="button" aria-label="Закрыть" @click="open = false"><XIcon /></button>
 				</header>
+				<div class="launcher-update" :class="{ available: updateState }">
+					<div class="launcher-update-copy">
+						<span>ЛАУНЧЕР</span>
+						<strong v-if="updateState">Доступна версия {{ availableUpdate?.version }}</strong>
+						<strong v-else-if="checkingState">Проверяем обновление…</strong>
+						<strong v-else>Установлена актуальная версия {{ currentVersion }}</strong>
+						<small v-if="availableUpdate?.body">{{ availableUpdate.body }}</small>
+					</div>
+					<button
+						v-if="updateState"
+						type="button"
+						class="install-launcher-update"
+						:disabled="installState"
+						@click="installUpdate"
+					>
+						<RefreshCwIcon v-if="installState" class="spin" />
+						<DownloadIcon v-else />
+						{{ installState ? 'Установка…' : 'Обновить' }}
+					</button>
+				</div>
+				<p v-if="updateError" class="update-error">Проверка лаунчера: {{ updateError }}</p>
 				<div class="update-summary">
-					<strong>{{ loading ? 'Проверяем сборки…' : totalUpdates ? `Доступно обновлений: ${totalUpdates}` : 'Всё актуально' }}</strong>
+					<strong>{{ loading ? 'Проверяем сборки…' : instanceUpdates ? `Обновлений сборок: ${instanceUpdates}` : 'Сборки актуальны' }}</strong>
 					<span>Обновления устанавливаются только по вашей команде.</span>
 				</div>
 				<div class="update-instance-list">
@@ -25,8 +46,8 @@
 					<div v-if="!loading && items.length === 0" class="update-empty">Сборки пока не созданы.</div>
 				</div>
 				<footer>
-					<button type="button" :disabled="loading" @click="scan"><RefreshCwIcon /> Проверить снова</button>
-					<button type="button" class="update-all" :disabled="totalUpdates === 0 || updatingAll" @click="updateAllInstances">
+					<button type="button" :disabled="loading || checkingState" @click="scan"><RefreshCwIcon /> Проверить снова</button>
+					<button type="button" class="update-all" :disabled="instanceUpdates === 0 || updatingAll" @click="updateAllInstances">
 						{{ updatingAll ? 'Обновляем…' : 'Обновить всё' }}
 					</button>
 				</footer>
@@ -38,10 +59,21 @@
 
 <script setup lang="ts">
 import { DownloadIcon, RefreshCwIcon, XIcon } from '@modrinth/assets'
+import { getVersion } from '@tauri-apps/api/app'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { automaticWorldBackupsEnabled, backupProfileWorlds } from '@/helpers/backups'
 import { get_projects, list, update_all } from '@/helpers/profile'
+import {
+	availableUpdate,
+	checkingState,
+	checkLauncherUpdate,
+	formatUpdaterError,
+	installLauncherUpdate,
+	installState,
+	updateError,
+	updateState,
+} from '@/helpers/update'
 
 type UpdateItem = {
 	path: string
@@ -58,19 +90,28 @@ const loading = ref(false)
 const updatingAll = ref(false)
 const items = ref<UpdateItem[]>([])
 const lastError = ref('')
-const totalUpdates = computed(() => items.value.reduce((total, item) => total + item.updates, 0))
+const currentVersion = ref('')
+const instanceUpdates = computed(() => items.value.reduce((total, item) => total + item.updates, 0))
+const totalUpdates = computed(() => instanceUpdates.value + (updateState.value ? 1 : 0))
 
 async function scan() {
 	loading.value = true
 	lastError.value = ''
+	const launcherCheck = checkLauncherUpdate()
 	try {
 		const profiles = await list()
+		const failures: string[] = []
 		items.value = await Promise.all(
 			profiles.map(async (profile) => {
-				const projects = await get_projects(profile.path, 'stale_while_revalidate_skip_offline')
-				const updates = Object.values(
-					(projects ?? {}) as Record<string, { update_version_id?: string }>,
-				).filter((project) => project.update_version_id).length
+				let updates = 0
+				try {
+					const projects = await get_projects(profile.path, 'stale_while_revalidate_skip_offline')
+					updates = Object.values(
+						(projects ?? {}) as Record<string, { update_version_id?: string }>,
+					).filter((project) => project?.update_version_id).length
+				} catch (error) {
+					failures.push(`${profile.name}: ${formatUpdaterError(error)}`)
+				}
 				return {
 					path: profile.path,
 					name: profile.name,
@@ -81,10 +122,20 @@ async function scan() {
 				}
 			}),
 		)
+		lastError.value = failures.join('\n')
 	} catch (error) {
-		lastError.value = `Проверка не удалась: ${error instanceof Error ? error.message : String(error)}`
+		lastError.value = `Проверка не удалась: ${formatUpdaterError(error)}`
 	} finally {
+		await launcherCheck
 		loading.value = false
+	}
+}
+
+async function installUpdate() {
+	try {
+		await installLauncherUpdate()
+	} catch (error) {
+		if (!updateError.value) updateError.value = formatUpdaterError(error)
 	}
 }
 
@@ -122,6 +173,7 @@ function handleKey(event: KeyboardEvent) {
 onMounted(() => {
 	document.addEventListener('click', handleOutside)
 	document.addEventListener('keydown', handleKey)
+	void getVersion().then((version) => (currentVersion.value = version))
 	void scan()
 })
 
@@ -145,6 +197,16 @@ onBeforeUnmount(() => {
 .update-center-popover button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .update-center-popover header button { width: 32px; height: 32px; display: grid; place-items: center; background: rgba(255,255,255,.045); border-radius: 9px; }
 .update-center-popover header svg { width: 16px; }
+.launcher-update { margin-top: 13px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; }
+.launcher-update.available { background: linear-gradient(135deg, rgba(141,57,231,.24), rgba(89,31,158,.1)); border-color: rgba(190,111,255,.32); box-shadow: 0 0 28px rgba(134,52,221,.11); }
+.launcher-update-copy { min-width: 0; display: flex; flex-direction: column; }
+.launcher-update-copy > span { color: #bd76ff; font-size: 9px; font-weight: 850; letter-spacing: .12em; }
+.launcher-update-copy strong { margin-top: 3px; font-size: 13px; }
+.launcher-update-copy small { max-width: 260px; margin-top: 3px; overflow: hidden; color: #9ba1ae; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.install-launcher-update { flex: none; padding: 8px 10px; display: flex; align-items: center; gap: 6px; color: white !important; background: linear-gradient(135deg,#973ef0,#6822c9); border-radius: 9px; font-size: 10px !important; font-weight: 800 !important; }
+.install-launcher-update svg { width: 14px; }
+.spin { animation: update-spin 900ms linear infinite; }
+@keyframes update-spin { to { transform: rotate(360deg); } }
 .update-summary { margin: 13px 0 10px; padding: 12px; display: flex; flex-direction: column; background: linear-gradient(135deg, rgba(132,54,218,.17), rgba(89,31,158,.08)); border: 1px solid rgba(178,95,255,.17); border-radius: 12px; }
 .update-summary strong { font-size: 13px; }
 .update-summary span { margin-top: 3px; color: #9298a6; font-size: 10px; }
@@ -162,7 +224,7 @@ onBeforeUnmount(() => {
 .update-center-popover footer svg { width: 14px; }
 .update-center-popover footer .update-all { color: white; background: linear-gradient(135deg,#9139ed,#6721c8); }
 .update-center-popover button:disabled { opacity: .5; cursor: wait; }
-.update-error { margin: 10px 0 0; padding: 9px; color: #ff9bb2; background: rgba(255,70,110,.08); border-radius: 9px; font-size: 10px; }
+.update-error { margin: 10px 0 0; padding: 9px; color: #ff9bb2; background: rgba(255,70,110,.08); border-radius: 9px; font-size: 10px; white-space: pre-wrap; word-break: break-word; }
 .update-empty { padding: 22px; color: #858c9a; text-align: center; }
 .update-popover-enter-active,.update-popover-leave-active { transition: opacity 170ms ease, transform 170ms ease; }
 .update-popover-enter-from,.update-popover-leave-to { opacity: 0; transform: translateY(-7px) scale(.98); }

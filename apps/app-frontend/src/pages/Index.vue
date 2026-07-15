@@ -23,12 +23,12 @@ import dayjs from 'dayjs'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import heroVibrant from '@/assets/launcher/hero-vibrant.jpg'
 import steveSkin from '@/assets/skins/steve.png'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_default_user, users } from '@/helpers/auth'
 import { loading_listener, process_listener, profile_listener } from '@/helpers/events'
+import { instanceBackgroundFor } from '@/helpers/instance-backgrounds'
 import { get_by_profile_path } from '@/helpers/process'
 import { finish_install, kill, list, run } from '@/helpers/profile.js'
 import { get_available_skins, get_normalized_skin_texture, type Skin } from '@/helpers/skins'
@@ -271,6 +271,10 @@ function cardBackgroundPosition(index: number) {
 	return positions[index % positions.length]
 }
 
+function instanceBackground(path: string) {
+	return instanceBackgroundFor(path)
+}
+
 await Promise.all([fetchInstances(), refreshDownloads()])
 await refreshPlaying()
 void refreshPlayerLook()
@@ -293,7 +297,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<main class="cinematic-home" :style="{ '--cinematic-hero': `url(${heroVibrant})` }">
+	<main
+		class="cinematic-home"
+		:style="{ '--cinematic-hero': `url(${instanceBackground(selectedInstance?.path ?? 'blockera')})` }"
+	>
 		<div class="cinematic-scene" aria-hidden="true"></div>
 		<div class="cinematic-shade" aria-hidden="true"></div>
 
@@ -395,7 +402,7 @@ onUnmounted(() => {
 					@click="selectInstance(instance)"
 					@contextmenu.prevent.stop="openInstanceFolderMenu($event, instance)"
 				>
-					<span class="card-image" :style="{ backgroundImage: `url(${heroVibrant})` }"></span>
+					<span class="card-image" :style="{ backgroundImage: `url(${instanceBackground(instance.path)})` }"></span>
 					<span class="card-shade"></span>
 					<Avatar
 						class="instance-avatar"

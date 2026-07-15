@@ -15,6 +15,7 @@ import { useRouter } from 'vue-router'
 
 import { trackEvent } from '@/helpers/analytics'
 import { process_listener } from '@/helpers/events'
+import { instanceBackgroundFor } from '@/helpers/instance-backgrounds'
 import { get_by_profile_path } from '@/helpers/process'
 import { finish_install, kill, run } from '@/helpers/profile'
 import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
@@ -211,11 +212,12 @@ onUnmounted(() => unlisten())
 	</template>
 	<div v-else>
 		<div
-			class="button-base bg-bg-raised p-4 rounded-xl flex gap-3 group"
+			class="instance-library-card button-base bg-bg-raised p-4 rounded-xl flex gap-3 group"
+			:style="{ '--instance-card-background': `url(${instanceBackgroundFor(instance.path)})` }"
 			@click="seeInstance"
 			@mouseenter="checkProcess"
 		>
-			<div class="relative flex items-center justify-center">
+			<div class="relative z-[1] flex items-center justify-center">
 				<Avatar
 					size="48px"
 					:src="instance.icon_path ? convertFileSrc(instance.icon_path) : null"
@@ -262,7 +264,7 @@ onUnmounted(() => unlisten())
 					</ButtonStyled>
 				</div>
 			</div>
-			<div class="flex flex-col gap-1">
+			<div class="relative z-[1] flex flex-col gap-1">
 				<p class="m-0 text-md font-bold text-contrast leading-tight line-clamp-1">
 					{{ instance.name }}
 				</p>
@@ -276,3 +278,34 @@ onUnmounted(() => unlisten())
 		</div>
 	</div>
 </template>
+
+<style scoped>
+.instance-library-card {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	min-height: 5.4rem;
+	align-items: center;
+}
+
+.instance-library-card::before {
+	content: '';
+	position: absolute;
+	z-index: 0;
+	inset: 0;
+	background:
+		linear-gradient(90deg, rgba(8, 12, 20, 0.96) 0%, rgba(8, 12, 20, 0.78) 58%, rgba(8, 12, 20, 0.42) 100%),
+		var(--instance-card-background) center / cover;
+	transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms ease;
+}
+
+.instance-library-card:hover::before {
+	transform: scale(1.035);
+	filter: saturate(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.instance-library-card::before { transition: none; }
+	.instance-library-card:hover::before { transform: none; }
+}
+</style>

@@ -91,7 +91,17 @@ function filterLabel(filter: { id: string; formatted_name: string }) {
 }
 
 function sortLabel(label?: string) {
-	return ({ Relevance: 'Релевантность', Downloads: 'Загрузки', Follows: 'Подписки', Newest: 'Новые', Updated: 'Обновлённые' } as Record<string, string>)[label ?? ''] ?? label
+	return (
+		(
+			{
+				Relevance: 'Релевантность',
+				Downloads: 'Загрузки',
+				Follows: 'Подписки',
+				Newest: 'Новые',
+				Updated: 'Обновлённые',
+			} as Record<string, string>
+		)[label ?? ''] ?? label
+	)
 }
 
 type Instance = {
@@ -206,8 +216,6 @@ const {
 	createPageParams,
 } = useSearch(projectTypes, tags, instanceFilters)
 
-const previousFilterState = ref('')
-
 const offline = ref(!navigator.onLine)
 window.addEventListener('offline', () => {
 	offline.value = true
@@ -220,6 +228,10 @@ const breadcrumbs = useBreadcrumbs()
 breadcrumbs.setContext({ name: 'Discover content', link: route.path, query: route.query })
 
 const loading = ref(true)
+type SearchState = 'idle' | 'loading' | 'success' | 'error'
+const searchState = ref<SearchState>('idle')
+const searchError = ref('')
+const SEARCH_TIMEOUT_MS = 20_000
 
 const projectType = ref(route.params.projectType)
 
@@ -243,56 +255,69 @@ const pageCount = computed(() =>
 	results.value ? Math.ceil(results.value.total_hits / results.value.limit) : 1,
 )
 
-watch(requestParams, () => {
-	if (!route.params.projectType) return
-	refreshSearch()
-})
-
-async function refreshSearch() {
-	const requestId = ++searchRequestId
-	let rawResults
-	try {
-		rawResults = await get_search_results(requestParams.value)
-	} catch (error) {
-		if (requestId !== searchRequestId) return
-		handleError(error)
-		rawResults = null
-	}
-	if (requestId !== searchRequestId) return
-	if (!rawResults) {
-		rawResults = {
-			result: {
-				hits: [],
-				total_hits: 0,
-				limit: 1,
-			},
-		}
-	}
-	if (instance.value) {
-		for (const val of rawResults.result.hits) {
-			val.installed =
-				newlyInstalled.value.includes(val.project_id) ||
-				Object.values(instanceProjects.value ?? {}).some(
-					(x) => x?.metadata?.project_id === val.project_id,
-				)
-		}
-	}
-	results.value = rawResults.result
-
-	const currentFilterState = JSON.stringify({
+const filterState = computed(() =>
+	JSON.stringify({
 		query: query.value,
 		filters: currentFilters.value,
 		sort: currentSortType.value,
 		maxResults: maxResults.value,
 		projectTypes: projectTypes.value,
-	})
+	}),
+)
 
-	if (previousFilterState.value && previousFilterState.value !== currentFilterState) {
+watch(filterState, (nextState, previousState) => {
+	if (previousState && nextState !== previousState && currentPage.value !== 1) {
 		currentPage.value = 1
 	}
+})
 
-	previousFilterState.value = currentFilterState
+watch(requestParams, () => {
+	if (!route.params.projectType) return
+	void refreshSearch()
+})
 
+watch(
+	() => [route.query.page, route.query.o],
+	([page, legacyOffset]) => {
+		const routePage = page
+			? Number(Array.isArray(page) ? page[0] : page)
+			: legacyOffset
+				? Math.floor(
+						Number(Array.isArray(legacyOffset) ? legacyOffset[0] : legacyOffset) / maxResults.value,
+					) + 1
+				: 1
+		if (Number.isFinite(routePage) && routePage > 0 && routePage !== currentPage.value) {
+			currentPage.value = routePage
+		}
+	},
+)
+
+function getSearchErrorMessage(error: unknown) {
+	if (error instanceof Error && error.message) return error.message
+	if (typeof error === 'string') return error
+	try {
+		return JSON.stringify(error)
+	} catch {
+		return String(error)
+	}
+}
+
+async function withSearchTimeout<T>(request: Promise<T>): Promise<T> {
+	let timeoutId: ReturnType<typeof setTimeout> | undefined
+	const timeout = new Promise<never>((_, reject) => {
+		timeoutId = setTimeout(
+			() => reject(new Error('Сервер каталога не ответил за 20 секунд.')),
+			SEARCH_TIMEOUT_MS,
+		)
+	})
+	try {
+		return await Promise.race([request, timeout])
+	} finally {
+		if (timeoutId) clearTimeout(timeoutId)
+	}
+}
+
+async function syncSearchRoute() {
 	const persistentParams: LocationQuery = {}
 
 	for (const [key, value] of Object.entries(route.query)) {
@@ -311,7 +336,6 @@ async function refreshSearch() {
 		...persistentParams,
 		...createPageParams(),
 	}
-	delete params.page
 	delete params.o
 
 	breadcrumbs.setContext({
@@ -323,13 +347,47 @@ async function refreshSearch() {
 	if (nextRoute.fullPath !== route.fullPath) {
 		await router.replace({ path: route.path, query: params })
 	}
-	if (requestId !== searchRequestId) return
-	loading.value = false
+}
+
+async function refreshSearch() {
+	const requestId = ++searchRequestId
+	loading.value = true
+	searchState.value = 'loading'
+	searchError.value = ''
+	try {
+		await syncSearchRoute()
+		if (requestId !== searchRequestId) return
+		const rawResults = await withSearchTimeout(get_search_results(requestParams.value))
+		if (requestId !== searchRequestId) return
+		const normalizedResults = rawResults?.result ?? {
+			hits: [],
+			total_hits: 0,
+			limit: maxResults.value,
+		}
+
+		if (instance.value) {
+			for (const val of normalizedResults.hits) {
+				val.installed =
+					newlyInstalled.value.includes(val.project_id) ||
+					Object.values(instanceProjects.value ?? {}).some(
+						(x) => x?.metadata?.project_id === val.project_id,
+					)
+			}
+		}
+		results.value = normalizedResults
+		searchState.value = 'success'
+	} catch (error) {
+		if (requestId !== searchRequestId) return
+		searchState.value = 'error'
+		searchError.value = getSearchErrorMessage(error)
+		console.error('Не удалось загрузить каталог:', error)
+	} finally {
+		if (requestId === searchRequestId) loading.value = false
+	}
 }
 
 async function setPage(newPageNumber: number) {
-	if (newPageNumber === currentPage.value || loading.value) return
-	loading.value = true
+	if (newPageNumber === currentPage.value || newPageNumber < 1) return
 	currentPage.value = newPageNumber
 
 	await onSearchChangeToTop()
@@ -458,16 +516,7 @@ const handleOptionsClick = (args) => {
 	}
 }
 
-await refreshSearch()
-
-// Initialize previousFilterState after first search
-previousFilterState.value = JSON.stringify({
-	query: query.value,
-	filters: currentFilters.value,
-	sort: currentSortType.value,
-	maxResults: maxResults.value,
-	projectTypes: projectTypes.value,
-})
+void refreshSearch()
 </script>
 
 <template>
@@ -540,7 +589,9 @@ previousFilterState.value = JSON.stringify({
 
 		<div class="browse-layout">
 			<aside v-if="filters" class="browse-filters">
-				<div class="filter-title"><span>Фильтры</span><small>{{ results?.total_hits ?? 0 }} проектов</small></div>
+				<div class="filter-title">
+					<span>Фильтры</span><small>{{ results?.total_hits ?? 0 }} проектов</small>
+				</div>
 				<SearchSidebarFilter
 					v-for="filter in filters.filter((item) => item.display !== 'none')"
 					:key="`main-filter-${filter.id}`"
@@ -555,91 +606,108 @@ previousFilterState.value = JSON.stringify({
 					inner-panel-class="mx-3"
 					:open-by-default="filter.id.startsWith('category') || filter.id === 'environment'"
 				>
-					<template #header><h3 class="text-sm m-0">{{ filterLabel(filter) }}</h3></template>
-					<template #locked-game_version>{{ formatMessage(messages.gameVersionProvidedByInstance) }}</template>
-					<template #locked-mod_loader>{{ formatMessage(messages.modLoaderProvidedByInstance) }}</template>
+					<template #header
+						><h3 class="text-sm m-0">{{ filterLabel(filter) }}</h3></template
+					>
+					<template #locked-game_version>{{
+						formatMessage(messages.gameVersionProvidedByInstance)
+					}}</template>
+					<template #locked-mod_loader>{{
+						formatMessage(messages.modLoaderProvidedByInstance)
+					}}</template>
 					<template #sync-button>{{ formatMessage(messages.syncFilterButton) }}</template>
 				</SearchSidebarFilter>
 			</aside>
 
 			<section class="browse-results">
-		<div class="browse-toolbar">
-			<DropdownSelect
-				v-slot="{ selected }"
-				v-model="currentSortType"
-				class="max-w-[16rem]"
-				name="Сортировка"
-				:options="sortTypes as any"
-				:display-name="(option: SortType | undefined) => sortLabel(option?.display)"
-			>
-				<span class="font-semibold text-primary">Сортировка: </span>
-				<span class="font-semibold text-secondary">{{ sortLabel(selected) }}</span>
-			</DropdownSelect>
-			<DropdownSelect
-				v-slot="{ selected }"
-				v-model="maxResults"
-				name="Количество результатов"
-				:options="[5, 10, 15, 20, 50, 100]"
-				class="max-w-[9rem]"
-			>
-				<span class="font-semibold text-primary">Показывать: </span>
-				<span class="font-semibold text-secondary">{{ selected }}</span>
-			</DropdownSelect>
-			<Pagination :page="currentPage" :count="pageCount" class="ml-auto" @switch-page="setPage" />
-		</div>
-		<SearchFilterControl
-			v-model:selected-filters="currentFilters"
-			:filters="filters.filter((f) => f.display !== 'none')"
-			:provided-filters="instanceFilters"
-			:overridden-provided-filter-types="overriddenProvidedFilterTypes"
-			:provided-message="messages.providedByInstance"
-		/>
-		<div class="search browse-search-results">
-			<section v-if="loading" class="offline">
-				<LoadingIndicator />
-			</section>
-			<section v-else-if="offline && results.total_hits === 0" class="offline">
-				Каталог недоступен без сети. Проверьте подключение к интернету и повторите попытку.
-			</section>
-			<section v-else class="project-list display-mode--list instance-results" role="list">
-				<SearchCard
-					v-for="result in results.hits"
-					:key="result?.project_id"
-					:project="result"
-					:instance="instance"
-					:categories="[
-						...localizedCategories.filter(
-							(cat) =>
-								result?.display_categories.includes(cat.name) && cat.project_type === projectType,
-						),
-						...loaders.filter(
-							(loader) =>
-								result?.display_categories.includes(loader.name) &&
-								loader.supported_project_types?.includes(projectType),
-						),
-					]"
-					:installed="result.installed || newlyInstalled.includes(result.project_id)"
-					@install="
-						(id) => {
-							newlyInstalled.push(id)
-						}
-					"
-					@contextmenu.prevent.stop="(event) => handleRightClick(event, result)"
+				<div class="browse-toolbar">
+					<DropdownSelect
+						v-slot="{ selected }"
+						v-model="currentSortType"
+						class="max-w-[16rem]"
+						name="Сортировка"
+						:options="sortTypes as any"
+						:display-name="(option: SortType | undefined) => sortLabel(option?.display)"
+					>
+						<span class="font-semibold text-primary">Сортировка: </span>
+						<span class="font-semibold text-secondary">{{ sortLabel(selected) }}</span>
+					</DropdownSelect>
+					<DropdownSelect
+						v-slot="{ selected }"
+						v-model="maxResults"
+						name="Количество результатов"
+						:options="[5, 10, 15, 20, 50, 100]"
+						class="max-w-[9rem]"
+					>
+						<span class="font-semibold text-primary">Показывать: </span>
+						<span class="font-semibold text-secondary">{{ selected }}</span>
+					</DropdownSelect>
+					<Pagination
+						:page="currentPage"
+						:count="pageCount"
+						class="ml-auto"
+						@switch-page="setPage"
+					/>
+				</div>
+				<SearchFilterControl
+					v-model:selected-filters="currentFilters"
+					:filters="filters.filter((f) => f.display !== 'none')"
+					:provided-filters="instanceFilters"
+					:overridden-provided-filter-types="overriddenProvidedFilterTypes"
+					:provided-message="messages.providedByInstance"
 				/>
-				<ContextMenu ref="options" @option-clicked="handleOptionsClick">
-					<template #open_link> <GlobeIcon /> Открыть страницу <ExternalIcon /> </template>
-					<template #copy_link> <ClipboardCopyIcon /> Копировать ссылку </template>
-				</ContextMenu>
-			</section>
-			<div class="flex justify-end">
-				<pagination
-					:page="currentPage"
-					:count="pageCount"
-					class="pagination-after"
-					@switch-page="setPage"
-				/>
-			</div>
-		</div>
+				<div class="search browse-search-results">
+					<section v-if="loading" class="offline">
+						<LoadingIndicator />
+					</section>
+					<section v-else-if="searchState === 'error'" class="offline browse-error" role="alert">
+						<strong>Не удалось загрузить каталог</strong>
+						<span>{{ searchError }}</span>
+						<Button @click="refreshSearch">Повторить</Button>
+					</section>
+					<section v-else-if="offline && results.total_hits === 0" class="offline">
+						Каталог недоступен без сети. Проверьте подключение к интернету и повторите попытку.
+					</section>
+					<section v-else class="project-list display-mode--list instance-results" role="list">
+						<SearchCard
+							v-for="result in results.hits"
+							:key="result?.project_id"
+							:project="result"
+							:instance="instance"
+							:categories="[
+								...localizedCategories.filter(
+									(cat) =>
+										result?.display_categories.includes(cat.name) &&
+										cat.project_type === projectType,
+								),
+								...loaders.filter(
+									(loader) =>
+										result?.display_categories.includes(loader.name) &&
+										loader.supported_project_types?.includes(projectType),
+								),
+							]"
+							:installed="result.installed || newlyInstalled.includes(result.project_id)"
+							@install="
+								(id) => {
+									newlyInstalled.push(id)
+								}
+							"
+							@contextmenu.prevent.stop="(event) => handleRightClick(event, result)"
+						/>
+						<ContextMenu ref="options" @option-clicked="handleOptionsClick">
+							<template #open_link> <GlobeIcon /> Открыть страницу <ExternalIcon /> </template>
+							<template #copy_link> <ClipboardCopyIcon /> Копировать ссылку </template>
+						</ContextMenu>
+					</section>
+					<div class="flex justify-end">
+						<pagination
+							:page="currentPage"
+							:count="pageCount"
+							class="pagination-after"
+							@switch-page="setPage"
+						/>
+					</div>
+				</div>
 			</section>
 		</div>
 	</main>
@@ -652,8 +720,7 @@ previousFilterState.value = JSON.stringify({
 	box-sizing: border-box;
 	overflow-y: auto;
 	background:
-		radial-gradient(circle at 74% -8%, rgba(126, 34, 206, 0.2), transparent 34rem),
-		#060a12;
+		radial-gradient(circle at 74% -8%, rgba(126, 34, 206, 0.2), transparent 34rem), #060a12;
 }
 
 .browse-hero {
@@ -670,13 +737,36 @@ previousFilterState.value = JSON.stringify({
 	box-shadow: 0 20px 54px rgba(0, 0, 0, 0.26);
 }
 
-.browse-heading { grid-row: span 2; align-self: center; }
-.browse-heading p { margin: 0 0 0.45rem; color: #c084fc; font-size: 0.7rem; font-weight: 750; letter-spacing: 0.14em; }
-.browse-heading h1 { margin: 0; color: #fff; font-size: 2.55rem; line-height: 1; }
-.browse-heading span { display: block; max-width: 28rem; margin-top: 0.7rem; color: rgba(226, 232, 240, 0.68); }
-.browse-tabs { justify-self: end; }
+.browse-heading {
+	grid-row: span 2;
+	align-self: center;
+}
+.browse-heading p {
+	margin: 0 0 0.45rem;
+	color: #c084fc;
+	font-size: 0.7rem;
+	font-weight: 750;
+	letter-spacing: 0.14em;
+}
+.browse-heading h1 {
+	margin: 0;
+	color: #fff;
+	font-size: 2.55rem;
+	line-height: 1;
+}
+.browse-heading span {
+	display: block;
+	max-width: 28rem;
+	margin-top: 0.7rem;
+	color: rgba(226, 232, 240, 0.68);
+}
+.browse-tabs {
+	justify-self: end;
+}
 
-.browse-search { width: 100%; }
+.browse-search {
+	width: 100%;
+}
 .browse-search input {
 	border: 1px solid rgba(255, 255, 255, 0.1) !important;
 	background: rgba(3, 6, 12, 0.74) !important;
@@ -697,34 +787,105 @@ previousFilterState.value = JSON.stringify({
 	background: rgba(12, 17, 27, 0.88);
 }
 
-.browse-filters { align-self: start; overflow: hidden; }
-.filter-title { display: flex; align-items: center; justify-content: space-between; padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-.filter-title span { color: #fff; font-weight: 750; }
-.filter-title small { color: rgba(226, 232, 240, 0.52); }
-.cinematic-filter { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-.browse-results { min-width: 0; padding: 1rem; }
-.browse-toolbar { display: flex; gap: 0.5rem; }
-.browse-search-results { margin-top: 0.75rem; }
+.browse-filters {
+	align-self: start;
+	overflow: hidden;
+}
+.filter-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.filter-title span {
+	color: #fff;
+	font-weight: 750;
+}
+.filter-title small {
+	color: rgba(226, 232, 240, 0.52);
+}
+.cinematic-filter {
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.browse-results {
+	min-width: 0;
+	padding: 1rem;
+}
+.browse-toolbar {
+	display: flex;
+	gap: 0.5rem;
+}
+.browse-search-results {
+	margin-top: 0.75rem;
+}
+.browse-error {
+	display: flex;
+	min-height: 13rem;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	text-align: center;
+}
+.browse-error strong {
+	color: #fff;
+	font-size: 1.05rem;
+}
+.browse-error span {
+	max-width: 34rem;
+	color: rgba(226, 232, 240, 0.66);
+	overflow-wrap: anywhere;
+}
 
-:deep(.instance-results) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.7rem; }
-:deep(.instance-results > div) { min-height: 8rem; border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(18, 24, 36, 0.92) !important; box-shadow: none; }
+:deep(.instance-results) {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 0.7rem;
+}
+:deep(.instance-results > div) {
+	min-height: 8rem;
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	background: rgba(18, 24, 36, 0.92) !important;
+	box-shadow: none;
+}
 
 @media (max-width: 1120px) {
-	.browse-page { padding-inline: 1rem; }
-	.browse-hero { grid-template-columns: 1fr; }
-	.browse-heading { grid-row: auto; }
-	.browse-tabs { justify-self: start; }
-	.browse-layout { grid-template-columns: 13rem minmax(0, 1fr); }
+	.browse-page {
+		padding-inline: 1rem;
+	}
+	.browse-hero {
+		grid-template-columns: 1fr;
+	}
+	.browse-heading {
+		grid-row: auto;
+	}
+	.browse-tabs {
+		justify-self: start;
+	}
+	.browse-layout {
+		grid-template-columns: 13rem minmax(0, 1fr);
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
 	.browse-hero,
-	.browse-layout { animation: browse-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-	.browse-layout { animation-delay: 70ms; }
+	.browse-layout {
+		animation: browse-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+	.browse-layout {
+		animation-delay: 70ms;
+	}
 }
 
 @keyframes browse-enter {
-	from { opacity: 0; transform: translateY(8px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 </style>

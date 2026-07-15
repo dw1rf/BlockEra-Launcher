@@ -1,104 +1,120 @@
 <template>
-	<ModalWrapper ref="modal" header="Creating an instance">
-		<div class="modal-header">
-			<Chips v-model="creationType" :items="['custom', 'from file', 'import from launcher']" />
-		</div>
-		<hr class="card-divider" />
-		<div v-if="creationType === 'custom'" class="modal-body">
-			<div class="image-upload">
-				<Avatar :src="display_icon" size="md" :rounded="true" />
-				<div class="image-input">
-					<Button @click="upload_icon()">
-						<UploadIcon />
-						Select icon
-					</Button>
-					<Button :disabled="!display_icon" @click="reset_icon">
-						<XIcon />
-						Remove icon
-					</Button>
+	<ModalWrapper
+		ref="modal"
+		class="blockera-creation-modal"
+		header="Новая сборка BlockEra"
+		width="min(920px, calc(100vw - 40px))"
+		max-width="920px"
+	>
+		<div class="creation-shell">
+			<section class="creation-intro">
+				<div class="intro-copy">
+					<span>МАСТЕР СБОРКИ</span>
+					<h2>Соберите свой мир</h2>
+					<p>Выберите удобный способ — BlockEra подготовит файлы и покажет прогресс установки.</p>
 				</div>
-			</div>
-			<div class="input-row">
-				<p class="input-label">Name</p>
-				<input
-					v-model="profile_name"
-					autocomplete="off"
-					class="text-input"
-					type="text"
-					maxlength="100"
-				/>
-			</div>
-			<div class="input-row">
-				<p class="input-label">Loader</p>
-				<Chips v-model="loader" :items="loaders" />
-			</div>
-			<div class="input-row">
-				<p class="input-label">Game version</p>
-				<div class="flex gap-4 items-center">
-					<multiselect
-						v-model="game_version"
-						class="selector"
-						:options="game_versions"
-						:multiple="false"
-						:searchable="true"
-						placeholder="Select game version"
-						open-direction="top"
-						:show-labels="false"
-					/>
-					<Checkbox v-model="showSnapshots" class="shrink-0" label="Show all versions" />
+				<div class="cover-preview" :style="{ backgroundImage: `url(${creationBackdrop})` }">
+					<span>Обложка подберётся автоматически</span>
 				</div>
-			</div>
-			<div v-if="loader !== 'vanilla'" class="input-row">
-				<p class="input-label">Loader version</p>
-				<Chips v-model="loader_version" :items="['stable', 'latest', 'other']" />
-			</div>
-			<div v-if="loader_version === 'other' && loader !== 'vanilla'">
-				<div v-if="game_version" class="input-row">
-					<p class="input-label">Select version</p>
-					<multiselect
-						v-model="specified_loader_version"
-						class="selector"
-						:options="selectable_versions"
-						:searchable="true"
-						placeholder="Select loader version"
-						open-direction="top"
-						:show-labels="false"
-					/>
+			</section>
+
+			<nav class="creation-tabs" aria-label="Способ создания сборки">
+				<button :class="{ active: creationType === 'custom' }" @click="creationType = 'custom'">
+					<PlusIcon />
+					<span><strong>Новая</strong><small>Настроить вручную</small></span>
+				</button>
+				<button :class="{ active: creationType === 'from file' }" @click="creationType = 'from file'">
+					<FolderOpenIcon />
+					<span><strong>Из файла</strong><small>Открыть .mrpack</small></span>
+				</button>
+				<button :class="{ active: creationType === 'import from launcher' }" @click="creationType = 'import from launcher'">
+					<FolderSearchIcon />
+					<span><strong>Перенос</strong><small>Из другого лаунчера</small></span>
+				</button>
+			</nav>
+
+			<Transition name="creation-view" mode="out-in">
+				<div v-if="creationType === 'custom'" key="custom" class="creation-view custom-view">
+					<section class="creation-panel identity-panel">
+						<div class="panel-heading">
+							<span>01</span>
+							<div><h3>Название и значок</h3><p>Так сборка будет выглядеть в вашей библиотеке.</p></div>
+						</div>
+						<div class="identity-fields">
+							<div class="image-upload">
+								<Avatar :src="display_icon" size="72px" :rounded="true" />
+								<button class="icon-upload" @click="upload_icon()"><UploadIcon /> Выбрать значок</button>
+								<button v-if="display_icon" class="icon-reset" aria-label="Удалить значок" @click="reset_icon"><XIcon /></button>
+							</div>
+							<label class="field-control">
+								<span>Название сборки</span>
+								<input v-model="profile_name" autocomplete="off" type="text" maxlength="100" placeholder="Например, Survival+" />
+							</label>
+						</div>
+					</section>
+
+					<section class="creation-panel runtime-panel">
+						<div class="panel-heading">
+							<span>02</span>
+							<div><h3>Версия и загрузчик</h3><p>Можно изменить позже в настройках сборки.</p></div>
+						</div>
+						<div class="loader-grid">
+							<button v-for="loaderName in loaders" :key="loaderName" :class="{ active: loader === loaderName }" @click="loader = loaderName">
+								<strong>{{ formatLoader(loaderName) }}</strong>
+								<small>{{ loaderDescription(loaderName) }}</small>
+							</button>
+						</div>
+						<div class="version-row">
+							<label class="field-control version-select">
+								<span>Версия Minecraft</span>
+								<multiselect v-model="game_version" :options="game_versions" :multiple="false" :searchable="true" placeholder="Выберите версию" :show-labels="false" />
+							</label>
+							<Checkbox v-model="showSnapshots" class="snapshot-toggle" label="Показывать снапшоты" />
+						</div>
+						<div v-if="loader !== 'vanilla'" class="loader-version-row">
+							<span>Версия загрузчика</span>
+							<div class="mini-tabs">
+								<button :class="{ active: loader_version === 'stable' }" @click="loader_version = 'stable'">Стабильная</button>
+								<button :class="{ active: loader_version === 'latest' }" @click="loader_version = 'latest'">Последняя</button>
+								<button :class="{ active: loader_version === 'other' }" @click="loader_version = 'other'">Выбрать</button>
+							</div>
+							<multiselect v-if="loader_version === 'other' && game_version" v-model="specified_loader_version" :options="selectable_versions" :searchable="true" placeholder="Точная версия загрузчика" :show-labels="false" />
+							<p v-else-if="loader_version === 'other'" class="warning">Сначала выберите версию Minecraft.</p>
+						</div>
+					</section>
+
+					<footer class="creation-actions">
+						<div><strong>{{ profile_name.trim() || 'Новая сборка' }}</strong><span>{{ game_version || 'Версия не выбрана' }} · {{ formatLoader(loader) }}</span></div>
+						<Button @click="hide()"><XIcon /> Отмена</Button>
+						<Button color="primary" :disabled="!check_valid || creating" @click="create_instance()"><PlusIcon v-if="!creating" /> {{ creating ? 'Создаём…' : 'Создать сборку' }}</Button>
+					</footer>
 				</div>
-				<div v-else class="input-row">
-					<p class="warning">Select a game version before you select a loader version</p>
+
+				<div v-else-if="creationType === 'from file'" key="file" class="creation-view file-view">
+					<button class="file-dropzone" @click="openFile">
+						<span class="drop-icon"><UploadIcon /></span>
+						<strong>Перетащите сюда файл сборки</strong>
+						<p>Поддерживается формат Modrinth <code>.mrpack</code></p>
+						<span class="browse-file"><FolderOpenIcon /> Выбрать файл</span>
+					</button>
+					<div class="import-note"><InfoIcon /><span>BlockEra проверит файл и покажет все этапы установки в центре загрузок.</span></div>
 				</div>
-			</div>
-			<div class="input-group push-right">
-				<Button @click="hide()">
-					<XIcon />
-					Cancel
-				</Button>
-				<Button color="primary" :disabled="!check_valid || creating" @click="create_instance()">
-					<PlusIcon v-if="!creating" />
-					{{ creating ? 'Creating...' : 'Create' }}
-				</Button>
-			</div>
-		</div>
-		<div v-else-if="creationType === 'from file'" class="modal-body">
-			<Button @click="openFile"> <FolderOpenIcon /> Import from file </Button>
-			<div class="info"><InfoIcon /> Or drag and drop your .mrpack file</div>
-		</div>
-		<div v-else class="modal-body">
+
+				<div v-else key="launcher" class="creation-view launcher-view">
 			<Chips
 				v-model="selectedProfileType"
 				:items="profileOptions"
 				:format-label="(profile) => profile?.name"
 			/>
 			<div class="path-selection">
-				<h3>{{ selectedProfileType.name }} path</h3>
+				<h3>Папка {{ selectedProfileType.name }}</h3>
 				<div class="path-input">
 					<div class="iconified-input">
 						<FolderOpenIcon />
 						<input
 							v-model="selectedProfileType.path"
 							type="text"
-							placeholder="Path to launcher"
+							placeholder="Путь к лаунчеру"
 							@change="setPath"
 						/>
 						<Button class="r-btn" @click="() => (selectedProfileType.path = '')">
@@ -129,7 +145,7 @@
 							"
 						/>
 					</div>
-					<div class="name-cell table-cell">Profile name</div>
+					<div class="name-cell table-cell">Название сборки</div>
 				</div>
 				<div
 					v-if="
@@ -151,17 +167,17 @@
 						</div>
 					</div>
 				</div>
-				<div v-else class="table-content empty">No profiles found</div>
+			<div v-else class="table-content empty">Сборки не найдены</div>
 			</div>
 			<div class="button-row">
 				<Button
-        		  v-if="selectedProfileType.name === 'Curseforge'"
-        		  @click="showCurseForgeProfileModal"
-        		  :disabled="loading"
-        		>
-        		  <CodeIcon />
-        		  Import from Profile Code
-        		</Button>
+					v-if="selectedProfileType.name === 'Curseforge'"
+					:disabled="loading"
+					@click="showCurseForgeProfileModal"
+				>
+					<CodeIcon />
+					Импорт по коду профиля
+				</Button>
 				<Button
 					:disabled="
 						loading ||
@@ -174,16 +190,16 @@
 				>
 					{{
 						loading
-							? 'Importing...'
+							? 'Импортируем…'
 							: Array.from(profiles.values())
 										.flatMap((e) => e)
 										.some((e) => e.selected)
-								? `Import ${
+								? `Импортировать: ${
 										Array.from(profiles.values())
 											.flatMap((e) => e)
 											.filter((e) => e.selected).length
 									} profiles`
-								: 'Select profiles to import'
+								: 'Выберите сборки для импорта'
 					}}
 				</Button>
 				<ProgressBar
@@ -191,6 +207,8 @@
 					:progress="(importedProfiles / (totalProfiles + 0.0001)) * 100"
 				/>
 			</div>
+				</div>
+			</Transition>
 		</div>
 	</ModalWrapper>
   	<CurseForgeProfileImportModal ref="curseforgeProfileModal" :close-parent="hide" />
@@ -198,6 +216,7 @@
 
 <script setup>
 import {
+	CodeIcon,
 	FolderOpenIcon,
 	FolderSearchIcon,
 	InfoIcon,
@@ -213,6 +232,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { computed, onUnmounted, ref, shallowRef } from 'vue'
 import Multiselect from 'vue-multiselect'
 
+import CurseForgeProfileImportModal from '@/components/ui/CurseForgeProfileImportModal.vue'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import ProgressBar from '@/components/ui/ProgressBar.vue'
 import { trackEvent } from '@/helpers/analytics'
@@ -221,12 +241,11 @@ import {
 	get_importable_instances,
 	import_instance,
 } from '@/helpers/import.js'
+import { instanceBackgroundFor } from '@/helpers/instance-backgrounds'
 import { get_game_versions, get_loader_versions } from '@/helpers/metadata'
 import { create_profile_and_install_from_file } from '@/helpers/pack.js'
 import { create } from '@/helpers/profile'
 import { get_loaders } from '@/helpers/tags'
-
-import CurseForgeProfileImportModal from '@/components/ui/CurseForgeProfileImportModal.vue'
 
 const { handleError } = injectNotificationManager()
 
@@ -241,6 +260,31 @@ const creating = ref(false)
 const showSnapshots = ref(false)
 const creationType = ref('custom')
 const isShowing = ref(false)
+const creationBackdrop = computed(() =>
+	instanceBackgroundFor(profile_name.value.trim() || `${loader.value}-${game_version.value || 'latest'}`),
+)
+
+function formatLoader(value) {
+	const labels = {
+		vanilla: 'Vanilla',
+		fabric: 'Fabric',
+		forge: 'Forge',
+		neoforge: 'NeoForge',
+		quilt: 'Quilt',
+	}
+	return labels[value] ?? value
+}
+
+function loaderDescription(value) {
+	const descriptions = {
+		vanilla: 'Чистая игра',
+		fabric: 'Лёгкий и быстрый',
+		forge: 'Большие модпаки',
+		neoforge: 'Современный Forge',
+		quilt: 'Гибкая экосистема',
+	}
+	return descriptions[value] ?? 'Загрузчик модов'
+}
 
 defineExpose({
 	show: async () => {
@@ -671,5 +715,394 @@ const next = async () => {
 
 .card-divider {
 	margin: var(--gap-md) var(--gap-lg) 0 var(--gap-lg);
+}
+
+.creation-shell {
+	width: min(52rem, calc(100vw - 7rem));
+	color: #f7f4fb;
+}
+
+.creation-intro {
+	min-height: 8.5rem;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 15rem;
+	gap: 1.25rem;
+	padding: 1.15rem;
+	border: 1px solid rgba(179, 95, 255, 0.2);
+	border-radius: 1.15rem;
+	background:
+		radial-gradient(circle at 18% 0, rgba(144, 56, 226, 0.22), transparent 45%),
+		rgba(10, 13, 22, 0.76);
+}
+
+.intro-copy {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding-left: 0.35rem;
+}
+
+.intro-copy > span {
+	color: #c47bff;
+	font-size: 0.68rem;
+	font-weight: 850;
+	letter-spacing: 0.14em;
+}
+
+.intro-copy h2 {
+	margin: 0.28rem 0 0.35rem;
+	font-size: clamp(1.55rem, 3vw, 2.25rem);
+	line-height: 1;
+}
+
+.intro-copy p {
+	max-width: 31rem;
+	margin: 0;
+	color: #aeb3c0;
+	font-size: 0.83rem;
+	line-height: 1.45;
+}
+
+.cover-preview {
+	position: relative;
+	overflow: hidden;
+	min-height: 6.2rem;
+	border: 1px solid rgba(255, 255, 255, 0.13);
+	border-radius: 0.9rem;
+	background-position: center;
+	background-size: cover;
+	box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+	transition: background-image 180ms ease;
+}
+
+.cover-preview::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(180deg, transparent 22%, rgba(4, 7, 13, 0.86));
+}
+
+.cover-preview span {
+	position: absolute;
+	z-index: 1;
+	left: 0.8rem;
+	right: 0.8rem;
+	bottom: 0.65rem;
+	color: #e8dcf4;
+	font-size: 0.66rem;
+	font-weight: 700;
+}
+
+.creation-tabs {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 0.65rem;
+	margin: 0.8rem 0;
+}
+
+.creation-tabs button {
+	min-width: 0;
+	padding: 0.72rem 0.85rem;
+	display: flex;
+	align-items: center;
+	gap: 0.68rem;
+	color: #a9afbd;
+	text-align: left;
+	border: 1px solid rgba(255, 255, 255, 0.065);
+	border-radius: 0.9rem;
+	background: rgba(255, 255, 255, 0.032);
+	cursor: pointer;
+	transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms ease, background 160ms ease;
+}
+
+.creation-tabs button:hover {
+	transform: translateY(-1px);
+	border-color: rgba(179, 93, 255, 0.25);
+	background: rgba(132, 54, 215, 0.09);
+}
+
+.creation-tabs button.active {
+	color: #f7f1ff;
+	border-color: rgba(190, 110, 255, 0.5);
+	background: linear-gradient(135deg, rgba(137, 55, 226, 0.25), rgba(79, 28, 143, 0.13));
+	box-shadow: inset 0 0 0 1px rgba(212, 157, 255, 0.07), 0 8px 28px rgba(101, 32, 182, 0.12);
+}
+
+.creation-tabs svg {
+	width: 1.2rem;
+	flex: none;
+	color: #bd75ff;
+}
+
+.creation-tabs span {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.creation-tabs strong { font-size: 0.82rem; }
+.creation-tabs small { margin-top: 0.12rem; color: #818897; font-size: 0.66rem; }
+
+.creation-view {
+	display: flex;
+	flex-direction: column;
+	gap: 0.7rem;
+}
+
+.creation-panel {
+	padding: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 1rem;
+	background: rgba(13, 18, 29, 0.88);
+}
+
+.panel-heading {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	margin-bottom: 0.85rem;
+}
+
+.panel-heading > span {
+	width: 2rem;
+	height: 2rem;
+	display: grid;
+	place-items: center;
+	flex: none;
+	color: #d7a7ff;
+	border: 1px solid rgba(178, 91, 255, 0.28);
+	border-radius: 0.65rem;
+	background: rgba(135, 54, 218, 0.16);
+	font-size: 0.67rem;
+	font-weight: 850;
+}
+
+.panel-heading h3 { margin: 0; font-size: 0.9rem; }
+.panel-heading p { margin: 0.15rem 0 0; color: #848b9a; font-size: 0.68rem; }
+
+.identity-fields {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: end;
+	gap: 0.9rem;
+}
+
+.image-upload {
+	position: relative;
+	display: grid;
+	grid-template-columns: auto auto;
+	align-items: center;
+	gap: 0.55rem;
+}
+
+.image-upload :deep(.avatar) {
+	border: 1px solid rgba(191, 111, 255, 0.26);
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.icon-upload,
+.icon-reset {
+	min-height: 2.65rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	color: #d9c1eb;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 0.72rem;
+	background: rgba(255, 255, 255, 0.045);
+	cursor: pointer;
+}
+
+.icon-upload { padding: 0 0.8rem; font-size: 0.73rem; font-weight: 700; }
+.icon-upload svg, .icon-reset svg { width: 0.95rem; }
+.icon-reset { position: absolute; width: 1.65rem; min-height: 1.65rem; left: 3.4rem; top: -0.4rem; color: #ff9ab3; }
+
+.field-control {
+	display: flex;
+	flex-direction: column;
+	gap: 0.38rem;
+}
+
+.field-control > span,
+.loader-version-row > span {
+	color: #c6cad3;
+	font-size: 0.7rem;
+	font-weight: 750;
+}
+
+.field-control input,
+.path-input input {
+	min-height: 2.65rem;
+	box-sizing: border-box;
+	color: #f5f2f8;
+	border: 1px solid rgba(255, 255, 255, 0.085);
+	border-radius: 0.75rem;
+	outline: none;
+	background: rgba(5, 9, 16, 0.7);
+}
+
+.field-control input { width: 100%; padding: 0 0.85rem; }
+.field-control input:focus { border-color: rgba(184, 100, 255, 0.55); box-shadow: 0 0 0 3px rgba(144, 57, 226, 0.11); }
+
+.loader-grid {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 0.48rem;
+}
+
+.loader-grid button {
+	min-width: 0;
+	min-height: 3.35rem;
+	padding: 0.55rem;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	color: #adb3c0;
+	border: 1px solid rgba(255, 255, 255, 0.065);
+	border-radius: 0.72rem;
+	background: rgba(255, 255, 255, 0.03);
+	cursor: pointer;
+	transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), border-color 150ms ease, background 150ms ease;
+}
+
+.loader-grid button:hover { transform: translateY(-1px); }
+.loader-grid button.active { color: #fff; border-color: rgba(189, 107, 255, 0.46); background: rgba(132, 50, 219, 0.18); }
+.loader-grid strong { font-size: 0.72rem; }
+.loader-grid small { margin-top: 0.18rem; overflow: hidden; color: #747c8b; font-size: 0.58rem; text-overflow: ellipsis; white-space: nowrap; }
+
+.version-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: end;
+	gap: 0.9rem;
+	margin-top: 0.75rem;
+}
+
+.version-select :deep(.multiselect),
+.loader-version-row :deep(.multiselect) { min-height: 2.65rem; }
+.version-select :deep(.multiselect__tags),
+.loader-version-row :deep(.multiselect__tags) { min-height: 2.65rem; padding-top: 0.65rem; border: 1px solid rgba(255,255,255,.085); border-radius: .75rem; background: rgba(5,9,16,.7); }
+.version-select :deep(.multiselect__content-wrapper),
+.loader-version-row :deep(.multiselect__content-wrapper) { border-color: rgba(182,99,255,.25); background: #111622; }
+.version-select :deep(.multiselect__option--highlight),
+.loader-version-row :deep(.multiselect__option--highlight) { background: #7627d1; }
+
+.snapshot-toggle { min-height: 2.65rem; padding-bottom: 0.1rem; }
+.snapshot-toggle :deep(label) { color: #aeb4c0; font-size: 0.7rem; }
+
+.loader-version-row {
+	margin-top: 0.7rem;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	align-items: center;
+	gap: 0.6rem 0.8rem;
+}
+
+.loader-version-row > :deep(.multiselect),
+.loader-version-row .warning { grid-column: 2; }
+
+.mini-tabs {
+	display: flex;
+	gap: 0.35rem;
+}
+
+.mini-tabs button {
+	padding: 0.42rem 0.65rem;
+	color: #9299a7;
+	border: 1px solid rgba(255,255,255,.06);
+	border-radius: .6rem;
+	background: rgba(255,255,255,.03);
+	cursor: pointer;
+	font-size: .66rem;
+}
+
+.mini-tabs button.active { color: #e9d5ff; border-color: rgba(184,99,255,.38); background: rgba(131,51,215,.16); }
+.warning { margin: 0; color: #f4b567; font-size: 0.7rem; }
+
+.creation-actions {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 0.55rem;
+	padding: 0.7rem 0.15rem 0;
+}
+
+.creation-actions > div { min-width: 0; display: flex; flex-direction: column; }
+.creation-actions > div strong { overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.creation-actions > div span { margin-top: 0.12rem; color: #7f8795; font-size: 0.65rem; }
+.creation-actions :deep(button) { min-height: 2.55rem; border-radius: 0.72rem; }
+
+.file-dropzone {
+	min-height: 19rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	color: #f5effb;
+	border: 1px dashed rgba(190, 110, 255, 0.45);
+	border-radius: 1.1rem;
+	background:
+		radial-gradient(circle at 50% 40%, rgba(144, 57, 226, 0.17), transparent 34%),
+		rgba(11, 15, 24, 0.86);
+	cursor: pointer;
+	transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, background 180ms ease;
+}
+
+.file-dropzone:hover { transform: translateY(-2px); border-color: rgba(207, 145, 255, 0.75); background-color: rgba(19, 18, 33, 0.92); }
+.drop-icon { width: 3.5rem; height: 3.5rem; display: grid; place-items: center; color: #d6a5ff; border-radius: 1rem; background: rgba(139, 54, 224, 0.18); }
+.drop-icon svg { width: 1.7rem; }
+.file-dropzone strong { margin-top: 1rem; font-size: 1rem; }
+.file-dropzone p { margin: 0.35rem 0 1rem; color: #8f96a4; font-size: 0.75rem; }
+.file-dropzone code { color: #ca8cff; }
+.browse-file { padding: 0.65rem 0.9rem; display: flex; align-items: center; gap: 0.45rem; border-radius: 0.7rem; background: linear-gradient(135deg, #8b35ec, #6120bd); font-size: 0.72rem; font-weight: 780; }
+.browse-file svg { width: 0.95rem; }
+.import-note { padding: 0.75rem 0.9rem; display: flex; align-items: center; gap: 0.55rem; color: #8f96a4; border: 1px solid rgba(255,255,255,.055); border-radius: .75rem; background: rgba(255,255,255,.025); font-size: .68rem; }
+.import-note svg { width: 1rem; color: #ad65ef; }
+
+.launcher-view { padding: 0.1rem; }
+.launcher-view :deep(.chips) { margin-bottom: 0.2rem; }
+.launcher-view .path-selection { padding: 0.9rem; border: 1px solid rgba(255,255,255,.065); background: rgba(12,17,27,.88); }
+.launcher-view .table { overflow: hidden; border-color: rgba(255,255,255,.07); border-radius: .85rem; }
+.launcher-view .table-head { color: #c9cdd6; background: rgba(137,54,219,.12); }
+.launcher-view .table-content { background: rgba(9,13,21,.78); }
+.launcher-view .button-row { margin-top: .1rem; }
+
+.creation-view-enter-active,
+.creation-view-leave-active { transition: opacity 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.creation-view-enter-from { opacity: 0; transform: translateY(8px); }
+.creation-view-leave-to { opacity: 0; transform: translateY(-5px); }
+
+.blockera-creation-modal :deep(.modal-overlay.standard) {
+	background: radial-gradient(circle at 50% 0, rgba(53, 20, 91, 0.42), rgba(3, 6, 11, 0.92) 58%);
+}
+
+.blockera-creation-modal :deep(.modal-body) {
+	border: 1px solid rgba(180, 96, 255, 0.24);
+	background: linear-gradient(145deg, rgba(14, 18, 28, 0.99), rgba(8, 11, 19, 0.99));
+	box-shadow: 0 34px 100px rgba(0,0,0,.58), 0 0 46px rgba(119,38,203,.08);
+}
+
+@media (max-width: 780px) {
+	.creation-shell { width: calc(100vw - 6rem); }
+	.creation-intro { grid-template-columns: 1fr; }
+	.cover-preview { display: none; }
+	.loader-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.identity-fields { grid-template-columns: 1fr; }
+	.version-row { grid-template-columns: 1fr; }
+	.creation-actions { grid-template-columns: 1fr 1fr; }
+	.creation-actions > div { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.creation-tabs button,
+	.loader-grid button,
+	.file-dropzone,
+	.creation-view-enter-active,
+	.creation-view-leave-active { transition: none !important; }
+	.creation-tabs button:hover,
+	.loader-grid button:hover,
+	.file-dropzone:hover { transform: none; }
 }
 </style>

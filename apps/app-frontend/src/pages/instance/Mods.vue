@@ -1,6 +1,23 @@
 <template>
 	<div class="blockera-content-manager">
-		<template v-if="projects?.length > 0">
+		<div v-if="loadingProjects" class="blockera-empty-state blockera-loading-state">
+			<LoadingIndicator />
+			<h2>Загружаем контент сборки</h2>
+			<p>Проверяем установленные моды, текстуры и шейдеры.</p>
+		</div>
+		<div v-else-if="projectsError" class="blockera-empty-state" role="alert">
+			<div class="empty-state-icon"><UpdatedIcon /></div>
+			<span>КОНТЕНТ СБОРКИ</span>
+			<h2>Не удалось загрузить список</h2>
+			<p>{{ projectsError }}</p>
+			<div class="empty-state-actions">
+				<ButtonStyled
+					><button @click="refreshProjects"><UpdatedIcon /> Повторить</button></ButtonStyled
+				>
+				<AddContentButton :instance="instance" />
+			</div>
+		</div>
+		<template v-else-if="projects?.length > 0">
 			<div class="flex items-center gap-2 mb-4">
 				<div class="iconified-input flex-grow">
 					<SearchIcon />
@@ -117,7 +134,7 @@
 									},
 								]"
 							>
-							<ShareIcon /> Поделиться <DropdownIcon />
+								<ShareIcon /> Поделиться <DropdownIcon />
 								<template #share-names> <TextInputIcon /> Project names </template>
 								<template #share-file-names> <FileIcon /> File names </template>
 								<template #share-urls> <LinkIcon /> Project links </template>
@@ -272,6 +289,7 @@ import {
 	ButtonStyled,
 	ContentListPanel,
 	injectNotificationManager,
+	LoadingIndicator,
 	OverflowMenu,
 	Pagination,
 	Toggle,
@@ -359,6 +377,8 @@ const canUpdatePack = computed(() => {
 const exportModal = ref(null)
 
 const projects = ref<ProjectListEntry[]>([])
+const loadingProjects = ref(true)
+const projectsError = ref('')
 const selectedFiles = ref<string[]>([])
 const selectedProjects = computed(() =>
 	projects.value.filter((x) => selectedFiles.value.includes(x.file_name)),
@@ -369,10 +389,8 @@ const selectionMap = ref(new Map())
 const initProjects = async (cacheBehaviour?: CacheBehaviour) => {
 	const newProjects: ProjectListEntry[] = []
 
-	const profileProjects = (await get_projects(props.instance.path, cacheBehaviour)) as Record<
-		string,
-		ContentFile
-	>
+	const profileProjects = ((await get_projects(props.instance.path, cacheBehaviour)) ??
+		{}) as Record<string, ContentFile>
 	const fetchProjects = []
 	const fetchVersions = []
 
@@ -383,17 +401,33 @@ const initProjects = async (cacheBehaviour?: CacheBehaviour) => {
 		}
 	}
 
-	const [modrinthProjects, modrinthVersions] = await Promise.all([
-		(await get_project_many(fetchProjects).catch(handleError)) as Project[],
-		(await get_version_many(fetchVersions).catch(handleError)) as Version[],
+	const [rawModrinthProjects, rawModrinthVersions] = await Promise.all([
+		get_project_many(fetchProjects).catch((error) => {
+			console.error('Не удалось получить данные проектов Modrinth:', error)
+			return [] as Project[]
+		}),
+		get_version_many(fetchVersions).catch((error) => {
+			console.error('Не удалось получить версии проектов Modrinth:', error)
+			return [] as Version[]
+		}),
 	])
+	const modrinthProjects = (rawModrinthProjects ?? []) as Project[]
+	const modrinthVersions = (rawModrinthVersions ?? []) as Version[]
 
-	const [modrinthTeams, modrinthOrganizations] = await Promise.all([
-		(await get_team_many(modrinthProjects.map((x) => x.team)).catch(handleError)) as TeamMember[][],
-		(await get_organization_many(
-			modrinthProjects.map((x) => x.organization).filter((x) => !!x),
-		).catch(handleError)) as Organization[],
+	const [rawModrinthTeams, rawModrinthOrganizations] = await Promise.all([
+		get_team_many(modrinthProjects.map((x) => x.team)).catch((error) => {
+			console.error('Не удалось получить авторов проектов Modrinth:', error)
+			return [] as TeamMember[][]
+		}),
+		get_organization_many(modrinthProjects.map((x) => x.organization).filter((x) => !!x)).catch(
+			(error) => {
+				console.error('Не удалось получить организации Modrinth:', error)
+				return [] as Organization[]
+			},
+		),
 	])
+	const modrinthTeams = (rawModrinthTeams ?? []) as TeamMember[][]
+	const modrinthOrganizations = (rawModrinthOrganizations ?? []) as Organization[]
 
 	for (const [path, file] of Object.entries(profileProjects)) {
 		if (file.metadata) {
@@ -405,7 +439,7 @@ const initProjects = async (cacheBehaviour?: CacheBehaviour) => {
 					? modrinthOrganizations.find((x) => x.id === project.organization)
 					: null
 
-				const team = modrinthTeams.find((x) => x[0].team_id === project.team)
+				const team = modrinthTeams.find((x) => x[0]?.team_id === project.team)
 
 				let author: ProjectListEntryAuthor | null = null
 				if (org) {
@@ -473,7 +507,31 @@ const initProjects = async (cacheBehaviour?: CacheBehaviour) => {
 	}
 	selectionMap.value = newSelectionMap
 }
-await initProjects()
+
+function getProjectsErrorMessage(error: unknown) {
+	if (error instanceof Error && error.message) return error.message
+	if (typeof error === 'string') return error
+	try {
+		return JSON.stringify(error)
+	} catch {
+		return String(error)
+	}
+}
+
+async function loadProjects(cacheBehaviour?: CacheBehaviour) {
+	loadingProjects.value = true
+	projectsError.value = ''
+	try {
+		await initProjects(cacheBehaviour)
+	} catch (error) {
+		projectsError.value = getProjectsErrorMessage(error)
+		console.error('Не удалось загрузить контент сборки:', error)
+	} finally {
+		loadingProjects.value = false
+	}
+}
+
+void loadProjects()
 
 const modpackVersionModal = ref<InstanceType<typeof ModpackVersionModal> | null>()
 const installing = computed(() => props.instance.install_stage !== 'installed')
@@ -623,10 +681,16 @@ const updateAll = async () => {
 			const backup = await backupProfileWorlds(props.instance.path)
 			if (
 				backup.failures.length > 0 &&
-				!window.confirm(`Не удалось создать ${backup.failures.length} резервных копий. Продолжить обновление?`)
-			) return
+				!window.confirm(
+					`Не удалось создать ${backup.failures.length} резервных копий. Продолжить обновление?`,
+				)
+			)
+				return
 		} catch {
-			if (!window.confirm('Не удалось создать резервные копии миров. Продолжить обновление без них?')) return
+			if (
+				!window.confirm('Не удалось создать резервные копии миров. Продолжить обновление без них?')
+			)
+				return
 		}
 	}
 
@@ -843,35 +907,47 @@ watch(selectAll, () => {
 const refreshingProjects = ref(false)
 async function refreshProjects() {
 	refreshingProjects.value = true
-	await initProjects('bypass')
-	refreshingProjects.value = false
+	try {
+		await loadProjects('bypass')
+	} finally {
+		refreshingProjects.value = false
+	}
 }
 
-const unlisten = await getCurrentWebview().onDragDropEvent(async (event) => {
-	if (event.payload.type !== 'drop') return
+let unlisten: (() => void) | undefined
+let unlistenProfiles: (() => void) | undefined
 
-	for (const file of event.payload.paths) {
-		if (file.endsWith('.mrpack')) continue
-		await add_project_from_path(props.instance.path, file).catch(handleError)
-	}
-	await initProjects()
+async function registerProjectListeners() {
+	unlisten = await getCurrentWebview().onDragDropEvent(async (event) => {
+		if (event.payload.type !== 'drop') return
+
+		for (const file of event.payload.paths) {
+			if (file.endsWith('.mrpack')) continue
+			await add_project_from_path(props.instance.path, file).catch(handleError)
+		}
+		await loadProjects()
+	})
+
+	unlistenProfiles = await profile_listener(
+		async (event: { event: string; profile_path_id: string }) => {
+			if (
+				event.profile_path_id === props.instance.path &&
+				event.event === 'synced' &&
+				props.instance.install_stage !== 'pack_installing'
+			) {
+				await loadProjects()
+			}
+		},
+	)
+}
+
+void registerProjectListeners().catch((error) => {
+	console.error('Не удалось подключить события контента сборки:', error)
 })
 
-const unlistenProfiles = await profile_listener(
-	async (event: { event: string; profile_path_id: string }) => {
-		if (
-			event.profile_path_id === props.instance.path &&
-			event.event === 'synced' &&
-			props.instance.install_stage !== 'pack_installing'
-		) {
-			await initProjects()
-		}
-	},
-)
-
 onUnmounted(() => {
-	unlisten()
-	unlistenProfiles()
+	unlisten?.()
+	unlistenProfiles?.()
 })
 </script>
 
@@ -879,16 +955,33 @@ onUnmounted(() => {
 .blockera-content-manager {
 	:deep(.iconified-input) {
 		height: 42px;
-		background: rgba(8, 12, 20, .72);
-		border: 1px solid rgba(255,255,255,.085);
+		background: rgba(8, 12, 20, 0.72);
+		border: 1px solid rgba(255, 255, 255, 0.085);
 		border-radius: 12px;
 		box-shadow: none;
 	}
-	:deep(.iconified-input:focus-within) { border-color: rgba(177, 91, 255, .48); }
-	:deep(.iconified-input input) { color: #f4f1f8; background: transparent; }
-	:deep(.content-list-panel), :deep(.card) { background: transparent; border-color: rgba(255,255,255,.07); box-shadow: none; }
-	:deep(.content-list-item) { margin-bottom: 7px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.065); border-radius: 13px; }
-	:deep(button) { border-radius: 10px; }
+	:deep(.iconified-input:focus-within) {
+		border-color: rgba(177, 91, 255, 0.48);
+	}
+	:deep(.iconified-input input) {
+		color: #f4f1f8;
+		background: transparent;
+	}
+	:deep(.content-list-panel),
+	:deep(.card) {
+		background: transparent;
+		border-color: rgba(255, 255, 255, 0.07);
+		box-shadow: none;
+	}
+	:deep(.content-list-item) {
+		margin-bottom: 7px;
+		background: rgba(255, 255, 255, 0.03);
+		border: 1px solid rgba(255, 255, 255, 0.065);
+		border-radius: 13px;
+	}
+	:deep(button) {
+		border-radius: 10px;
+	}
 }
 
 .blockera-empty-state {
@@ -898,13 +991,55 @@ onUnmounted(() => {
 	align-items: center;
 	justify-content: center;
 	text-align: center;
-	background: radial-gradient(circle at 50% 45%, rgba(133, 54, 214, .12), transparent 18rem);
+	background: radial-gradient(circle at 50% 45%, rgba(133, 54, 214, 0.12), transparent 18rem);
 
-	.empty-state-icon { width: 64px; height: 64px; display: grid; place-items: center; color: #c587ff; background: linear-gradient(145deg, rgba(150,70,235,.22), rgba(79,30,132,.12)); border: 1px solid rgba(184,105,255,.3); border-radius: 19px; }
-	.empty-state-icon svg { width: 28px; height: 28px; }
-	> span { margin-top: 18px; color: #b469f5; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
-	h2 { margin: 6px 0; color: #f7f4fa; font-size: 25px; }
-	p { max-width: 430px; margin: 0 0 18px; color: #8e95a4; line-height: 1.55; }
+	.empty-state-icon {
+		width: 64px;
+		height: 64px;
+		display: grid;
+		place-items: center;
+		color: #c587ff;
+		background: linear-gradient(145deg, rgba(150, 70, 235, 0.22), rgba(79, 30, 132, 0.12));
+		border: 1px solid rgba(184, 105, 255, 0.3);
+		border-radius: 19px;
+	}
+	.empty-state-icon svg {
+		width: 28px;
+		height: 28px;
+	}
+	> span {
+		margin-top: 18px;
+		color: #b469f5;
+		font-size: 10px;
+		font-weight: 850;
+		letter-spacing: 0.14em;
+	}
+	h2 {
+		margin: 6px 0;
+		color: #f7f4fa;
+		font-size: 25px;
+	}
+	p {
+		max-width: 430px;
+		margin: 0 0 18px;
+		color: #8e95a4;
+		line-height: 1.55;
+	}
+}
+
+.blockera-loading-state {
+	gap: 0.75rem;
+}
+.blockera-loading-state h2,
+.blockera-loading-state p {
+	margin: 0;
+}
+.empty-state-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
 }
 
 .text-input {

@@ -18,7 +18,6 @@ import {
 	NewspaperIcon,
 	NotepadTextIcon,
 	PlusIcon,
-	RefreshCwIcon,
 	RestoreIcon,
 	RightArrowIcon,
 	ServerIcon,
@@ -37,7 +36,6 @@ import {
 	NewsArticleCard,
 	NotificationPanel,
 	OverflowMenu,
-	ProgressSpinner,
 	provideModrinthClient,
 	provideNotificationManager,
 	providePageContext,
@@ -175,13 +173,15 @@ const authUnreachable = computed(() => {
 // This code is modified by AstralRinth
 onMounted(async () => {
 	await useCheckDisableMouseover()
-	await getRemote(false)
+	void getRemote(false)
+	updateCheckInterval = window.setInterval(() => void getRemote(false), 30 * 60 * 1000)
 
 	document.querySelector('body').addEventListener('click', handleClick)
 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
 })
 
 onUnmounted(async () => {
+	if (updateCheckInterval) window.clearInterval(updateCheckInterval)
 	document.querySelector('body').removeEventListener('click', handleClick)
 	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
 })
@@ -513,6 +513,8 @@ const appUpdateDownload = {
 	version: ref(),
 }
 
+let updateCheckInterval
+
 function handleClick(e) {
 	let target = e.target
 	while (target != null) {
@@ -727,42 +729,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</NavButton>
 			<div class="flex flex-grow"></div>
 			<Transition name="nav-button-animated">
-				<div
-					v-if="
-						availableUpdate &&
-						updateToastDismissed &&
-						!restarting &&
-						(finishedDownloading || metered)
-					"
-				>
-					<NavButton
-						v-tooltip.right="
-							formatMessage(
-								finishedDownloading
-									? messages.reloadToUpdate
-									: downloadProgress === 0
-										? messages.downloadUpdate
-										: messages.downloadingUpdate,
-								{
-									percent: downloadPercent,
-								},
-							)
-						"
-						:to="
-							finishedDownloading
-								? installUpdate
-								: downloadProgress > 0 && downloadProgress < 1
-									? showUpdateToast
-									: downloadAvailableUpdate
-						"
-					>
-						<ProgressSpinner
-							v-if="downloadProgress > 0 && downloadProgress < 1"
-							class="text-brand"
-							:progress="downloadProgress"
-						/>
-						<RefreshCwIcon v-else-if="finishedDownloading" class="text-brand" />
-						<DownloadIcon v-else class="text-brand" />
+				<div v-if="updateState">
+					<NavButton v-tooltip.right="'Доступно обновление BlockEra Launcher'" :to="() => $refs.settingsModal.show()">
+						<DownloadIcon class="text-brand" />
 					</NavButton>
 				</div>
 			</Transition>

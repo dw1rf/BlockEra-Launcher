@@ -20,7 +20,7 @@ use daedalus::minecraft::{LoggingSide, RuleAction, VersionInfo};
 use daedalus::modded::LoaderVersion;
 use rand::seq::SliceRandom; // This code is modified by AstralRinth
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use st::Profile;
 use std::fmt::Write;
 use std::path::PathBuf;
@@ -30,6 +30,20 @@ mod args;
 
 pub mod download;
 pub mod quick_play_version;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OfflineSkinProvider {
+    ElyBy,
+    Disabled,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OfflineSkinProviderResult {
+    pub provider: OfflineSkinProvider,
+    pub injector_active: bool,
+    pub error: Option<String>,
+}
 
 use crate::state::ACTIVE_STATE;
 
@@ -666,55 +680,43 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
-    let mut offline_skin_server = None;
+    let offline_skin_server: Option<OfflineSkinServer> = None;
 
     if credentials.account_type == AccountType::Pirate.as_lowercase_str() {
-        match crate::api::minecraft_skins::get_active_offline_skin(
-            credentials.offline_profile.id,
-        )
-        .await
+        let offline_skin_provider = match utils::get_elyby_injector_library()
+            .await
         {
-            Ok(Some(skin)) => {
-                match OfflineSkinServer::start(
-                    credentials.offline_profile.id,
-                    credentials.offline_profile.name.clone(),
-                    skin,
+            Ok(injector) => {
+                command.arg("-Dauthlibinjector.noShowServerName");
+                command
+                    .arg(format!("-javaagent:{}=ely.by", injector.display()));
+                let _ = emit_info(
+                    "[BlockEra] Сетевые offline-скины подключены через Ely.by.",
                 )
-                .await
-                {
-                    Ok(server) => match utils::get_elyby_injector_library()
-                        .await
-                    {
-                        Ok(injector) => {
-                            command.arg("-Dauthlibinjector.noShowServerName");
-                            command.arg(format!(
-                                "-javaagent:{}={}",
-                                injector.display(),
-                                server.info().api_root
-                            ));
-                            let _ = emit_info("[BlockEra] Offline-скин подключён к Minecraft.").await;
-                            offline_skin_server = Some(server);
-                        }
-                        Err(error) => {
-                            let _ = emit_info(&format!(
-								"[BlockEra] Не удалось подключить offline-скин: {error}. Игра продолжит запуск без него."
-							)).await;
-                        }
-                    },
-                    Err(error) => {
-                        let _ = emit_info(&format!(
-							"[BlockEra] Не удалось запустить локальный skin-сервис: {error}."
-						)).await;
-                    }
+                .await;
+                OfflineSkinProviderResult {
+                    provider: OfflineSkinProvider::ElyBy,
+                    injector_active: true,
+                    error: None,
                 }
             }
-            Ok(None) => {}
             Err(error) => {
+                let error = error.to_string();
                 let _ = emit_info(&format!(
-					"[BlockEra] Не удалось прочитать выбранный offline-скин: {error}."
-				)).await;
+                    "[BlockEra] Не удалось подключить сетевые offline-скины Ely.by: {error}. Игра продолжит запуск без них."
+                ))
+                .await;
+                OfflineSkinProviderResult {
+                    provider: OfflineSkinProvider::Disabled,
+                    injector_active: false,
+                    error: Some(error),
+                }
             }
-        }
+        };
+        tracing::info!(
+            ?offline_skin_provider,
+            "offline skin provider initialized"
+        );
 
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
             let invalid_url = "https://invalid.invalid";

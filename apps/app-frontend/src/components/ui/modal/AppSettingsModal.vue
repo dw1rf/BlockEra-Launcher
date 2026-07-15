@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import {
+	BlockEraLogo,
 	CoffeeIcon,
+	DownloadIcon,
 	GameIcon,
 	GaugeIcon,
-	DownloadIcon,
-	BlockEraLogo,
-	SpinnerIcon,
 	LanguagesIcon,
 	PaintbrushIcon,
 	ReportIcon,
 	SettingsIcon,
 	ShieldIcon,
+	SpinnerIcon,
 } from '@modrinth/assets'
 import {
+	Button,
 	commonMessages,
 	defineMessage,
 	defineMessages,
@@ -33,26 +34,33 @@ import LanguageSettings from '@/components/ui/settings/LanguageSettings.vue'
 import PrivacySettings from '@/components/ui/settings/PrivacySettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
 import { get, set } from '@/helpers/settings.ts'
-
-// This code is modified by AstralRinth
-import { installState, getRemote, updateState } from '@/helpers/update.js'
+import {
+	availableUpdate,
+	checkingState,
+	checkLauncherUpdate,
+	formatUpdaterError,
+	installLauncherUpdate,
+	installState,
+	updateError,
+	updateState,
+} from '@/helpers/update.js'
+import { injectAppUpdateDownloadProgress } from '@/providers/download-progress.ts'
+import { useTheming } from '@/store/state'
 
 const updateModalView = ref(null)
-const updateRequestFailView = ref(null)
 
 const initUpdateModal = async () => {
-  updateModalView.value.show()
+	updateModalView.value.show()
+	await checkLauncherUpdate()
 }
 
 const initDownload = async () => {
-  updateModalView.value.hide()
-  const result = await getRemote(true);
-  if (!result) {
-    updateRequestFailView.value.show()
-  }
+	try {
+		await installLauncherUpdate()
+	} catch (error) {
+		if (!updateError.value) updateError.value = formatUpdaterError(error)
+	}
 }
-import { injectAppUpdateDownloadProgress } from '@/providers/download-progress.ts'
-import { useTheming } from '@/store/state'
 
 const themeStore = useTheming()
 
@@ -219,80 +227,36 @@ const messages = defineMessages({
 							</p>
 						</div>
 						<div v-if="updateState" class="w-8 h-8 cursor-pointer hover:brightness-75 neon-icon pulse">
-            			  <template v-if="installState">
-            			    <SpinnerIcon class="size-6 animate-spin" v-tooltip.bottom="'Installing in process...'" />
-            			  </template>
-            			  <template v-else>
-            			    <DownloadIcon class="size-6" v-tooltip.bottom="'View update info'" @click="!installState && (initUpdateModal(), getRemote(false))" />
-            			  </template>
-            			</div>
+							<template v-if="installState">
+								<SpinnerIcon v-tooltip.bottom="'Устанавливаем обновление…'" class="size-6 animate-spin" />
+							</template>
+							<template v-else>
+								<DownloadIcon v-tooltip.bottom="'Открыть обновление'" class="size-6" @click="!installState && initUpdateModal()" />
+							</template>
+						</div>
 					</div>
 				</div>
 			</template>
 		</TabbedModal>
 		<!-- [AR] Feature -->
-		<ModalWrapper ref="updateModalView" :has-to-type="false" header="Request to update BlockEra Launcher">
-    	  <div class="space-y-4">
-    	    <div class="space-y-2">
-				<strong>The new version of BlockEra Launcher is available!</strong>
-    	      <p>Your version is outdated. We recommend that you update to the latest version.</p>
-			  <br/>
-			  <br/>
-    	      <p><strong>⚠️ Please, read this notice before initialize update process</strong></p>
-    	      <p>
-    	        Before updating, make sure that you have saved and closed all running instances and made a backup copy of the launcher data such as
-				<code>%appdata%\Roaming\BlockEraLauncher</code> on Windows or <code>~/Library/Application Support/BlockEraLauncher</code> on macOS.
-				Remember that the authors of the product are not responsible for the breakdown of
-    	        your files, so you should always make back up copies of them and keep them in a safe place.
-    	      </p>
-    	    </div>
-    	    <div class="text-sm text-secondary space-y-1">
-    	      <p>
-    	        <strong>☁️ Latest release tag:</strong>
-    	        <span id="releaseTag" class="neon-text"></span>
-		        <br/>
-				<strong>☁️ Latest release title:</strong>
-				<span id="releaseTitle" class="neon-text"></span>
-				<br/>
-    	        <strong>💾 Installed & Running version:</strong>
-    	        <span class="neon-text">v{{ version }}</span>
-    	      </p>
-    	    </div>
-			  <a class="neon-text" href="https://me.astralium.su/get/ar" target="_blank"
-    	        rel="noopener noreferrer">
-				Checkout our git repository
-			  </a>
-    	    <div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
-    	      <Button class="bordered" @click="updateModalView.hide()">Cancel</Button>
-    	      <Button class="bordered" @click="initDownload()">Download file</Button>
-    	    </div>
-    	  </div>
-    	</ModalWrapper>
-    	<ModalWrapper ref="updateRequestFailView" :has-to-type="false" header="Failed to request a file from the server :(">
-    	  <div class="space-y-4">
-    	    <div class="space-y-2">
-    	      <p><strong>Error occurred</strong></p>
-    	      <p>Unfortunately, the program was unable to download the file from our servers.</p>
-    	      <p>
-    	        Please try downloading it yourself from
-    	        <a class="neon-text" href="https://me.astralium.su/get/ar" target="_blank" rel="noopener noreferrer">Git
-    	          Astralium</a>
-    	        if there are any updates available.
-    	      </p>
-    	    </div>
-
-    	    <div class="text-sm text-secondary">
-    	      <p>
-				<strong>Local BlockEra Launcher:</strong>
-    	        <span class="neon-text">v{{ version }}</span>
-    	      </p>
-    	    </div>
-
-    	    <div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
-    	      <Button class="bordered" @click="updateRequestFailView.hide()">Close</Button>
-    	    </div>
-    	  </div>
-    	</ModalWrapper>
+		<ModalWrapper ref="updateModalView" :has-to-type="false" header="Обновление BlockEra Launcher">
+			<div class="space-y-4 pb-12">
+				<div class="space-y-2">
+					<strong v-if="availableUpdate">Доступна версия {{ availableUpdate.version }}</strong>
+					<strong v-else-if="checkingState">Проверяем обновление…</strong>
+					<strong v-else>Установлена актуальная версия</strong>
+					<p v-if="availableUpdate?.body" class="text-secondary">{{ availableUpdate.body }}</p>
+					<p v-else class="text-secondary">Текущая версия: {{ version }}</p>
+					<p v-if="updateError" class="update-request-error">{{ updateError }}</p>
+				</div>
+				<div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
+					<Button class="bordered" @click="updateModalView.hide()">Закрыть</Button>
+					<Button v-if="availableUpdate" class="bordered" :disabled="installState" @click="initDownload()">
+						{{ installState ? 'Устанавливаем…' : 'Скачать и перезапустить' }}
+					</Button>
+				</div>
+			</div>
+		</ModalWrapper>
 	</ModalWrapper>
 </template>
 
@@ -306,6 +270,16 @@ code {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+}
+
+.update-request-error {
+	padding: 0.75rem;
+	border: 1px solid rgba(255, 83, 123, 0.24);
+	border-radius: 0.75rem;
+	color: #ff9bb2;
+	background: rgba(255, 70, 110, 0.08);
+	white-space: pre-wrap;
+	word-break: break-word;
 }
 
 .settings-title {

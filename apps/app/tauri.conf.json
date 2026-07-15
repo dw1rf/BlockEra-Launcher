@@ -42,7 +42,7 @@
 		]
 	},
 	"productName": "BlockEra Launcher",
-	"version": "0.10.2702",
+	"version": "0.10.2703",
 	"mainBinaryName": "BlockEra Launcher",
 	"identifier": "com.blockera.launcher",
 	"plugins": {
@@ -94,7 +94,7 @@
 				],
 				"enable": true
 			},
-			"capabilities": ["core", "plugins"],
+			"capabilities": ["core", "plugins", "updater"],
 			"csp": {
 				"default-src": "'self' customprotocol: asset:",
 				"connect-src": "ipc: https://git.astralium.su https://authserver.ely.by http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.sentry.io https://api.mclo.gs 'self' data: blob:",
