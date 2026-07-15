@@ -58,13 +58,11 @@ async function findLauncherDir() {
 </script>
 
 <template>
-	<h2 class="m-0 text-lg font-extrabold text-contrast">App directory</h2>
-	<p class="m-0 mt-1 mb-2 leading-tight text-secondary">
-		The directory where the launcher stores all of its files. Changes will be applied after
-		restarting the launcher.
-	</p>
-
-	<div class="m-1 my-2">
+	<div class="launcher-settings-page">
+	<header class="settings-page-header"><p>ХРАНИЛИЩЕ</p><h2>Файлы и загрузки</h2><span>Папка данных, кэш и нагрузка на интернет и диск.</span></header>
+	<section class="settings-section settings-fields">
+		<div class="settings-section-heading"><div><h3>Папка BlockEra Launcher</h3><p>Здесь хранятся сборки, библиотеки и служебные файлы. Изменение применится после перезапуска.</p></div></div>
+	<div>
 		<div class="iconified-input w-full">
 			<BoxIcon />
 			<input id="appDir" v-model="settings.custom_dir" type="text" class="input" />
@@ -73,8 +71,9 @@ async function findLauncherDir() {
 			</Button>
 		</div>
 	</div>
+	</section>
 
-	<div>
+	<section class="settings-section settings-list">
 		<ConfirmModalWrapper
 			ref="purgeCacheConfirmModal"
 			title="Are you sure you want to purge the cache?"
@@ -85,22 +84,11 @@ async function findLauncherDir() {
 			@proceed="purgeCache"
 		/>
 
-		<h2 class="m-0 text-lg font-extrabold text-contrast">App cache</h2>
-		<p class="m-0 mt-1 mb-2 leading-tight text-secondary">
-			The Modrinth app stores a cache of data to speed up loading. This can be purged to force the
-			app to reload data. This may slow down the app temporarily.
-		</p>
-	</div>
-	<button id="purge-cache" class="btn min-w-max" @click="$refs.purgeCacheConfirmModal.show()">
-		<TrashIcon />
-		Purge cache
-	</button>
+		<div class="settings-row"><div><h3>Кэш каталога</h3><p>Удаляет временные данные проектов и заставляет лаунчер получить их заново.</p></div><button id="purge-cache" class="btn min-w-max" @click="$refs.purgeCacheConfirmModal.show()"><TrashIcon /> Очистить</button></div>
+	</section>
 
-	<h2 class="m-0 text-lg font-extrabold text-contrast mt-4">Maximum concurrent downloads</h2>
-	<p class="m-0 mt-1 mb-2 leading-tight text-secondary">
-		The maximum amount of files the launcher can download at the same time. Set this to a lower
-		value if you have a poor internet connection. (app restart required to take effect)
-	</p>
+	<section class="settings-section">
+	<div class="settings-section-heading"><div><h3>Параллельные загрузки</h3><p>Уменьшите значение при нестабильном интернете. Применится после перезапуска.</p></div><strong>{{ settings.max_concurrent_downloads }}</strong></div>
 	<Slider
 		id="max-downloads"
 		v-model="settings.max_concurrent_downloads"
@@ -108,11 +96,10 @@ async function findLauncherDir() {
 		:max="10"
 		:step="1"
 	/>
-
-	<h2 class="mt-4 m-0 text-lg font-extrabold text-contrast">Maximum concurrent writes</h2>
-	<p class="m-0 mt-1 mb-2 leading-tight text-secondary">
-		The maximum amount of files the launcher can write to the disk at once. Set this to a lower
-		value if you are frequently getting I/O errors. (app restart required to take effect)
-	</p>
+	</section>
+	<section class="settings-section">
+	<div class="settings-section-heading"><div><h3>Параллельная запись на диск</h3><p>Снизьте значение при ошибках ввода-вывода или на медленном HDD.</p></div><strong>{{ settings.max_concurrent_writes }}</strong></div>
 	<Slider id="max-writes" v-model="settings.max_concurrent_writes" :min="1" :max="50" :step="1" />
+	</section>
+	</div>
 </template>

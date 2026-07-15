@@ -9,6 +9,7 @@ export const DEFAULT_FEATURE_FLAGS = {
 }
 
 export const THEME_OPTIONS = ['dark', 'light', 'oled', 'system'] as const
+export const BLOCKERA_THEME_OPTIONS = ['dark'] as const
 
 export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
 export type FeatureFlags = Record<FeatureFlag, boolean>
@@ -36,12 +37,8 @@ export const useTheming = defineStore('themeStore', {
 	state: () => DEFAULT_THEME_STORE,
 	actions: {
 		setThemeState(newTheme: ColorTheme) {
-			if (THEME_OPTIONS.includes(newTheme)) {
-				this.selectedTheme = newTheme
-			} else {
-				console.warn('Selected theme is not present. Check themeOptions.')
-			}
-
+			if (newTheme !== 'dark') console.info('[BlockEra] Используется фирменная тёмная тема.')
+			this.selectedTheme = 'dark'
 			this.setThemeClass()
 		},
 		setThemeClass() {
@@ -49,23 +46,13 @@ export const useTheming = defineStore('themeStore', {
 				document.getElementsByTagName('html')[0].classList.remove(`${theme}-mode`)
 			}
 
-			let theme = this.selectedTheme
-			if (this.selectedTheme === 'system') {
-				const darkThemeMq = window.matchMedia('(prefers-color-scheme: dark)')
-				if (darkThemeMq.matches) {
-					theme = 'dark'
-				} else {
-					theme = 'light'
-				}
-			}
-
-			document.getElementsByTagName('html')[0].classList.add(`${theme}-mode`)
+			document.getElementsByTagName('html')[0].classList.add('dark-mode')
 		},
 		getFeatureFlag(key: FeatureFlag) {
 			return this.featureFlags[key] ?? DEFAULT_FEATURE_FLAGS[key]
 		},
 		getThemeOptions() {
-			return THEME_OPTIONS
+			return BLOCKERA_THEME_OPTIONS
 		},
 	},
 })

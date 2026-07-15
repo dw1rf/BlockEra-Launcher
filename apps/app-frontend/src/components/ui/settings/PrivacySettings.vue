@@ -23,43 +23,12 @@ watch(
 </script>
 
 <template>
-	<div class="flex items-center justify-between gap-4">
-		<div>
-			<h2 class="m-0 text-lg font-extrabold text-contrast">Personalized ads</h2>
-			<p class="m-0 text-sm">
-				Modrinth's ad provider, Aditude, shows ads based on your preferences. By disabling this
-				option, you opt out and ads will no longer be shown based on your interests.
-			</p>
-		</div>
-    <!-- [AR] Patch. Disabled element by default -->
-		<Toggle id="personalized-ads" v-model="settings.personalized_ads" :disabled="!settings.personalized_ads" />
-	</div>
-
-	<div class="mt-4 flex items-center justify-between gap-4">
-		<div>
-			<h2 class="m-0 text-lg font-extrabold text-contrast">Telemetry</h2>
-			<p class="m-0 text-sm">
-				Modrinth collects anonymized analytics and usage data to improve our user experience and
-				customize your experience. By disabling this option, you opt out and your data will no
-				longer be collected.
-			</p>
-		</div>
-    <!-- [AR] Patch. Disabled element by default -->
-		<Toggle id="opt-out-analytics" v-model="settings.telemetry" :disabled="!settings.telemetry" />
-	</div>
-
-	<div class="mt-4 flex items-center justify-between gap-4">
-		<div>
-			<h2 class="m-0 text-lg font-extrabold text-contrast">Discord RPC</h2>
-			<p class="m-0 text-sm">
-				Manages the Discord Rich Presence integration. Disabling this will cause 'Modrinth' to no
-				longer show up as a game or app you are using on your Discord profile.
-			</p>
-			<p class="m-0 mt-2 text-sm">
-				Note: This will not prevent any instance-specific Discord Rich Presence integrations, such
-				as those added by mods. (app restart required to take effect)
-			</p>
-		</div>
-		<Toggle id="disable-discord-rpc" v-model="settings.discord_rpc" />
+	<div class="launcher-settings-page">
+		<header class="settings-page-header"><p>ПРИВАТНОСТЬ</p><h2>Данные и интеграции</h2><span>Управляйте аналитикой и внешними сервисами.</span></header>
+		<section class="settings-section settings-list">
+			<div class="settings-row"><div><h3>Персонализированная реклама</h3><p>Использовать интересы для подбора рекламных материалов.</p></div><Toggle id="personalized-ads" v-model="settings.personalized_ads" :disabled="!settings.personalized_ads" /></div>
+			<div class="settings-row"><div><h3>Анонимная аналитика</h3><p>Отправлять обезличенные данные об использовании для улучшения лаунчера.</p></div><Toggle id="opt-out-analytics" v-model="settings.telemetry" :disabled="!settings.telemetry" /></div>
+			<div class="settings-row"><div><h3>Статус в Discord</h3><p>Показывать в профиле Discord, что вы используете BlockEra Launcher. Потребуется перезапуск.</p></div><Toggle id="disable-discord-rpc" v-model="settings.discord_rpc" /></div>
+		</section>
 	</div>
 </template>

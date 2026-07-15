@@ -1,4 +1,5 @@
 use futures::{Stream, StreamExt, stream};
+use sqlx::Row;
 use uuid::{Uuid, fmt::Hyphenated};
 
 use super::MinecraftSkinVariant;
@@ -81,6 +82,88 @@ pub struct CustomMinecraftSkin {
 }
 
 impl CustomMinecraftSkin {
+    pub async fn set_active(
+        &self,
+        minecraft_user_id: Uuid,
+        db: impl sqlx::Acquire<'_, Database = sqlx::Sqlite>,
+    ) -> crate::Result<()> {
+        let minecraft_user_id = minecraft_user_id.as_hyphenated();
+        let variant = match self.variant {
+            MinecraftSkinVariant::Classic => "CLASSIC",
+            MinecraftSkinVariant::Slim => "SLIM",
+            MinecraftSkinVariant::Unknown => "UNKNOWN",
+        };
+        sqlx::query("INSERT OR REPLACE INTO offline_minecraft_skin_selections (minecraft_user_uuid, texture_key, variant) VALUES (?, ?, ?)")
+		.bind(minecraft_user_id.to_string())
+		.bind(&self.texture_key)
+		.bind(variant)
+		.execute(&mut *db.acquire().await?)
+		.await?;
+        Ok(())
+    }
+
+    pub async fn clear_active(
+        minecraft_user_id: Uuid,
+        db: impl sqlx::Acquire<'_, Database = sqlx::Sqlite>,
+    ) -> crate::Result<()> {
+        let minecraft_user_id = minecraft_user_id.as_hyphenated();
+        sqlx::query("INSERT OR REPLACE INTO offline_minecraft_skin_selections (minecraft_user_uuid, texture_key, variant) VALUES (?, NULL, NULL)")
+		.bind(minecraft_user_id.to_string())
+		.execute(&mut *db.acquire().await?)
+		.await?;
+        Ok(())
+    }
+
+    pub async fn get_active(
+        minecraft_user_id: Uuid,
+        db: impl sqlx::Acquire<'_, Database = sqlx::Sqlite> + Copy,
+    ) -> crate::Result<Option<Self>> {
+        let minecraft_user_id = minecraft_user_id.as_hyphenated();
+        let selection = sqlx::query("SELECT texture_key, variant FROM offline_minecraft_skin_selections WHERE minecraft_user_uuid = ?")
+		.bind(minecraft_user_id.to_string())
+		.fetch_optional(&mut *db.acquire().await?)
+		.await?;
+        if let Some(selection) = selection {
+            let texture_key: Option<String> =
+                selection.try_get("texture_key")?;
+            let variant: Option<String> = selection.try_get("variant")?;
+            let (Some(texture_key), Some(variant)) = (texture_key, variant)
+            else {
+                return Ok(None);
+            };
+            let variant = match variant.as_str() {
+                "SLIM" => MinecraftSkinVariant::Slim,
+                "CLASSIC" => MinecraftSkinVariant::Classic,
+                _ => MinecraftSkinVariant::Unknown,
+            };
+            return Ok(Some(Self {
+                texture_key,
+                variant,
+                cape_id: None,
+            }));
+        }
+
+        let row = sqlx::query("SELECT texture_key, variant, cape_id FROM custom_minecraft_skins WHERE minecraft_user_uuid = ? ORDER BY rowid DESC LIMIT 1")
+		.bind(minecraft_user_id.to_string())
+		.fetch_optional(&mut *db.acquire().await?)
+		.await?;
+
+        row.map(|row| {
+            let variant: String = row.try_get("variant")?;
+            let cape_id: Option<String> = row.try_get("cape_id")?;
+            Ok(Self {
+                texture_key: row.try_get("texture_key")?,
+                variant: match variant.as_str() {
+                    "SLIM" => MinecraftSkinVariant::Slim,
+                    "CLASSIC" => MinecraftSkinVariant::Classic,
+                    _ => MinecraftSkinVariant::Unknown,
+                },
+                cape_id: cape_id.and_then(|id| Uuid::parse_str(&id).ok()),
+            })
+        })
+        .transpose()
+    }
+
     pub async fn add(
         minecraft_user_id: Uuid,
         texture_key: &str,

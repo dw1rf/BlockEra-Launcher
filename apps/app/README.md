@@ -1,10 +1,10 @@
-# ![Modrinth App](/.github/assets/app_cover.png)
+# ![BlockEra Launcher](/.github/assets/app_cover.png)
 
-## Modrinth App
+## BlockEra Launcher
 
-The Modrinth App is a desktop application for managing your Minecraft mods. It is built with [Tauri](https://tauri.app/) and [Vue](https://vuejs.org/).
+BlockEra Launcher is a desktop application for managing Minecraft instances and mods. It is built with [Tauri](https://tauri.app/) and [Vue](https://vuejs.org/).
 
-If you're not a developer and you've stumbled upon this repository, you can download the latest release of the app from the [Modrinth website](https://modrinth.com/app).
+If you're not a developer and you've stumbled upon this repository, build the local app from this fork instead of using the upstream Modrinth release.
 
 ## Development
 

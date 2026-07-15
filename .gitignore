@@ -72,6 +72,10 @@ apps/labrinth/fixtures/demo
 *storybook.log
 storybook-static
 
+# Local UI drafts
+design-*.png
+design-qa.md
+
 .wrangler/
 
 # frontend robots.txt

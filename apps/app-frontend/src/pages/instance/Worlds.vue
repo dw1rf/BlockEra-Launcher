@@ -15,17 +15,18 @@
 	<EditWorldModal ref="editWorldModal" :instance="instance" @submit="editWorld" />
 	<ConfirmModalWrapper
 		ref="removeServerModal"
-		:title="`Are you sure you want to remove ${serverToRemove?.name ?? 'this server'}?`"
-		:description="`'${serverToRemove?.name}'${serverToRemove?.address === serverToRemove?.name ? ' ' : ` (${serverToRemove?.address})`} will be removed from your list, including in-game, and there will be no way to recover it.`"
+		:title="`Удалить сервер ${serverToRemove?.name ?? ''}?`"
+		:description="`Сервер будет удалён из списка этой сборки.`"
 		:markdown="false"
 		@proceed="proceedRemoveServer"
 	/>
 	<ConfirmModalWrapper
 		ref="deleteWorldModal"
-		:title="`Are you sure you want to permanently delete this world?`"
-		:description="`'${worldToDelete?.name}' will be **permanently deleted**, and there will be no way to recover it.`"
+		:title="`Удалить мир без возможности восстановления?`"
+		:description="`Мир '${worldToDelete?.name}' будет удалён навсегда. Перед удалением рекомендуется создать резервную копию.`"
 		@proceed="proceedDeleteWorld"
 	/>
+	<div class="blockera-worlds">
 	<div v-if="worlds.length > 0" class="flex flex-col gap-4">
 		<div class="flex flex-wrap gap-2 items-center">
 			<div class="iconified-input flex-grow">
@@ -33,7 +34,7 @@
 				<input
 					v-model="searchFilter"
 					type="text"
-					:placeholder="`Search worlds...`"
+					placeholder="Поиск миров и серверов…"
 					class="text-input search-input"
 					autocomplete="off"
 				/>
@@ -45,18 +46,23 @@
 				<button :disabled="refreshingAll" @click="refreshAllWorlds">
 					<template v-if="refreshingAll">
 						<SpinnerIcon class="animate-spin" />
-						Refreshing...
+						Обновляем…
 					</template>
 					<template v-else>
 						<UpdatedIcon />
-						Refresh
+						Обновить
 					</template>
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
 				<button @click="addServerModal?.show()">
 					<PlusIcon />
-					Add a server
+					Добавить сервер
+				</button>
+			</ButtonStyled>
+			<ButtonStyled>
+				<button :disabled="backingUp" @click="backupAllWorlds">
+					<PackageIcon /> {{ backingUp ? 'Создаём копии…' : backupLabel }}
 				</button>
 			</ButtonStyled>
 		</div>
@@ -91,37 +97,36 @@
 			/>
 		</div>
 	</div>
-	<div v-else class="w-full max-w-[48rem] mx-auto flex flex-col mt-6">
-		<RadialHeader class="">
-			<div class="flex items-center gap-6 w-[32rem] mx-auto">
-				<img src="@/assets/sad-modrinth-bot.webp" alt="" aria-hidden="true" class="h-24" />
-				<span class="text-contrast font-bold text-xl"> You don't have any worlds yet. </span>
-			</div>
-		</RadialHeader>
+	<div v-else class="blockera-worlds-empty">
+		<div class="worlds-empty-icon"><PackageIcon /></div>
+		<span>МИРЫ И СЕРВЕРЫ</span>
+		<h2>Миров пока нет</h2>
+		<p>Создайте мир в Minecraft или добавьте сервер для быстрого подключения.</p>
 		<div class="flex gap-2 mt-4 mx-auto">
 			<ButtonStyled>
 				<button @click="addServerModal?.show()">
 					<PlusIcon aria-hidden="true" />
-					Add a server
+					Добавить сервер
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
 				<button :disabled="refreshingAll" @click="refreshAllWorlds">
 					<template v-if="refreshingAll">
 						<SpinnerIcon aria-hidden="true" class="animate-spin" />
-						Refreshing...
+						Обновляем…
 					</template>
 					<template v-else>
 						<UpdatedIcon aria-hidden="true" />
-						Refresh
+						Обновить
 					</template>
 				</button>
 			</ButtonStyled>
 		</div>
 	</div>
+	</div>
 </template>
 <script setup lang="ts">
-import { PlusIcon, SearchIcon, SpinnerIcon, UpdatedIcon, XIcon } from '@modrinth/assets'
+import { PackageIcon, PlusIcon, SearchIcon, SpinnerIcon, UpdatedIcon, XIcon } from '@modrinth/assets'
 import {
 	Button,
 	ButtonStyled,
@@ -131,7 +136,6 @@ import {
 	GAME_MODES,
 	type GameVersion,
 	injectNotificationManager,
-	RadialHeader,
 } from '@modrinth/ui'
 import type { Version } from '@modrinth/utils'
 import { platform } from '@tauri-apps/plugin-os'
@@ -148,6 +152,7 @@ import { profile_listener } from '@/helpers/events'
 import { get_game_versions } from '@/helpers/tags'
 import type { GameInstance } from '@/helpers/types'
 import {
+	backup_world,
 	delete_world,
 	get_profile_protocol_version,
 	getWorldIdentifier,
@@ -208,11 +213,35 @@ const filters = ref<string[]>([])
 const searchFilter = ref('')
 
 const refreshingAll = ref(false)
+const backingUp = ref(false)
+const backupLabel = ref('Создать бэкап')
 const hadNoWorlds = ref(true)
 const startingInstance = ref(false)
 const worldPlaying = ref<World>()
 
 const worlds = ref<World[]>([])
+
+async function backupAllWorlds() {
+	if (backingUp.value) return
+	const localWorlds = worlds.value.filter((world): world is SingleplayerWorld => world.type === 'singleplayer')
+	if (localWorlds.length === 0) {
+		backupLabel.value = 'Нет миров для копии'
+		return
+	}
+
+	backingUp.value = true
+	let completed = 0
+	for (const world of localWorlds) {
+		try {
+			await backup_world(instance.value.path, world.path)
+			completed += 1
+		} catch (error) {
+			handleError(error)
+		}
+	}
+	backupLabel.value = completed === localWorlds.length ? `Скопировано: ${completed}` : `Готово: ${completed}/${localWorlds.length}`
+	backingUp.value = false
+}
 const serverData = ref<Record<string, ServerData>>({})
 
 // Track servers_updated calls on Linux to prevent server ping spam
@@ -481,3 +510,28 @@ const messages = defineMessages({
 	},
 })
 </script>
+
+<style scoped lang="scss">
+.blockera-worlds {
+	:deep(.iconified-input) { height: 42px; background: rgba(8,12,20,.72); border: 1px solid rgba(255,255,255,.085); border-radius: 12px; }
+	:deep(.iconified-input:focus-within) { border-color: rgba(177,91,255,.48); }
+	:deep(.world-item), :deep(.card) { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.07); border-radius: 13px; box-shadow: none; }
+	:deep(button) { border-radius: 10px; }
+}
+
+.blockera-worlds-empty {
+	min-height: 370px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	background: radial-gradient(circle at 50% 45%, rgba(133,54,214,.12), transparent 18rem);
+
+	.worlds-empty-icon { width: 64px; height: 64px; display: grid; place-items: center; color: #c587ff; background: rgba(150,70,235,.14); border: 1px solid rgba(184,105,255,.3); border-radius: 19px; }
+	.worlds-empty-icon svg { width: 28px; }
+	> span { margin-top: 18px; color: #b469f5; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
+	h2 { margin: 6px 0; color: #f7f4fa; font-size: 25px; }
+	p { max-width: 430px; margin: 0; color: #8e95a4; line-height: 1.55; }
+}
+</style>

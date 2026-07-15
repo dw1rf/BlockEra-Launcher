@@ -1,0 +1,11 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="24" fill="url(#blockera-bg)" />
+  <path d="M34 24H66C82 24 92 32 92 45C92 53 88 59 81 62C91 65 97 72 97 82C97 97 85 105 67 105H34V24ZM53 40V55H64C70 55 73 52 73 47C73 42 70 40 64 40H53ZM53 70V89H67C74 89 78 86 78 80C78 73 74 70 67 70H53Z" fill="#140A1E" />
+  <path d="M54 42H64C68 42 70 44 70 47M54 72H66C72 72 75 75 75 80" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="4" stroke-linecap="round" />
+  <defs>
+    <linearGradient id="blockera-bg" x1="13" y1="115" x2="115" y2="13" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#761AD6" />
+      <stop offset="1" stop-color="#D4B1FF" />
+    </linearGradient>
+  </defs>
+</svg>

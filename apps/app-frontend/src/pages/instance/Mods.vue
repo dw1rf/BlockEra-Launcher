@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="blockera-content-manager">
 		<template v-if="projects?.length > 0">
 			<div class="flex items-center gap-2 mb-4">
 				<div class="iconified-input flex-grow">
@@ -7,7 +7,7 @@
 					<input
 						v-model="searchFilter"
 						type="text"
-						:placeholder="`Search ${filteredProjects.length} project${filteredProjects.length === 1 ? '' : 's'}...`"
+						:placeholder="`Поиск по ${filteredProjects.length} проектам…`"
 						class="text-input search-input"
 						autocomplete="off"
 					/>
@@ -94,7 +94,7 @@
 							color-fill="text"
 							hover-color-fill="text"
 						>
-							<button @click="updateSelected()"><DownloadIcon /> Update</button>
+							<button @click="updateSelected()"><DownloadIcon /> Обновить</button>
 						</ButtonStyled>
 						<ButtonStyled>
 							<OverflowMenu
@@ -117,7 +117,7 @@
 									},
 								]"
 							>
-								<ShareIcon /> Share <DropdownIcon />
+							<ShareIcon /> Поделиться <DropdownIcon />
 								<template #share-names> <TextInputIcon /> Project names </template>
 								<template #share-file-names> <FileIcon /> File names </template>
 								<template #share-urls> <LinkIcon /> Project links </template>
@@ -125,13 +125,13 @@
 							</OverflowMenu>
 						</ButtonStyled>
 						<ButtonStyled v-if="selectedProjects.some((m) => m.disabled)">
-							<button @click="enableAll()"><CheckCircleIcon /> Enable</button>
+							<button @click="enableAll()"><CheckCircleIcon /> Включить</button>
 						</ButtonStyled>
 						<ButtonStyled v-if="selectedProjects.some((m) => !m.disabled)">
-							<button @click="disableAll()"><SlashIcon /> Disable</button>
+							<button @click="disableAll()"><SlashIcon /> Отключить</button>
 						</ButtonStyled>
 						<ButtonStyled color="red">
-							<button @click="deleteSelected()"><TrashIcon /> Remove</button>
+							<button @click="deleteSelected()"><TrashIcon /> Удалить</button>
 						</ButtonStyled>
 					</div>
 				</template>
@@ -139,7 +139,7 @@
 					<ButtonStyled type="transparent" color-fill="text" hover-color-fill="text">
 						<button :disabled="refreshingProjects" class="w-max" @click="refreshProjects">
 							<UpdatedIcon />
-							Refresh
+							Обновить список
 						</button>
 					</ButtonStyled>
 					<ButtonStyled
@@ -150,7 +150,7 @@
 						hover-color-fill="text"
 						@click="updateAll"
 					>
-						<button class="w-max"><DownloadIcon /> Update all</button>
+						<button class="w-max"><DownloadIcon /> Обновить всё</button>
 					</ButtonStyled>
 					<ButtonStyled
 						v-if="canUpdatePack"
@@ -160,7 +160,7 @@
 						hover-color-fill="text"
 					>
 						<button class="w-max" :disabled="installing" @click="modpackVersionModal?.show()">
-							<DownloadIcon /> Update pack
+							<DownloadIcon /> Обновить сборку
 						</button>
 					</ButtonStyled>
 				</template>
@@ -223,16 +223,12 @@
 				/>
 			</div>
 		</template>
-		<div v-else class="w-full max-w-[48rem] mx-auto flex flex-col mt-6">
-			<RadialHeader class="">
-				<div class="flex items-center gap-6 w-[32rem] mx-auto">
-					<img src="@/assets/sad-modrinth-bot.webp" class="h-24" />
-					<span class="text-contrast font-bold text-xl"
-						>You haven't added any content to this instance yet.</span
-					>
-				</div>
-			</RadialHeader>
-			<div class="flex mt-4 mx-auto">
+		<div v-else class="blockera-empty-state">
+			<div class="empty-state-icon"><PlusIcon /></div>
+			<span>БИБЛИОТЕКА СБОРКИ</span>
+			<h2>Здесь пока нет контента</h2>
+			<p>Добавьте моды, текстуры, шейдеры или датапаки из каталога BlockEra.</p>
+			<div>
 				<AddContentButton :instance="instance" />
 			</div>
 		</div>
@@ -263,6 +259,7 @@ import {
 	FilterIcon,
 	LinkIcon,
 	MoreVerticalIcon,
+	PlusIcon,
 	SearchIcon,
 	ShareIcon,
 	SlashIcon,
@@ -274,13 +271,10 @@ import {
 	Button,
 	ButtonStyled,
 	ContentListPanel,
-	defineMessages,
 	injectNotificationManager,
 	OverflowMenu,
 	Pagination,
-	RadialHeader,
 	Toggle,
-	useVIntl,
 } from '@modrinth/ui'
 import type { ContentItem } from '@modrinth/ui/src/components/content/ContentListItem.vue'
 import type { Organization, Project, TeamMember, Version } from '@modrinth/utils'
@@ -298,6 +292,7 @@ import ExportModal from '@/components/ui/ExportModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
 import ModpackVersionModal from '@/components/ui/ModpackVersionModal.vue'
 import { trackEvent } from '@/helpers/analytics'
+import { automaticWorldBackupsEnabled, backupProfileWorlds } from '@/helpers/backups'
 import {
 	get_organization_many,
 	get_project_many,
@@ -483,24 +478,17 @@ await initProjects()
 const modpackVersionModal = ref<InstanceType<typeof ModpackVersionModal> | null>()
 const installing = computed(() => props.instance.install_stage !== 'installed')
 
-const vintl = useVIntl()
-const { formatMessage } = vintl
-
 type FilterOption = {
 	id: string
 	formattedName: string
 }
 
-const messages = defineMessages({
-	updatesAvailableFilter: {
-		id: 'instance.filter.updates-available',
-		defaultMessage: 'Updates available',
-	},
-	disabledFilter: {
-		id: 'instance.filter.disabled',
-		defaultMessage: 'Disabled projects',
-	},
-})
+const projectTypeLabels: Record<string, string> = {
+	mod: 'Моды',
+	resourcepack: 'Текстуры',
+	shader: 'Шейдеры',
+	datapack: 'Датапаки',
+}
 
 const filterOptions: ComputedRef<FilterOption[]> = computed(() => {
 	const options: FilterOption[] = []
@@ -515,21 +503,21 @@ const filterOptions: ComputedRef<FilterOption[]> = computed(() => {
 	types.forEach((type) => {
 		options.push({
 			id: type,
-			formattedName: formatProjectType(type) + 's',
+			formattedName: projectTypeLabels[type] ?? formatProjectType(type),
 		})
 	})
 
 	if (!isPackLocked.value && projects.value.some((m) => m.outdated)) {
 		options.push({
 			id: 'updates',
-			formattedName: formatMessage(messages.updatesAvailableFilter),
+			formattedName: 'Есть обновления',
 		})
 	}
 
 	if (projects.value.some((m) => m.disabled)) {
 		options.push({
 			id: 'disabled',
-			formattedName: formatMessage(messages.disabledFilter),
+			formattedName: 'Отключённые',
 		})
 	}
 
@@ -630,6 +618,18 @@ const sortProjects = (filter: string) => {
 }
 
 const updateAll = async () => {
+	if (automaticWorldBackupsEnabled()) {
+		try {
+			const backup = await backupProfileWorlds(props.instance.path)
+			if (
+				backup.failures.length > 0 &&
+				!window.confirm(`Не удалось создать ${backup.failures.length} резервных копий. Продолжить обновление?`)
+			) return
+		} catch {
+			if (!window.confirm('Не удалось создать резервные копии миров. Продолжить обновление без них?')) return
+		}
+	}
+
 	const setProjects = []
 	const outdatedProjects = []
 
@@ -876,6 +876,37 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.blockera-content-manager {
+	:deep(.iconified-input) {
+		height: 42px;
+		background: rgba(8, 12, 20, .72);
+		border: 1px solid rgba(255,255,255,.085);
+		border-radius: 12px;
+		box-shadow: none;
+	}
+	:deep(.iconified-input:focus-within) { border-color: rgba(177, 91, 255, .48); }
+	:deep(.iconified-input input) { color: #f4f1f8; background: transparent; }
+	:deep(.content-list-panel), :deep(.card) { background: transparent; border-color: rgba(255,255,255,.07); box-shadow: none; }
+	:deep(.content-list-item) { margin-bottom: 7px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.065); border-radius: 13px; }
+	:deep(button) { border-radius: 10px; }
+}
+
+.blockera-empty-state {
+	min-height: 370px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	background: radial-gradient(circle at 50% 45%, rgba(133, 54, 214, .12), transparent 18rem);
+
+	.empty-state-icon { width: 64px; height: 64px; display: grid; place-items: center; color: #c587ff; background: linear-gradient(145deg, rgba(150,70,235,.22), rgba(79,30,132,.12)); border: 1px solid rgba(184,105,255,.3); border-radius: 19px; }
+	.empty-state-icon svg { width: 28px; height: 28px; }
+	> span { margin-top: 18px; color: #b469f5; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
+	h2 { margin: 6px 0; color: #f7f4fa; font-size: 25px; }
+	p { max-width: 430px; margin: 0 0 18px; color: #8e95a4; line-height: 1.55; }
+}
+
 .text-input {
 	width: 100%;
 }

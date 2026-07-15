@@ -43,7 +43,9 @@ async function onLocaleChange(newLocale: string) {
 </script>
 
 <template>
-	<h2 class="m-0 text-lg font-extrabold text-contrast">Language</h2>
+	<div class="launcher-settings-page">
+	<header class="settings-page-header"><p>ЛОКАЛИЗАЦИЯ</p><h2>Язык интерфейса</h2><span>Выберите язык меню, уведомлений и служебных сообщений.</span></header>
+	<section class="settings-section">
 
 	<Admonition type="warning" class="mt-2 mb-4">
 		{{ formatMessage(languageSelectorMessages.languageWarning, { platform }) }}
@@ -68,4 +70,6 @@ async function onLocaleChange(newLocale: string) {
 		:on-locale-change="onLocaleChange"
 		:is-changing="$isChanging"
 	/>
+	</section>
+	</div>
 </template>

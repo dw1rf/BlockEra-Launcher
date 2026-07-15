@@ -78,7 +78,7 @@ defineExpose({
 			supportLink.value = 'https://support.modrinth.com'
 			metadata.value.profilePath = context.profilePath
 		} else if (source === 'state_init') {
-			title.value = 'Error initializing AstralRinth App'
+			title.value = 'Error initializing BlockEra Launcher'
 			errorType.value = 'state_init'
 			supportLink.value = 'https://support.modrinth.com'
 		} else {
@@ -186,7 +186,7 @@ async function onApplyMigrationFix(eol) {
 					<template v-if="metadata.network">
 						<h3>Network issues</h3>
 						<p>
-							It looks like there were issues with the AstralRinth App connecting to Microsoft's
+							It looks like there were issues with BlockEra Launcher connecting to Microsoft's
 							servers. This is often the result of a poor connection, so we recommend trying again
 							to see if it works. If issues continue to persist, follow the steps in
 							<a
@@ -200,7 +200,7 @@ async function onApplyMigrationFix(eol) {
 					<template v-else-if="metadata.hostsFile">
 						<h3>Network issues</h3>
 						<p>
-							The AstralRinth App tried to connect to Microsoft / Xbox / Minecraft services, but the
+							BlockEra Launcher tried to connect to Microsoft / Xbox / Minecraft services, but the
 							remote server rejected the connection. This may indicate that these services are
 							blocked by the hosts file. Please visit
 							<a
@@ -239,7 +239,7 @@ async function onApplyMigrationFix(eol) {
 					<template v-if="metadata.readOnly">
 						<h3>Change directory permissions</h3>
 						<p>
-							It looks like the AstralRinth App is unable to write to the directory you selected.
+							It looks like BlockEra Launcher is unable to write to the directory you selected.
 							Please adjust the permissions of the directory and try again or cancel the directory
 							change.
 						</p>
@@ -253,7 +253,7 @@ async function onApplyMigrationFix(eol) {
 					</template>
 					<template v-else>
 						<p>
-							The AstralRinth App is unable to migrate to the new directory you selected. Please
+							BlockEra Launcher is unable to migrate to the new directory you selected. Please
 							contact support for help or cancel the directory change.
 						</p>
 					</template>
@@ -283,7 +283,7 @@ async function onApplyMigrationFix(eol) {
 				</div>
 				<template v-else-if="errorType === 'state_init'">
 					<p>
-						AstralRinth App failed to load correctly. This may be because of a corrupted file, or
+						BlockEra Launcher failed to load correctly. This may be because of a corrupted file, or
 						because the app is missing crucial files.
 					</p>
 					<p>You may be able to fix it through one of the following ways:</p>
@@ -293,7 +293,7 @@ async function onApplyMigrationFix(eol) {
 					</ul>
 				</template>
 				<template v-else-if="errorType === 'no_loader_version'">
-					<p>The AstralRinth App failed to find the loader version for this instance.</p>
+					<p>BlockEra Launcher failed to find the loader version for this instance.</p>
 					<p>To resolve this, you need to repair the instance. Click the button below to do so.</p>
 					<div class="cta-button">
 						<button class="btn btn-primary" :disabled="loadingRepair" @click="repairInstance">
@@ -356,8 +356,8 @@ async function onApplyMigrationFix(eol) {
 						<p class="notice__text">
 							If you're encountering an error while applying migrations, such as "Error while applying migrations: migration XXXXXXXXXX was previously applied but has been modified", or a similar issue with migration, the following actions might help:
 						</p>
-						<p>If none of the above steps help, you can try saving a copy of the file <code>app.db</code> to a safe location, such as <code>%appdata%\Roaming\AstralRinthApp</code>
-							on Windows or <code>~/Library/Application Support/AstralRinthApp</code> on macOS, then deleting the original file and letting the app re-create the database file.
+						<p>If none of the above steps help, you can try saving a copy of the file <code>app.db</code> to a safe location, such as <code>%appdata%\Roaming\BlockEraLauncher</code>
+							on Windows or <code>~/Library/Application Support/BlockEraLauncher</code> on macOS, then deleting the original file and letting the app re-create the database file.
 							Note that this may cause data loss inside the app, so make sure to back up your launcher data before applying this fixes.
 						</p>
 					</div>

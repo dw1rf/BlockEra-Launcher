@@ -23,11 +23,23 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             should_disable_mouseover,
             highlight_in_folder,
             open_path,
+            open_profile_folder,
             show_launcher_logs_folder,
             progress_bars_list,
             get_opening_command
         ])
         .build()
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProfileFolder {
+    Root,
+    Mods,
+    ResourcePacks,
+    ShaderPacks,
+    Saves,
+    Backups,
 }
 
 // This code is modified by AstralRinth
@@ -131,6 +143,27 @@ pub async fn open_path<R: Runtime>(app: tauri::AppHandle<R>, path: PathBuf) {
     })
     .await
     .ok();
+}
+
+#[tauri::command]
+pub async fn open_profile_folder<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    profile_path: &str,
+    folder: ProfileFolder,
+) -> Result<()> {
+    let mut path = theseus::profile::get_full_path(profile_path).await?;
+    match folder {
+        ProfileFolder::Root => {}
+        ProfileFolder::Mods => path.push("mods"),
+        ProfileFolder::ResourcePacks => path.push("resourcepacks"),
+        ProfileFolder::ShaderPacks => path.push("shaderpacks"),
+        ProfileFolder::Saves => path.push("saves"),
+        ProfileFolder::Backups => path.push("backups"),
+    }
+
+    tokio::fs::create_dir_all(&path).await?;
+    open_path(app, path).await;
+    Ok(())
 }
 
 #[tauri::command]

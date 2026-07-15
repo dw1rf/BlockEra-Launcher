@@ -8,16 +8,12 @@
 	},
 	"bundle": {
 		"active": true,
+		"createUpdaterArtifacts": true,
 		"category": "Game",
 		"copyright": "",
 		"targets": "all",
 		"externalBin": [],
-		"icon": [
-			"icons/128x128.png",
-			"icons/128x128@2x.png",
-			"icons/icon.icns",
-			"icons/icon.ico"
-		],
+		"icon": ["icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
 		"windows": {
 			"nsis": {
 				"installMode": "currentUser",
@@ -40,25 +36,30 @@
 		},
 		"fileAssociations": [
 			{
-				"ext": [
-					"mrpack"
-				],
+				"ext": ["mrpack"],
 				"mimeType": "application/x-modrinth-modpack+zip"
 			}
 		]
 	},
-	"productName": "AstralRinth App",
+	"productName": "BlockEra Launcher",
 	"version": "0.10.2701",
-	"mainBinaryName": "AstralRinth App",
-	"identifier": "AstralRinthApp",
+	"mainBinaryName": "BlockEra Launcher",
+	"identifier": "com.blockera.launcher",
 	"plugins": {
 		"deep-link": {
 			"desktop": {
-				"schemes": [
-					"modrinth"
-				]
+				"schemes": ["modrinth"]
 			},
 			"mobile": []
+		},
+		"updater": {
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcwOTAyNUI4MEJBN0VFOEUKUldTTzdxY0x1Q1dRY0ZkRVlmRmJRSFc3ZFB5M05xRVhobVJ1WG1zTDdpSXFIUlZDc2JZN0wrQ28K",
+			"endpoints": [
+				"https://github.com/dw1rf/BlockEra-Launcher/releases/latest/download/latest.json"
+			],
+			"windows": {
+				"installMode": "passive"
+			}
 		}
 	},
 	"app": {
@@ -71,7 +72,7 @@
 				"fullscreen": false,
 				"height": 800,
 				"resizable": true,
-				"title": "AstralRinth",
+				"title": "BlockEra Launcher",
 				"label": "main",
 				"width": 1280,
 				"minHeight": 700,
@@ -93,16 +94,11 @@
 				],
 				"enable": true
 			},
-			"capabilities": [
-				"core",
-				"plugins"
-			],
+			"capabilities": ["core", "plugins"],
 			"csp": {
 				"default-src": "'self' customprotocol: asset:",
 				"connect-src": "ipc: https://git.astralium.su https://authserver.ely.by http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.sentry.io https://api.mclo.gs 'self' data: blob:",
-				"font-src": [
-					"https://cdn-raw.modrinth.com/fonts/"
-				],
+				"font-src": ["https://cdn-raw.modrinth.com/fonts/"],
 				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
 				"style-src": "'unsafe-inline' 'self'",
 				"script-src": "https://*.posthog.com https://tally.so/widgets/embed.js 'self'",

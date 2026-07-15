@@ -130,7 +130,7 @@ static GLOBAL_FETCH_FENCE: LazyLock<FetchFence> =
         inner: Mutex::new(FenceInner::new()),
     });
 
-pub static REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+fn reqwest_client_builder() -> reqwest::ClientBuilder {
     let mut headers = reqwest::header::HeaderMap::new();
 
     let header =
@@ -138,13 +138,99 @@ pub static REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
             .unwrap();
     headers.insert(reqwest::header::USER_AGENT, header);
     reqwest::Client::builder()
+        .connect_timeout(time::Duration::from_secs(15))
+        .read_timeout(time::Duration::from_secs(30))
+        .timeout(time::Duration::from_secs(10 * 60))
         .tcp_keepalive(Some(time::Duration::from_secs(10)))
         .default_headers(headers)
+}
+
+pub static REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest_client_builder()
         .build()
         .expect("Reqwest Client Building Failed")
 });
 
-const FETCH_ATTEMPTS: usize = 2;
+static DOWNLOAD_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest_client_builder()
+        .http1_only()
+        .pool_max_idle_per_host(0)
+        .no_brotli()
+        .no_deflate()
+        .no_gzip()
+        .build()
+        .expect("Download Client Building Failed")
+});
+
+const FETCH_ATTEMPTS: usize = 4;
+const FETCH_RETRY_BASE_DELAY: time::Duration = time::Duration::from_millis(500);
+
+async fn wait_before_fetch_retry(attempt: usize, url: &str, error: String) {
+    let delay_multiplier = 1_u32 << attempt.saturating_sub(1).min(4) as u32;
+    let delay = FETCH_RETRY_BASE_DELAY.saturating_mul(delay_multiplier);
+
+    tracing::warn!(
+        attempt,
+        max_attempts = FETCH_ATTEMPTS + 1,
+        delay_ms = delay.as_millis(),
+        %url,
+        %error,
+        "Fetch attempt failed; retrying"
+    );
+    tokio::time::sleep(delay).await;
+}
+
+#[cfg(target_os = "windows")]
+async fn fetch_java_with_curl(url: &str) -> crate::Result<Bytes> {
+    let temp_path = tempfile::Builder::new()
+        .prefix("blockera-java-")
+        .suffix(".zip")
+        .tempfile()?
+        .into_temp_path();
+
+    let output = tokio::process::Command::new("curl.exe")
+        .args([
+            "--fail",
+            "--location",
+            "--silent",
+            "--show-error",
+            "--http1.1",
+            "--retry",
+            "5",
+            "--retry-all-errors",
+            "--retry-delay",
+            "1",
+            "--connect-timeout",
+            "15",
+            "--speed-limit",
+            "1024",
+            "--speed-time",
+            "30",
+            "--max-time",
+            "600",
+            "--output",
+        ])
+        .arg(temp_path.as_os_str())
+        .arg(url)
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(std::io::Error::other(format!(
+            "curl failed to download Java runtime: {stderr}"
+        ))
+        .into());
+    }
+
+    let bytes = tokio::fs::read(&*temp_path).await?;
+    tracing::info!(
+        url,
+        size = bytes.len(),
+        "Downloaded Java runtime with curl"
+    );
+    Ok(Bytes::from(bytes))
+}
 
 #[tracing::instrument(skip(semaphore))]
 pub async fn fetch(
@@ -192,6 +278,27 @@ pub async fn fetch_advanced(
 ) -> crate::Result<Bytes> {
     let _permit = semaphore.0.acquire().await?;
 
+    #[cfg(target_os = "windows")]
+    if method == Method::GET
+        && (url.starts_with("https://cdn.azul.com/")
+            || url.starts_with("https://api.adoptium.net/v3/binary/"))
+    {
+        let bytes = fetch_java_with_curl(url).await?;
+
+        if let Some(sha1) = sha1 {
+            let hash = sha1_async(bytes.clone()).await?;
+            if hash != sha1 {
+                return Err(ErrorKind::HashError(sha1.to_string(), hash).into());
+            }
+        }
+
+        if let Some((bar, total)) = loading_bar {
+            emit_loading(bar, total, None)?;
+        }
+
+        return Ok(bytes);
+    }
+
     let is_api_url = url.starts_with(env!("MODRINTH_API_URL"))
         || url.starts_with(env!("MODRINTH_API_URL_V3"));
 
@@ -210,7 +317,12 @@ pub async fn fetch_advanced(
             return Err(ErrorKind::ApiIsDownError.into());
         }
 
-        let mut req = REQWEST_CLIENT.request(method.clone(), url);
+        let client = if loading_bar.is_some() {
+            &*DOWNLOAD_CLIENT
+        } else {
+            &*REQWEST_CLIENT
+        };
+        let mut req = client.request(method.clone(), url);
 
         if let Some(body) = json_body.clone() {
             req = req.json(&body);
@@ -233,6 +345,11 @@ pub async fn fetch_advanced(
                     }
 
                     if attempt <= FETCH_ATTEMPTS {
+                        let error = resp
+                            .error_for_status_ref()
+                            .expect_err("server error status")
+                            .to_string();
+                        wait_before_fetch_retry(attempt, url, error).await;
                         continue;
                     }
                 }
@@ -253,11 +370,16 @@ pub async fn fetch_advanced(
                         use futures::StreamExt;
                         let mut stream = resp.bytes_stream();
                         let mut bytes = Vec::new();
+                        let mut stream_error = None;
                         while let Some(item) = stream.next().await {
-                            let chunk = item.or(Err(ErrorKind::NoValueFor(
-                                "fetch bytes".to_string(),
-                            )))?;
-                            bytes.append(&mut chunk.to_vec());
+                            let chunk = match item {
+                                Ok(chunk) => chunk,
+                                Err(error) => {
+                                    stream_error = Some(error);
+                                    break;
+                                }
+                            };
+                            bytes.extend_from_slice(&chunk);
                             emit_loading(
                                 bar,
                                 (chunk.len() as f64 / total_size as f64)
@@ -266,7 +388,11 @@ pub async fn fetch_advanced(
                             )?;
                         }
 
-                        Ok(bytes::Bytes::from(bytes))
+                        if let Some(error) = stream_error {
+                            Err(error)
+                        } else {
+                            Ok(bytes::Bytes::from(bytes))
+                        }
                     } else {
                         resp.bytes().await
                     }
@@ -274,36 +400,56 @@ pub async fn fetch_advanced(
                     resp.bytes().await
                 };
 
-                if let Ok(bytes) = bytes {
-                    if let Some(sha1) = sha1 {
-                        let hash = sha1_async(bytes.clone()).await?;
-                        if &*hash != sha1 {
-                            if attempt <= FETCH_ATTEMPTS {
-                                continue;
-                            } else {
-                                return Err(ErrorKind::HashError(
-                                    sha1.to_string(),
-                                    hash,
-                                )
-                                .into());
+                match bytes {
+                    Ok(bytes) => {
+                        if let Some(sha1) = sha1 {
+                            let hash = sha1_async(bytes.clone()).await?;
+                            if &*hash != sha1 {
+                                if attempt <= FETCH_ATTEMPTS {
+                                    wait_before_fetch_retry(
+                                        attempt,
+                                        url,
+                                        format!(
+                                            "SHA-1 mismatch: expected {sha1}, got {hash}"
+                                        ),
+                                    )
+                                    .await;
+                                    continue;
+                                } else {
+                                    return Err(ErrorKind::HashError(
+                                        sha1.to_string(),
+                                        hash,
+                                    )
+                                    .into());
+                                }
                             }
                         }
+
+                        tracing::trace!("Done downloading URL {url}");
+
+                        if is_api_url {
+                            GLOBAL_FETCH_FENCE.record_ok();
+                        }
+
+                        return Ok(bytes);
                     }
-
-                    tracing::trace!("Done downloading URL {url}");
-
-                    if is_api_url {
-                        GLOBAL_FETCH_FENCE.record_ok();
+                    Err(error) if attempt <= FETCH_ATTEMPTS => {
+                        wait_before_fetch_retry(
+                            attempt,
+                            url,
+                            format!("{error:?}"),
+                        )
+                        .await;
+                        continue;
                     }
-
-                    return Ok(bytes);
-                } else if attempt <= FETCH_ATTEMPTS {
-                    continue;
-                } else if let Err(err) = bytes {
-                    return Err(err.into());
+                    Err(error) => return Err(error.into()),
                 }
             }
-            Err(_) if attempt <= FETCH_ATTEMPTS => continue,
+            Err(error) if attempt <= FETCH_ATTEMPTS => {
+                wait_before_fetch_retry(attempt, url, format!("{error:?}"))
+                    .await;
+                continue;
+            }
             Err(err) => {
                 return Err(err.into());
             }

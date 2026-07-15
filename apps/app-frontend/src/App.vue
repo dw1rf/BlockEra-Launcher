@@ -1,8 +1,10 @@
 <script setup>
 import { AuthFeature, PanelVersionFeature, TauriModrinthClient } from '@modrinth/api-client'
 import {
-	ArrowBigUpDashIcon,
+	BlockEraLogo,
+	BlocksIcon,
 	ChangeSkinIcon,
+	CollectionIcon,
 	CompassIcon,
 	DownloadIcon,
 	ExternalIcon,
@@ -56,6 +58,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 
 import ModrinthLoadingIndicator from '@/components/LoadingIndicatorBar.vue'
 import AccountsCard from '@/components/ui/AccountsCard.vue'
+import BlockEraUpdateCenter from '@/components/ui/BlockEraUpdateCenter.vue'
 import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
 import FriendsList from '@/components/ui/friends/FriendsList.vue'
@@ -71,15 +74,16 @@ import RunningAppBar from '@/components/ui/RunningAppBar.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import URLConfirmModal from '@/components/ui/URLConfirmModal.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
-import { debugAnalytics, initAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
+import { debugAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user } from '@/helpers/cache.js'
-import { command_listener, warning_listener, info_listener } from '@/helpers/events.js'
+import { command_listener, info_listener,warning_listener } from '@/helpers/events.js'
 import { useFetch } from '@/helpers/fetch.js'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { list } from '@/helpers/profile.js'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_opening_command, initialize_state } from '@/helpers/state'
+import { getRemote, updateState } from '@/helpers/update.js'
 import {
 	getOS,
 	isDev
@@ -90,18 +94,20 @@ import {
 } from '@/providers/download-progress.ts'
 import { useError } from '@/store/error.js'
 import { useInstall } from '@/store/install.js'
-import { useLoading, useTheming } from '@/store/state'
+import { useLoading, useSelectedInstance, useTheming } from '@/store/state'
 
 import { create_profile_and_install_from_file } from './helpers/pack'
 import { generateSkinPreviews } from './helpers/rendering/batch-skin-renderer'
 import { get_available_capes, get_available_skins } from './helpers/skins'
 import { AppNotificationManager } from './providers/app-notifications'
 
-// This code is modified by AstralRinth
-import { get, set } from '@/helpers/settings.ts'
-import { getRemote, updateState } from '@/helpers/update.js'
-
 const themeStore = useTheming()
+const selectedInstanceStore = useSelectedInstance()
+const modsRoute = computed(() =>
+	selectedInstanceStore.selectedInstanceId
+		? `/instance/${encodeURIComponent(selectedInstanceStore.selectedInstanceId)}`
+		: '/library',
+)
 
 const notificationManager = new AppNotificationManager()
 provideNotificationManager(notificationManager)
@@ -215,10 +221,11 @@ const messages = defineMessages({
 
 // This code is modified by AstralRinth
 async function setupApp() {
-	const settings = await get()
-  	settings.personalized_ads = false
-  	settings.telemetry = false
-  	await set(settings)
+	const settings = await getSettings()
+	settings.personalized_ads = false
+	settings.telemetry = false
+	settings.theme = 'dark'
+	await setSettings(settings)
 
 	const {
 		native_decorations,
@@ -269,11 +276,11 @@ async function setupApp() {
 
 	// This code is modified by AstralRinth
 	if (!telemetry) {
-  	  console.info("[AR] • Telemetry disabled by default (Hard patched).")
+		console.info('[BlockEra] Телеметрия отключена по умолчанию.')
   	  optOutAnalytics()
   	}
   	if (!personalized_ads) {
-  	  console.info("[AR] • Personalized ads disabled by default (Hard patched).")
+		console.info('[BlockEra] Персонализированная реклама отключена по умолчанию.')
   	}
 	if (dev) debugAnalytics()
 	trackEvent('Launched', { version, dev, onboarded })
@@ -392,6 +399,15 @@ router.afterEach((to, from, failure) => {
 	})
 })
 const route = useRoute()
+const cinematicShell = computed(
+	() =>
+		route.path === '/' ||
+		route.path.startsWith('/library') ||
+		route.path.startsWith('/instance/') ||
+		route.path.startsWith('/browse/') ||
+		route.path.startsWith('/project/') ||
+		route.path === '/skins',
+)
 
 const loading = useLoading()
 loading.setEnabled(false)
@@ -659,6 +675,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			<InstanceCreationModal ref="installationModal" />
 		</Suspense>
 		<div
+			v-if="!cinematicShell"
 			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.5rem] w-[--left-bar-width]"
 		>
 			<NavButton v-tooltip.right="'Home'" to="/">
@@ -751,8 +768,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</Transition>
 			<template v-if="updateState">
 			  <NavButton
-			    class="neon-icon pulse"
-				v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
+			    v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
+				class="neon-icon pulse"
 				:to="() => $refs.settingsModal.show()">
 				<SettingsIcon />
 			    </NavButton>
@@ -799,7 +816,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<LogInIcon class="text-brand" />
 			</NavButton>
 		</div>
-		<div data-tauri-drag-region class="app-grid-statusbar bg-bg-raised h-[--top-bar-height] flex">
+		<div
+			v-if="!cinematicShell"
+			data-tauri-drag-region
+			class="app-grid-statusbar bg-bg-raised h-[--top-bar-height] flex"
+		>
 			<div data-tauri-drag-region class="flex p-3">
 				<div data-tauri-drag-region class="flex items-center gap-1 ml-3">
 					<button
@@ -854,12 +875,64 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				</section>
 			</section>
 		</div>
+		<header v-else data-tauri-drag-region class="cinematic-topbar">
+			<router-link to="/" class="cinematic-brand" data-tauri-drag-region-exclude>
+				<BlockEraLogo aria-hidden="true" />
+				<span class="cinematic-brand-copy">
+					<strong>BLOCKERA</strong>
+					<small>GAME LAUNCHER</small>
+				</span>
+			</router-link>
+			<nav class="cinematic-nav" aria-label="Основная навигация" data-tauri-drag-region-exclude>
+				<router-link to="/" class="cinematic-nav-link">
+					<HomeIcon />
+					<span>Главная</span>
+				</router-link>
+				<router-link to="/library" class="cinematic-nav-link">
+					<CollectionIcon />
+					<span>Сборки</span>
+				</router-link>
+				<router-link :to="modsRoute" class="cinematic-nav-link">
+					<BlocksIcon />
+					<span>Моды</span>
+				</router-link>
+				<router-link to="/skins" class="cinematic-nav-link">
+					<ChangeSkinIcon />
+					<span>Скины</span>
+				</router-link>
+				<button class="cinematic-nav-link" @click="$refs.settingsModal.show()">
+					<SettingsIcon />
+					<span>Настройки</span>
+				</button>
+			</nav>
+			<div class="cinematic-topbar-actions" data-tauri-drag-region-exclude>
+				<Suspense>
+					<BlockEraUpdateCenter />
+				</Suspense>
+				<Suspense>
+					<AccountsCard mode="small" class="cinematic-account" />
+				</Suspense>
+				<section v-if="!nativeDecorations" class="window-controls cinematic-window-controls">
+					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
+						<MinimizeIcon />
+					</Button>
+					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().toggleMaximize()">
+						<RestoreIcon v-if="isMaximized" />
+						<MaximizeIcon v-else />
+					</Button>
+					<Button class="titlebar-button close" icon-only @click="handleClose">
+						<XIcon />
+					</Button>
+				</section>
+			</div>
+		</header>
 	</div>
 	<div
 		v-if="stateInitialized"
 		class="app-contents experimental-styles-within"
 		:class="{
-			'sidebar-enabled': sidebarVisible,
+			'sidebar-enabled': sidebarVisible && !cinematicShell,
+			'cinematic-shell-contents': cinematicShell,
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 		}"
 	>
@@ -871,7 +944,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				>
 					<h2 class="text-lg font-extrabold mt-0 mb-2">Hey there Modrinth user!</h2>
 					<p class="m-0 leading-tight">
-						Would you mind answering a few questions about your experience with Modrinth App?
+						Would you mind answering a few questions about your experience with BlockEra Launcher?
 					</p>
 					<p class="mt-3 mb-4 leading-tight">
 						This feedback will go directly to the Modrinth team and help guide future updates!
@@ -937,6 +1010,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</RouterView>
 		</div>
 		<div
+			v-if="!cinematicShell"
 			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid overflow-auto"
 			:class="{ 'has-plus': hasPlus }"
 		>
@@ -1064,6 +1138,145 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	--top-bar-height: 3rem;
 	--left-bar-width: 4rem;
 	--right-bar-width: 300px;
+}
+
+.app-grid-layout:has(.cinematic-topbar),
+.app-contents.cinematic-shell-contents {
+	--top-bar-height: 4.75rem;
+	--left-bar-width: 0rem;
+	--right-bar-width: 0rem;
+}
+
+.cinematic-topbar {
+	grid-area: status;
+	z-index: 30;
+	display: flex;
+	align-items: center;
+	height: var(--top-bar-height);
+	padding-left: 1.25rem;
+	background: rgba(7, 10, 17, 0.94);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+	backdrop-filter: blur(20px);
+}
+
+.cinematic-brand {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.7rem;
+	min-width: 15.5rem;
+	color: var(--color-contrast);
+	text-decoration: none;
+}
+
+.cinematic-brand > svg {
+	width: 2.8rem;
+	height: 2.8rem;
+	color: var(--color-brand);
+	filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.18));
+}
+
+.cinematic-brand-copy {
+	display: flex;
+	flex-direction: column;
+	line-height: 1;
+	letter-spacing: 0.08em;
+}
+
+.cinematic-brand-copy strong {
+	font-size: 1.22rem;
+	font-weight: 850;
+}
+
+.cinematic-brand-copy small {
+	margin-top: 0.28rem;
+	font-size: 0.56rem;
+	color: var(--color-secondary);
+	letter-spacing: 0.24em;
+}
+
+.cinematic-nav {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	height: 100%;
+}
+
+.cinematic-nav-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.65rem;
+	min-width: 7.35rem;
+	height: 2.75rem;
+	padding: 0 1rem;
+	border: 1px solid transparent;
+	border-radius: 0.65rem;
+	background: transparent;
+	box-shadow: none;
+	color: var(--color-base);
+	font: inherit;
+	text-decoration: none;
+	cursor: pointer;
+	transition:
+		transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+		color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+		background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
+		border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cinematic-nav-link svg {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+.cinematic-nav-link:hover {
+	transform: translateY(-1px);
+	color: var(--color-contrast);
+	background: rgba(255, 255, 255, 0.05);
+}
+
+.cinematic-nav-link.router-link-active {
+	color: #e9d5ff;
+	background: rgba(116, 44, 220, 0.13);
+	border-color: rgba(168, 85, 247, 0.36);
+	box-shadow: 0 0 24px rgba(126, 34, 206, 0.13);
+}
+
+.cinematic-topbar-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	min-width: 0;
+	margin-left: auto;
+}
+
+.cinematic-account {
+	width: 13.5rem;
+	max-width: 13.5rem;
+	margin-top: 0 !important;
+}
+
+.cinematic-window-controls {
+	height: var(--top-bar-height);
+}
+
+.app-contents.cinematic-shell-contents {
+	left: 0;
+	top: var(--top-bar-height);
+	height: calc(100vh - var(--top-bar-height));
+	border-radius: 0;
+	grid-template-columns: 1fr;
+	background: #050912;
+}
+
+.app-contents.cinematic-shell-contents::before {
+	display: none;
+}
+
+.app-contents.cinematic-shell-contents .app-viewport {
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 .app-grid-layout {

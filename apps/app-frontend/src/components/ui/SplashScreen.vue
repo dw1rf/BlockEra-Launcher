@@ -16,6 +16,10 @@
 			</button>
 		</div>
 		<div class="app-logo-wrapper" data-tauri-drag-region>
+			<div class="blockera-wordmark">
+				<div class="blockera-mark">B</div>
+				<span>BlockEra Launcher</span>
+			</div>
 			<svg
 				class="app-logo"
 				viewBox="0 0 1215 175"
@@ -179,8 +183,29 @@ const handleClose = async () => {
 }
 
 .app-logo {
+	display: none;
 	height: 2.25rem;
 	width: fit-content;
+}
+
+.blockera-wordmark {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	color: var(--color-contrast);
+	font-size: 2.25rem;
+	font-weight: 800;
+}
+
+.blockera-mark {
+	display: grid;
+	place-items: center;
+	width: 3.25rem;
+	height: 3.25rem;
+	border-radius: var(--radius-lg);
+	background: linear-gradient(135deg, var(--color-purple-700), var(--color-purple-300));
+	color: #140a1e;
+	box-shadow: 0 0 2rem rgba(199, 138, 255, 0.35);
 }
 
 .loading-bar {
@@ -192,7 +217,7 @@ const handleClose = async () => {
 	height: 100vh;
 	width: 100vw;
 	background:
-		linear-gradient(180deg, rgba(66, 131, 92, 0.275) 0%, rgba(17, 35, 43, 0.5) 97.29%),
+		linear-gradient(180deg, rgba(93, 41, 142, 0.32) 0%, rgba(32, 20, 45, 0.55) 97.29%),
 		linear-gradient(0deg, rgba(22, 24, 28, 0.64), rgba(22, 24, 28, 0.64));
 	z-index: 9997;
 }

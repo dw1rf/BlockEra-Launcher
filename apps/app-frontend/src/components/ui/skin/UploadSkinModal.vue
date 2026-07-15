@@ -1,7 +1,7 @@
 <template>
 	<ModalWrapper ref="modal" @on-hide="hide(true)">
 		<template #title>
-			<span class="text-lg font-extrabold text-contrast"> Upload skin texture </span>
+			<span class="text-lg font-extrabold text-contrast"> Загрузка скина </span>
 		</template>
 		<div class="relative">
 			<div
@@ -9,10 +9,10 @@
 				@click="triggerFileInput"
 			>
 				<p class="mx-auto mb-0 text-primary font-bold text-lg text-center flex items-center gap-2">
-					<UploadIcon /> Select skin texture file
+					<UploadIcon /> Выберите PNG-файл скина
 				</p>
 				<p class="mx-auto mt-0 text-secondary text-sm text-center">
-					Drag and drop or click here to browse
+					Перетащите файл сюда или нажмите для выбора
 				</p>
 				<input
 					ref="fileInput"

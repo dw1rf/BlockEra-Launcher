@@ -1,8 +1,9 @@
 <template>
-	<div
+	<button
 		v-if="mode !== 'isolated'"
 		ref="button"
-		class="button-base mt-2 px-3 py-2 bg-button-bg rounded-xl flex items-center gap-2"
+		type="button"
+		class="account-trigger"
 		:class="{ expanded: mode === 'expanded' }"
 		@click="toggleMenu"
 	>
@@ -12,104 +13,98 @@
 				selectedAccount ? avatarUrl : 'https://launcher-files.modrinth.com/assets/steve_head.png'
 			"
 		/>
-		<div class="flex flex-col w-full">
-			<span>
+		<div class="account-trigger-copy">
+			<strong>
 				<component
 					:is="getAccountType(selectedAccount)"
 					v-if="selectedAccount"
 					class="vector-icon"
 				/>
-				{{ selectedAccount ? selectedAccount.profile.name : 'Select account' }}
-			</span>
-			<span class="text-secondary text-xs">Minecraft account</span>
+				{{ selectedAccount ? selectedAccount.profile.name : 'Выбрать аккаунт' }}
+			</strong>
+			<span>{{ selectedAccount ? 'Готов к запуску' : 'Требуется вход' }}</span>
 		</div>
-		<DropdownIcon class="w-5 h-5 shrink-0" />
-	</div>
-	<transition name="fade">
-		<Card
-			v-if="showCard || mode === 'isolated'"
-			ref="card"
-			class="account-card"
-			:class="{ expanded: mode === 'expanded', isolated: mode === 'isolated' }"
-		>
-			<div v-if="selectedAccount" class="selected account">
-				<Avatar size="xs" :src="avatarUrl" />
-				<div>
-					<h4>
-						<component :is="getAccountType(selectedAccount)" class="vector-icon" />
-						{{ selectedAccount.profile.name }}
-					</h4>
-					<p>Selected</p>
+		<DropdownIcon class="account-trigger-chevron" :class="{ open: showCard }" />
+	</button>
+	<Teleport to="body">
+		<transition name="account-popover">
+			<div
+				v-if="showCard && mode !== 'isolated'"
+				ref="card"
+				class="account-popover"
+				:style="popoverStyle"
+				role="menu"
+			>
+				<div class="account-popover-heading">
+					<div><span>АККАУНТ ДЛЯ ИГРЫ</span><strong>Быстрое переключение</strong></div>
+					<span class="account-count">{{ accounts.length }}</span>
 				</div>
-				<Button
-					v-tooltip="'Log out'"
-					icon-only
-					color="raised"
-					@click="logout(selectedAccount.profile.id)"
+				<button
+					v-for="account in accounts"
+					:key="account.profile.id"
+					type="button"
+					class="account-choice"
+					:class="{ active: account.profile.id === selectedAccount?.profile.id }"
+					@click="selectAndClose(account)"
 				>
-					<TrashIcon />
-				</Button>
+					<Avatar :src="getAccountAvatarUrl(account)" size="36px" />
+					<span><strong>{{ account.profile.name }}</strong><small>Аккаунт Minecraft</small></span>
+					<span class="account-check">{{ account.profile.id === selectedAccount?.profile.id ? '✓' : '' }}</span>
+				</button>
+				<div v-if="accounts.length === 0" class="account-empty">
+					<strong>Аккаунты не добавлены</strong>
+					<span>Добавьте Microsoft, Ely.by или офлайн-профиль.</span>
+				</div>
+				<button type="button" class="manage-accounts" @click.stop="showAccountManager($event)">
+					Управление аккаунтами
+					<DropdownIcon />
+				</button>
 			</div>
-			<div v-else class="login-section account">
-				<h4>Not signed in</h4>
-				<Button
-					v-tooltip="'Log via Microsoft'"
-					:disabled="microsoftLoginDisabled"
-					icon-only
-					@click="login()"
-				>
-					<MicrosoftIcon v-if="!microsoftLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
-				<Button v-tooltip="'Add offline account'" icon-only @click="showOfflineLoginModal()">
-					<OfflineIcon />
-				</Button>
-				<Button v-tooltip="'Log via Ely.by'" icon-only @click="showElyByLoginModal()">
-					<ElyByIcon v-if="!elyByLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
+		</transition>
+	</Teleport>
+	<ModalWrapper ref="accountManagerModal" class="account-manager-modal" header="Аккаунты BlockEra">
+		<div class="account-manager-body">
+			<div class="account-manager-intro">
+				<span>ПРОФИЛИ MINECRAFT</span>
+				<h2>Выберите способ входа</h2>
+				<p>Активный аккаунт будет использоваться при следующем запуске игры.</p>
 			</div>
-			<div v-if="displayAccounts.length > 0" class="account-group">
-				<div v-for="account in displayAccounts" :key="account.profile.id" class="account-row">
-					<Button class="option account" @click="setAccount(account)">
-						<Avatar :src="getAccountAvatarUrl(account)" class="icon" />
-						<p class="account-type">
-							<component :is="getAccountType(account)" class="vector-icon" />
-							{{ account.profile.name }}
-						</p>
-					</Button>
-					<Button v-tooltip="'Log out'" icon-only @click="logout(account.profile.id)">
-						<TrashIcon />
-					</Button>
+			<div class="account-provider-grid">
+				<button type="button" :disabled="microsoftLoginDisabled" @click="login()">
+					<MicrosoftIcon v-if="!microsoftLoginDisabled" /><SpinnerIcon v-else class="animate-spin" />
+					<span><strong>Microsoft</strong><small>Лицензионный аккаунт</small></span>
+				</button>
+				<button type="button" @click="showOfflineLoginModal()">
+					<OfflineIcon /><span><strong>Офлайн</strong><small>Локальное имя игрока</small></span>
+				</button>
+				<button type="button" :disabled="elyByLoginDisabled" @click="showElyByLoginModal()">
+					<ElyByIcon v-if="!elyByLoginDisabled" /><SpinnerIcon v-else class="animate-spin" />
+					<span><strong>Ely.by</strong><small>Аккаунт Ely.by</small></span>
+				</button>
+			</div>
+			<div v-if="accounts.length" class="managed-account-list">
+				<div v-for="account in accounts" :key="account.profile.id" class="managed-account-row">
+					<button type="button" class="managed-account-select" @click="setAccount(account)">
+						<Avatar :src="getAccountAvatarUrl(account)" size="40px" />
+						<span><strong>{{ account.profile.name }}</strong><small>{{ account.profile.id === selectedAccount?.profile.id ? 'Используется сейчас' : 'Выбрать аккаунт' }}</small></span>
+					</button>
+					<button type="button" class="managed-account-delete" aria-label="Удалить аккаунт" @click="logout(account.profile.id)"><TrashIcon /></button>
 				</div>
 			</div>
-			<div v-if="accounts.length > 0" class="login-section account centered">
-				<Button v-tooltip="'Log via Microsoft'" icon-only @click="login()">
-					<MicrosoftIcon v-if="!microsoftLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
-				<Button v-tooltip="'Add offline account'" icon-only @click="showOfflineLoginModal()">
-					<OfflineIcon />
-				</Button>
-				<Button v-tooltip="'Log via Ely.by'" icon-only @click="showElyByLoginModal()">
-					<ElyByIcon v-if="!elyByLoginDisabled" />
-					<SpinnerIcon v-else class="animate-spin" />
-				</Button>
-			</div>
-		</Card>
-	</transition>
-	<ModalWrapper ref="addElyByModal" class="modal" header="Authenticate with Ely.by">
+		</div>
+	</ModalWrapper>
+	<ModalWrapper ref="addElyByModal" class="modal" header="Вход через Ely.by">
 		<ModalWrapper
 			ref="requestElyByTwoFactorCodeModal"
 			class="modal"
-			header="Ely.by requested 2FA code for authentication"
+			header="Двухфакторная аутентификация Ely.by"
 		>
 			<div class="flex flex-col gap-4 px-6 py-5">
-				<label class="label">Enter your 2FA code</label>
+				<label class="label">Введите код подтверждения</label>
 				<input
 					v-model="elyByTwoFactorCode"
 					type="text"
-					placeholder="Your 2FA code here..."
+					placeholder="Код 2FA"
 					class="input"
 				/>
 				<div class="mt-6 ml-auto">
@@ -120,24 +115,24 @@
 						class="continue-button"
 						@click="addElyByProfile()"
 					>
-						Continue
+						Продолжить
 					</Button>
 				</div>
 			</div>
 		</ModalWrapper>
 		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label">Enter your player name or email (preferred)</label>
+			<label class="label">Имя игрока или email</label>
 			<input
 				v-model="elyByLogin"
 				type="text"
-				placeholder="Your player name or email here..."
+				placeholder="Имя или email"
 				class="input"
 			/>
-			<label class="label">Enter your password</label>
+			<label class="label">Пароль</label>
 			<input
 				v-model="elyByPassword"
 				type="password"
-				placeholder="Your password here..."
+				placeholder="Пароль Ely.by"
 				class="input"
 			/>
 			<div class="mt-6 ml-auto">
@@ -148,23 +143,23 @@
 					class="continue-button"
 					@click="addElyByProfile()"
 				>
-					Login
+					Войти
 				</Button>
 			</div>
 		</div>
 	</ModalWrapper>
-	<ModalWrapper ref="addOfflineModal" class="modal" header="Add new offline account">
+	<ModalWrapper ref="addOfflineModal" class="modal" header="Добавить офлайн-аккаунт">
 		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label">Enter your player name</label>
+			<label class="label">Имя игрока</label>
 			<input
 				v-model="offlinePlayerName"
 				type="text"
-				placeholder="Your player name here..."
+				placeholder="Например, Steve"
 				class="input"
 			/>
 			<div class="mt-6 ml-auto">
 				<Button icon-only color="primary" class="continue-button" @click="addOfflineProfile()">
-					Login
+					Добавить
 				</Button>
 			</div>
 		</div>
@@ -242,6 +237,17 @@
 </template>
 
 <script setup>
+import {
+	DropdownIcon,
+	ElyByIcon,
+	MicrosoftIcon,
+	OfflineIcon,
+	SpinnerIcon,
+	TrashIcon,
+} from '@modrinth/assets'
+import { Avatar, Button, injectNotificationManager } from '@modrinth/ui'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
+
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import {
@@ -258,16 +264,6 @@ import { process_listener } from '@/helpers/events'
 import { getPlayerHeadUrl } from '@/helpers/rendering/batch-skin-renderer.ts'
 import { get_available_skins } from '@/helpers/skins'
 import { handleSevereError } from '@/store/error.js'
-import {
-	DropdownIcon,
-	ElyByIcon,
-	MicrosoftIcon,
-	OfflineIcon,
-	SpinnerIcon,
-	TrashIcon,
-} from '@modrinth/assets'
-import { Avatar, Button, Card, injectNotificationManager } from '@modrinth/ui'
-import { computed, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
 
 const { handleError } = injectNotificationManager()
 
@@ -287,7 +283,7 @@ const elyByLoginDisabled = ref(false)
 const defaultUser = ref()
 
 // This code is modified by AstralRinth
-const clientToken = 'astralrinth'
+const clientToken = 'blockera-launcher'
 const addOfflineModal = ref(null)
 const addElyByModal = ref(null)
 const requestElyByTwoFactorCodeModal = ref(null)
@@ -494,10 +490,6 @@ defineExpose({
 })
 await refreshValues()
 
-const displayAccounts = computed(() =>
-	accounts.value.filter((account) => defaultUser.value !== account.profile.id),
-)
-
 const avatarUrl = computed(() => {
 	if (equippedSkin.value?.texture_key) {
 		const cachedUrl = headUrlCache.value.get(equippedSkin.value.texture_key)
@@ -549,6 +541,8 @@ async function login() {
 }
 
 const logout = async (id) => {
+	const account = accounts.value.find((entry) => entry.profile.id === id)
+	if (!window.confirm(`Удалить аккаунт ${account?.profile.name ?? ''} из BlockEra Launcher?`)) return
 	await remove_user(id).catch(handleError)
 	await refreshValues()
 	if (!selectedAccount.value && accounts.value.length > 0) {
@@ -563,12 +557,44 @@ const logout = async (id) => {
 const showCard = ref(false)
 const card = ref(null)
 const button = ref(null)
+const accountManagerModal = ref(null)
+const popoverStyle = ref({})
+
+function updatePopoverPosition() {
+	if (!button.value) return
+	const rect = button.value.getBoundingClientRect()
+	const width = Math.min(340, window.innerWidth - 24)
+	const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12))
+	const top = Math.min(rect.bottom + 10, window.innerHeight - 120)
+	popoverStyle.value = {
+		width: `${width}px`,
+		left: `${left}px`,
+		top: `${top}px`,
+	}
+}
+
+async function selectAndClose(account) {
+	await setAccount(account)
+	showCard.value = false
+}
+
+async function showAccountManager(event) {
+	showCard.value = false
+	await nextTick()
+	accountManagerModal.value?.show(event)
+}
+
+function handleKeydown(event) {
+	if (event.key === 'Escape') showCard.value = false
+}
+
 const handleClickOutside = (event) => {
 	const elements = document.elementsFromPoint(event.clientX, event.clientY)
 	if (
 		card.value &&
-		card.value.$el !== event.target &&
-		!elements.includes(card.value.$el) &&
+		card.value !== event.target &&
+		!elements.includes(card.value) &&
+		button.value &&
 		!button.value.contains(event.target)
 	) {
 		toggleMenu(false)
@@ -579,6 +605,7 @@ function toggleMenu(override = true) {
 	if (showCard.value || !override) {
 		showCard.value = false
 	} else {
+		updatePopoverPosition()
 		showCard.value = true
 	}
 }
@@ -591,10 +618,14 @@ const unlisten = await process_listener(async (e) => {
 
 onMounted(() => {
 	window.addEventListener('click', handleClickOutside)
+	window.addEventListener('keydown', handleKeydown)
+	window.addEventListener('resize', updatePopoverPosition)
 })
 
 onBeforeUnmount(() => {
 	window.removeEventListener('click', handleClickOutside)
+	window.removeEventListener('keydown', handleKeydown)
+	window.removeEventListener('resize', updatePopoverPosition)
 })
 
 onUnmounted(() => {
@@ -603,6 +634,183 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.account-trigger {
+	min-width: 220px;
+	max-width: 270px;
+	height: 58px;
+	padding: 8px 12px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	color: #f8f6ff;
+	background: rgba(15, 18, 28, 0.82);
+	border: 1px solid rgba(180, 120, 255, 0.18);
+	border-radius: 15px;
+	cursor: pointer;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+	transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+
+	&:hover {
+		background: rgba(28, 23, 43, 0.96);
+		border-color: rgba(174, 87, 255, 0.52);
+	}
+
+	&:active { transform: scale(0.985); }
+}
+
+.account-trigger-copy {
+	min-width: 0;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+
+	strong, span {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	strong { font-size: 14px; }
+	span { color: #a8adba; font-size: 11px; margin-top: 2px; }
+}
+
+.account-trigger-chevron {
+	width: 18px;
+	height: 18px;
+	transition: transform 180ms ease;
+	&.open { transform: rotate(180deg); }
+}
+
+.account-popover {
+	position: fixed;
+	z-index: 10000;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	max-height: min(520px, calc(100vh - 90px));
+	overflow: auto;
+	padding: 12px;
+	color: #f8f6ff;
+	background: rgba(12, 14, 23, 0.98);
+	border: 1px solid rgba(176, 97, 255, 0.3);
+	border-radius: 18px;
+	box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), 0 0 36px rgba(122, 46, 230, 0.12);
+	backdrop-filter: blur(24px);
+}
+
+.account-popover-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 5px 5px 9px;
+
+	div { display: flex; flex-direction: column; }
+	span { color: #bb78ff; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+	strong { margin-top: 2px; font-size: 15px; }
+	.account-count { min-width: 25px; padding: 5px 7px; text-align: center; background: rgba(139, 65, 229, .2); border-radius: 9px; }
+}
+
+.account-choice,
+.manage-accounts,
+.account-provider-grid button,
+.managed-account-select,
+.managed-account-delete {
+	font: inherit;
+	color: inherit;
+	border: 0;
+	cursor: pointer;
+}
+
+.account-choice {
+	width: 100%;
+	padding: 9px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	text-align: left;
+	background: rgba(255, 255, 255, .035);
+	border: 1px solid transparent;
+	border-radius: 12px;
+	transition: background 160ms ease, border-color 160ms ease;
+
+	&:hover { background: rgba(157, 82, 237, .12); }
+	&.active { background: rgba(143, 64, 232, .16); border-color: rgba(184, 108, 255, .36); }
+	> span:nth-child(2) { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+	strong, small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	small { margin-top: 2px; color: #9da2b0; font-size: 11px; }
+}
+
+.account-check { color: #c77dff; font-size: 17px; font-weight: 900; }
+.account-empty { padding: 15px 10px; display: flex; flex-direction: column; gap: 4px; color: #aeb2bf; font-size: 12px; }
+.account-empty strong { color: #f8f6ff; font-size: 14px; }
+
+.manage-accounts {
+	margin-top: 4px;
+	padding: 11px 12px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	color: #d7afff;
+	background: linear-gradient(135deg, rgba(114, 45, 211, .22), rgba(161, 72, 244, .12));
+	border: 1px solid rgba(174, 94, 255, .28);
+	border-radius: 12px;
+	font-weight: 750;
+	&:hover { background: linear-gradient(135deg, rgba(132, 52, 235, .34), rgba(178, 84, 255, .18)); }
+	svg { width: 16px; transform: rotate(-90deg); }
+}
+
+.account-manager-body { min-width: min(680px, calc(100vw - 64px)); padding: 24px; color: #f8f6ff; }
+.account-manager-intro span { color: #bd76ff; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.account-manager-intro h2 { margin: 5px 0; font-size: 26px; }
+.account-manager-intro p { margin: 0; color: #aeb2bf; }
+.account-provider-grid { margin: 20px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.account-provider-grid button {
+	padding: 15px;
+	display: flex;
+	align-items: center;
+	gap: 11px;
+	text-align: left;
+	background: rgba(255, 255, 255, .035);
+	border: 1px solid rgba(255, 255, 255, .08);
+	border-radius: 14px;
+	transition: border-color 160ms ease, transform 160ms ease;
+	&:hover { border-color: rgba(185, 104, 255, .45); transform: translateY(-1px); }
+	&:disabled { opacity: .55; cursor: wait; }
+	svg { width: 28px; height: 28px; }
+	span { min-width: 0; display: flex; flex-direction: column; }
+	small { margin-top: 3px; color: #969cab; font-size: 11px; }
+}
+
+.managed-account-list { display: flex; flex-direction: column; gap: 8px; }
+.managed-account-row { display: flex; gap: 8px; }
+.managed-account-select { flex: 1; padding: 10px; display: flex; align-items: center; gap: 11px; text-align: left; background: rgba(255,255,255,.035); border-radius: 13px; }
+.managed-account-select span { display: flex; flex-direction: column; }
+.managed-account-select small { margin-top: 2px; color: #9da2b0; }
+.managed-account-delete { width: 44px; display: grid; place-items: center; color: #ff809f; background: rgba(255, 73, 116, .08); border-radius: 13px; }
+.managed-account-delete svg { width: 18px; }
+
+.account-popover-enter-active,
+.account-popover-leave-active { transition: opacity 170ms ease, transform 170ms ease; }
+.account-popover-enter-from,
+.account-popover-leave-to { opacity: 0; transform: translateY(-8px) scale(.98); }
+
+@media (max-width: 1050px) {
+	.account-trigger { min-width: 56px; width: 56px; padding: 8px; }
+	.account-trigger-copy, .account-trigger-chevron { display: none; }
+	.account-provider-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.account-trigger,
+	.account-trigger-chevron,
+	.account-popover-enter-active,
+	.account-popover-leave-active,
+	.account-provider-grid button { transition-duration: 1ms !important; }
+}
+
 .selected {
 	background: var(--color-brand-highlight);
 	border-radius: var(--radius-lg);

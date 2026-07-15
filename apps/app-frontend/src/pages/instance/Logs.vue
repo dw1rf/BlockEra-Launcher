@@ -1,10 +1,10 @@
 <template>
-	<Card class="log-card">
+	<Card class="log-card blockera-log-card">
 		<div class="button-row">
 			<DropdownSelect
 				v-model="selectedLogIndex"
 				:default-value="0"
-				name="Log date"
+				name="Дата запуска"
 				:options="logs.map((_, index) => index)"
 				:display-name="(option) => logs[option]?.name"
 				:disabled="logs.length === 0"
@@ -13,18 +13,18 @@
 				<Button :disabled="!logs[selectedLogIndex]" @click="copyLog()">
 					<ClipboardCopyIcon v-if="!copied" />
 					<CheckIcon v-else />
-					{{ copied ? 'Copied' : 'Copy' }}
+					{{ copied ? 'Скопировано' : 'Копировать' }}
 				</Button>
 				<Button color="primary" :disabled="offline || !logs[selectedLogIndex]" @click="share">
 					<ShareIcon aria-hidden="true" />
-					Share
+					Поделиться
 				</Button>
 				<Button
 					v-if="logs[selectedLogIndex] && logs[selectedLogIndex].live === true"
 					@click="clearLiveLog()"
 				>
 					<TrashIcon aria-hidden="true" />
-					Clear
+					Очистить
 				</Button>
 
 				<Button
@@ -34,7 +34,7 @@
 					@click="deleteLog()"
 				>
 					<TrashIcon aria-hidden="true" />
-					Delete
+					Удалить
 				</Button>
 			</div>
 		</div>
@@ -45,7 +45,7 @@
 				autocomplete="off"
 				type="text"
 				class="text-filter"
-				placeholder="Type to filter logs..."
+				placeholder="Поиск по тексту логов…"
 			/>
 			<div class="filter-group">
 				<Checkbox
@@ -79,9 +79,9 @@
 		</div>
 		<ShareModalWrapper
 			ref="shareModal"
-			header="Share Log"
-			share-title="Instance Log"
-			share-text="Check out this log from an instance on the Modrinth App"
+			header="Поделиться логом"
+			share-title="Лог запуска BlockEra"
+			share-text="Лог запуска сборки в BlockEra Launcher"
 			:open-in-new-tab="false"
 			link
 		/>
@@ -486,7 +486,19 @@ onUnmounted(() => {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
-	height: 100vh;
+	height: min(650px, calc(100vh - 330px));
+	min-height: 430px;
+}
+
+.blockera-log-card {
+	padding: 0;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+
+	:deep(button), :deep(.dropdown-select) { border-radius: 10px; }
+	.text-filter { min-height: 40px; padding: 0 13px; color: #f3f0f7; background: rgba(8,12,20,.74); border: 1px solid rgba(255,255,255,.085); border-radius: 11px; outline: none; }
+	.text-filter:focus { border-color: rgba(176,89,255,.5); }
 }
 
 .button-row {
@@ -506,9 +518,10 @@ onUnmounted(() => {
 	width: 100%;
 	height: 100%;
 	font-family: var(--mono-font);
-	background-color: var(--color-accent-contrast);
+	background: #070a10;
 	color: var(--color-contrast);
-	border-radius: var(--radius-lg);
+	border: 1px solid rgba(155,85,224,.18);
+	border-radius: 13px;
 	padding-top: 1.5rem;
 	overflow-x: auto; /* Enables horizontal scrolling */
 	overflow-y: hidden; /* Disables vertical scrolling on this wrapper */

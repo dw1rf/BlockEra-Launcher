@@ -21,15 +21,17 @@ async function updateJavaVersion(version) {
 }
 </script>
 <template>
-	<div v-for="(javaVersion, index) in [25, 21, 17, 8]" :key="`java-${javaVersion}`">
-		<h2 class="m-0 text-lg font-extrabold text-contrast" :class="{ 'mt-4': index !== 0 }">
-			Java {{ javaVersion }} location
-		</h2>
-		<JavaSelector
-			:id="'java-selector-' + javaVersion"
-			v-model="javaVersions[javaVersion]"
-			:version="javaVersion"
-			@update:model-value="updateJavaVersion"
-		/>
+	<div class="launcher-settings-page">
+		<header class="settings-page-header">
+			<p>СРЕДА ЗАПУСКА</p>
+			<h2>Установки Java</h2>
+			<span>BlockEra Launcher автоматически подбирает подходящую Java для каждой версии Minecraft.</span>
+		</header>
+		<section class="settings-section java-stack">
+			<div v-for="javaVersion in [25, 21, 17, 8]" :key="`java-${javaVersion}`" class="java-version-row">
+				<div><strong>Java {{ javaVersion }}</strong><span>{{ javaVersion >= 21 ? 'Новые версии Minecraft' : javaVersion === 17 ? 'Minecraft 1.18–1.20.4' : 'Старые версии Minecraft' }}</span></div>
+				<JavaSelector :id="'java-selector-' + javaVersion" v-model="javaVersions[javaVersion]" :version="javaVersion" @update:model-value="updateJavaVersion" />
+			</div>
+		</section>
 	</div>
 </template>

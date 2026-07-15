@@ -8,6 +8,7 @@ use std::sync::{
 pub use bytes::Bytes;
 use futures::{StreamExt, TryStreamExt, stream};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use url::Url;
 use uuid::Uuid;
 
@@ -15,7 +16,7 @@ pub use crate::state::MinecraftSkinVariant;
 use crate::{
     ErrorKind, State,
     state::{
-        MinecraftCharacterExpressionState, MinecraftProfile,
+        AccountType, MinecraftCharacterExpressionState, MinecraftProfile,
         minecraft_skins::{
             CustomMinecraftSkin, DefaultMinecraftCape, mojang_api,
         },
@@ -72,6 +73,30 @@ pub struct Skin {
     pub is_equipped: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct ActiveOfflineSkin {
+    pub texture_key: String,
+    pub variant: MinecraftSkinVariant,
+    pub texture: Vec<u8>,
+}
+
+pub async fn get_active_offline_skin(
+    user_id: Uuid,
+) -> crate::Result<Option<ActiveOfflineSkin>> {
+    let state = State::get().await?;
+    let Some(skin) =
+        CustomMinecraftSkin::get_active(user_id, &state.pool).await?
+    else {
+        return Ok(None);
+    };
+    let texture = skin.texture_blob(&state.pool).await?;
+    Ok(Some(ActiveOfflineSkin {
+        texture_key: skin.texture_key,
+        variant: skin.variant,
+        texture,
+    }))
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum SkinSource {
@@ -101,12 +126,14 @@ pub async fn get_available_capes() -> crate::Result<Vec<Cape>> {
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
 
-    let profile =
-        selected_credentials.online_profile().await.ok_or_else(|| {
-            ErrorKind::OnlineMinecraftProfileUnavailable {
-                user_name: selected_credentials.offline_profile.name.clone(),
-            }
-        })?;
+    if selected_credentials.account_type
+        == AccountType::Pirate.as_lowercase_str()
+    {
+        return Ok(Vec::new());
+    }
+    let Some(profile) = selected_credentials.online_profile().await else {
+        return Ok(Vec::new());
+    };
 
     let default_cape_id = DefaultMinecraftCape::get(profile.id, &state.pool)
         .await?
@@ -139,12 +166,20 @@ pub async fn get_available_skins() -> crate::Result<Vec<Skin>> {
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
 
-    let profile =
-        selected_credentials.online_profile().await.ok_or_else(|| {
-            ErrorKind::OnlineMinecraftProfileUnavailable {
-                user_name: selected_credentials.offline_profile.name.clone(),
-            }
+    if selected_credentials.account_type
+        == AccountType::Pirate.as_lowercase_str()
+    {
+        return get_offline_available_skins(
+            selected_credentials.offline_profile.id,
+            &state,
+        )
+        .await;
+    }
+    let Some(profile) = selected_credentials.online_profile().await else {
+        return Err(ErrorKind::OnlineMinecraftProfileUnavailable {
+            user_name: selected_credentials.offline_profile.name.clone(),
         })?;
+    };
 
     let current_skin = profile.current_skin()?;
     let current_cape_id = profile.current_cape().map(|cape| cape.id);
@@ -240,6 +275,61 @@ pub async fn get_available_skins() -> crate::Result<Vec<Skin>> {
     Ok(available_skins)
 }
 
+async fn get_offline_available_skins(
+    user_id: Uuid,
+    state: &State,
+) -> crate::Result<Vec<Skin>> {
+    let mut stored_skins = CustomMinecraftSkin::get_all(user_id, &state.pool)
+        .await?
+        .collect::<Vec<_>>()
+        .await;
+    let active_skin =
+        CustomMinecraftSkin::get_active(user_id, &state.pool).await?;
+    let mut available_skins =
+        Vec::with_capacity(stored_skins.len() + assets::DEFAULT_SKINS.len());
+
+    for custom_skin in stored_skins.drain(..) {
+        let texture = png_util::blob_to_data_url(
+            custom_skin.texture_blob(&state.pool).await?,
+        )
+        .or_else(|| {
+            png_util::blob_to_data_url(include_bytes!(
+                "minecraft_skins/assets/default/MissingNo.png"
+            ))
+        })
+        .unwrap();
+
+        let is_equipped = active_skin.as_ref().is_some_and(|active| {
+            active.texture_key == custom_skin.texture_key
+                && active.variant == custom_skin.variant
+        });
+        available_skins.push(Skin {
+            texture_key: custom_skin.texture_key.into(),
+            name: None,
+            variant: custom_skin.variant,
+            cape_id: None,
+            texture,
+            source: SkinSource::Custom,
+            is_equipped,
+        });
+    }
+
+    available_skins.extend(assets::DEFAULT_SKINS.iter().map(|default_skin| {
+        Skin {
+            texture_key: Arc::clone(&default_skin.texture_key),
+            name: default_skin.name.as_ref().cloned(),
+            variant: default_skin.variant,
+            cape_id: None,
+            texture: Arc::clone(&default_skin.texture),
+            source: SkinSource::Default,
+            is_equipped: active_skin.is_none()
+                && default_skin.name.as_deref() == Some("Steve"),
+        }
+    }));
+
+    Ok(available_skins)
+}
+
 /// Adds a custom skin to the app database and equips it for the currently selected
 /// Minecraft profile.
 #[tracing::instrument(skip(texture_blob))]
@@ -259,6 +349,29 @@ pub async fn add_and_equip_custom_skin(
     let selected_credentials = Credentials::get_default_credential(&state.pool)
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
+
+    if selected_credentials.account_type
+        == AccountType::Pirate.as_lowercase_str()
+    {
+        let texture_key = format!("{:x}", Sha256::digest(&texture_blob));
+        CustomMinecraftSkin::add(
+            selected_credentials.offline_profile.id,
+            &texture_key,
+            &texture_blob,
+            variant,
+            None,
+            &state.pool,
+        )
+        .await?;
+        CustomMinecraftSkin {
+            texture_key,
+            variant,
+            cape_id: None,
+        }
+        .set_active(selected_credentials.offline_profile.id, &state.pool)
+        .await?;
+        return Ok(());
+    }
 
     // We have to equip the skin first, as it's the Mojang API backend who knows
     // how to compute the texture key we require, which we can then read from the
@@ -307,6 +420,12 @@ pub async fn set_default_cape(cape: Option<Cape>) -> crate::Result<()> {
     let selected_credentials = Credentials::get_default_credential(&state.pool)
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
+
+    if selected_credentials.account_type
+        == AccountType::Pirate.as_lowercase_str()
+    {
+        return Ok(());
+    }
 
     let profile =
         selected_credentials.online_profile().await.ok_or_else(|| {
@@ -359,6 +478,44 @@ pub async fn equip_skin(skin: Skin) -> crate::Result<()> {
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
 
+    if selected_credentials.account_type
+        == AccountType::Pirate.as_lowercase_str()
+    {
+        if matches!(skin.source, SkinSource::Custom) {
+            let custom_skin = CustomMinecraftSkin {
+                texture_key: skin.texture_key.to_string(),
+                variant: skin.variant,
+                cape_id: None,
+            };
+            let texture = custom_skin.texture_blob(&state.pool).await?;
+            custom_skin
+                .remove(selected_credentials.offline_profile.id, &state.pool)
+                .await?;
+            CustomMinecraftSkin::add(
+                selected_credentials.offline_profile.id,
+                &skin.texture_key,
+                &texture,
+                skin.variant,
+                None,
+                &state.pool,
+            )
+            .await?;
+            custom_skin
+                .set_active(
+                    selected_credentials.offline_profile.id,
+                    &state.pool,
+                )
+                .await?;
+        } else {
+            CustomMinecraftSkin::clear_active(
+                selected_credentials.offline_profile.id,
+                &state.pool,
+            )
+            .await?;
+        }
+        return Ok(());
+    }
+
     let profile =
         selected_credentials.online_profile().await.ok_or_else(|| {
             ErrorKind::OnlineMinecraftProfileUnavailable {
@@ -392,6 +549,20 @@ pub async fn remove_custom_skin(skin: Skin) -> crate::Result<()> {
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
 
+    let offline_user_id = (selected_credentials.account_type
+        == AccountType::Pirate.as_lowercase_str())
+    .then_some(selected_credentials.offline_profile.id);
+    let was_active = if let Some(user_id) = offline_user_id {
+        CustomMinecraftSkin::get_active(user_id, &state.pool)
+            .await?
+            .is_some_and(|active| {
+                active.texture_key == skin.texture_key.as_ref()
+                    && active.variant == skin.variant
+            })
+    } else {
+        false
+    };
+
     CustomMinecraftSkin {
         texture_key: skin.texture_key.to_string(),
         variant: skin.variant,
@@ -402,6 +573,14 @@ pub async fn remove_custom_skin(skin: Skin) -> crate::Result<()> {
         &state.pool,
     )
     .await?;
+
+    if was_active {
+        CustomMinecraftSkin::clear_active(
+            offline_user_id.unwrap(),
+            &state.pool,
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -416,6 +595,17 @@ pub async fn unequip_skin() -> crate::Result<()> {
     let selected_credentials = Credentials::get_default_credential(&state.pool)
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
+
+    if selected_credentials.account_type
+        == AccountType::Pirate.as_lowercase_str()
+    {
+        CustomMinecraftSkin::clear_active(
+            selected_credentials.offline_profile.id,
+            &state.pool,
+        )
+        .await?;
+        return Ok(());
+    }
 
     let profile =
         selected_credentials.online_profile().await.ok_or_else(|| {

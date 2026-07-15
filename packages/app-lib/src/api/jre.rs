@@ -1,9 +1,12 @@
 //! Authentication flow interface
 use crate::event::emit::{emit_loading, init_loading};
 use crate::state::JavaVersion;
-use crate::util::fetch::{fetch_advanced, fetch_json};
+use crate::util::fetch::fetch_advanced;
+#[cfg(not(target_os = "windows"))]
+use crate::util::fetch::fetch_json;
 use dashmap::DashMap;
 use reqwest::Method;
+#[cfg(not(target_os = "windows"))]
 use serde::Deserialize;
 use std::path::PathBuf;
 use sysinfo::{MemoryRefreshKind, RefreshKind};
@@ -63,97 +66,121 @@ pub async fn auto_install_java(java_version: u32) -> crate::Result<PathBuf> {
     )
     .await?;
 
+    #[cfg(not(target_os = "windows"))]
     #[derive(Deserialize)]
     struct Package {
         pub download_url: String,
-        pub name: PathBuf,
     }
 
     emit_loading(&loading_bar, 0.0, Some("Fetching java version"))?;
-    let packages = fetch_json::<Vec<Package>>(
-                Method::GET,
-                &format!(
-                    "https://api.azul.com/metadata/v1/zulu/packages?arch={}&java_version={}&os={}&archive_type=zip&javafx_bundled=false&java_package_type=jre&page_size=1",
-                    std::env::consts::ARCH, java_version, std::env::consts::OS
-                ),
-                None,
-                None,
-                &state.fetch_semaphore,
-                &state.pool,
-            ).await?;
-    emit_loading(&loading_bar, 10.0, Some("Downloading java version"))?;
 
-    if let Some(download) = packages.first() {
-        let file = fetch_advanced(
+    #[cfg(target_os = "windows")]
+    let download_url = {
+        let arch = match std::env::consts::ARCH {
+            "x86_64" => "x64",
+            "x86" => "x32",
+            arch => arch,
+        };
+        format!(
+            "https://api.adoptium.net/v3/binary/latest/{java_version}/ga/windows/{arch}/jre/hotspot/normal/eclipse?project=jdk"
+        )
+    };
+
+    #[cfg(not(target_os = "windows"))]
+    let download_url = {
+        let packages = fetch_json::<Vec<Package>>(
             Method::GET,
-            &download.download_url,
+            &format!(
+                "https://api.azul.com/metadata/v1/zulu/packages?arch={}&java_version={}&os={}&archive_type=zip&javafx_bundled=false&java_package_type=jre&page_size=1",
+                std::env::consts::ARCH,
+                java_version,
+                std::env::consts::OS
+            ),
             None,
             None,
-            None,
-            Some((&loading_bar, 80.0)),
             &state.fetch_semaphore,
             &state.pool,
         )
         .await?;
-
-        let path = state.directories.java_versions_dir();
-
-        let mut archive = zip::ZipArchive::new(std::io::Cursor::new(file))
-            .map_err(|_| {
-                crate::Error::from(crate::ErrorKind::InputError(
-                    "Failed to read java zip".to_string(),
+        packages
+            .first()
+            .ok_or_else(|| {
+                crate::ErrorKind::LauncherError(format!(
+                    "No Java Version found for Java version {}, OS {}, and Architecture {}",
+                    java_version,
+                    std::env::consts::OS,
+                    std::env::consts::ARCH,
                 ))
-            })?;
+            })?
+            .download_url
+            .clone()
+    };
 
-        // removes the old installation of java
-        if let Some(file) = archive.file_names().next()
-            && let Some(dir) = file.split('/').next()
-        {
-            let path = path.join(dir);
+    emit_loading(&loading_bar, 10.0, Some("Downloading java version"))?;
 
-            if path.exists() {
-                io::remove_dir_all(path).await?;
-            }
-        }
+    let file = fetch_advanced(
+        Method::GET,
+        &download_url,
+        None,
+        None,
+        None,
+        Some((&loading_bar, 80.0)),
+        &state.fetch_semaphore,
+        &state.pool,
+    )
+    .await?;
 
-        emit_loading(&loading_bar, 0.0, Some("Extracting java"))?;
-        archive.extract(&path).map_err(|_| {
+    let path = state.directories.java_versions_dir();
+
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(file))
+        .map_err(|_| {
             crate::Error::from(crate::ErrorKind::InputError(
-                "Failed to extract java zip".to_string(),
+                "Failed to read java zip".to_string(),
             ))
         })?;
-        emit_loading(&loading_bar, 10.0, Some("Done extracting java"))?;
-        let mut base_path = path.join(
-            download
-                .name
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
-        );
 
-        #[cfg(target_os = "macos")]
-        {
-            base_path = base_path
-                .join(format!("zulu-{java_version}.jre"))
-                .join("Contents")
-                .join("Home")
-                .join("bin")
-                .join("java")
-        }
+    let archive_root = archive
+        .file_names()
+        .next()
+        .and_then(|file| file.split('/').next())
+        .filter(|dir| !dir.is_empty())
+        .ok_or_else(|| {
+            crate::Error::from(crate::ErrorKind::InputError(
+                "Java archive has no root directory".to_string(),
+            ))
+        })?
+        .to_string();
 
-        #[cfg(not(target_os = "macos"))]
-        {
-            base_path = base_path.join("bin").join(jre::JAVA_BIN)
-        }
-
-        Ok(base_path)
-    } else {
-        Err(crate::ErrorKind::LauncherError(format!(
-                    "No Java Version found for Java version {}, OS {}, and Architecture {}",
-                    java_version, std::env::consts::OS, std::env::consts::ARCH,
-                )).into())
+    let installed_path = path.join(&archive_root);
+    if installed_path.exists() {
+        io::remove_dir_all(&installed_path).await?;
     }
+
+    emit_loading(&loading_bar, 0.0, Some("Extracting java"))?;
+    archive.extract(&path).map_err(|_| {
+        crate::Error::from(crate::ErrorKind::InputError(
+            "Failed to extract java zip".to_string(),
+        ))
+    })?;
+    emit_loading(&loading_bar, 10.0, Some("Done extracting java"))?;
+    let mut base_path = installed_path;
+
+    #[cfg(target_os = "macos")]
+    {
+        base_path = base_path
+            .join(format!("zulu-{java_version}.jre"))
+            .join("Contents")
+            .join("Home")
+            .join("bin")
+            .join("java")
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        base_path = base_path.join("bin").join(jre::JAVA_BIN)
+    }
+
+    Ok(base_path)
 }
 
 // Validates JRE at a given at a given path

@@ -3,7 +3,7 @@
 	<ModalWrapper ref="modal" @on-hide="resetState">
 		<template #title>
 			<span class="text-lg font-extrabold text-contrast">
-				{{ mode === 'edit' ? 'Editing skin' : 'Adding a skin' }}
+				{{ mode === 'edit' ? 'Изменение скина' : 'Добавление скина' }}
 			</span>
 		</template>
 
@@ -24,21 +24,21 @@
 
 			<div class="flex flex-col gap-4 w-full min-h-[20rem]">
 				<section>
-					<h2 class="text-base font-semibold mb-2">Texture</h2>
-					<Button @click="openUploadSkinModal"> <UploadIcon /> Replace texture </Button>
+					<h2 class="text-base font-semibold mb-2">Текстура</h2>
+					<Button @click="openUploadSkinModal"> <UploadIcon /> Заменить текстуру </Button>
 				</section>
 
 				<section>
-					<h2 class="text-base font-semibold mb-2">Arm style</h2>
+					<h2 class="text-base font-semibold mb-2">Модель рук</h2>
 					<RadioButtons v-model="variant" :items="['CLASSIC', 'SLIM']">
 						<template #default="{ item }">
-							{{ item === 'CLASSIC' ? 'Wide' : 'Slim' }}
+							{{ item === 'CLASSIC' ? 'Классические' : 'Тонкие' }}
 						</template>
 					</RadioButtons>
 				</section>
 
-				<section>
-					<h2 class="text-base font-semibold mb-2">Cape</h2>
+				<section v-if="!offline">
+					<h2 class="text-base font-semibold mb-2">Плащ</h2>
 					<div class="flex gap-2">
 						<CapeButton
 							v-if="defaultCape"
@@ -84,10 +84,10 @@
 					<SpinnerIcon v-if="isSaving" class="animate-spin" />
 					<CheckIcon v-else-if="mode === 'new'" />
 					<SaveIcon v-else />
-					{{ mode === 'new' ? 'Add skin' : 'Save skin' }}
+					{{ mode === 'new' ? 'Добавить скин' : 'Сохранить скин' }}
 				</button>
 			</ButtonStyled>
-			<Button :disabled="isSaving" @click="hide"><XIcon />Cancel</Button>
+			<Button :disabled="isSaving" @click="hide"><XIcon />Отмена</Button>
 		</div>
 	</ModalWrapper>
 
@@ -148,7 +148,7 @@ const previewSkin = ref<string>('')
 
 const variant = ref<SkinModel>('CLASSIC')
 const selectedCape = ref<Cape | undefined>(undefined)
-const props = defineProps<{ capes?: Cape[]; defaultCape?: Cape }>()
+const props = defineProps<{ capes?: Cape[]; defaultCape?: Cape; offline?: boolean }>()
 
 const selectedCapeTexture = computed(() => selectedCape.value?.texture)
 const visibleCapeList = ref<Cape[]>([])
@@ -372,10 +372,10 @@ async function save() {
 		const bytes: Uint8Array = new Uint8Array(await (await fetch(textureUrl)).arrayBuffer())
 
 		if (mode.value === 'new') {
-			await add_and_equip_custom_skin(bytes, variant.value, selectedCape.value)
+			await add_and_equip_custom_skin(bytes, variant.value, props.offline ? undefined : selectedCape.value)
 			emit('saved')
 		} else {
-			await add_and_equip_custom_skin(bytes, variant.value, selectedCape.value)
+			await add_and_equip_custom_skin(bytes, variant.value, props.offline ? undefined : selectedCape.value)
 			await remove_custom_skin(currentSkin.value!)
 			emit('saved')
 		}

@@ -28,7 +28,7 @@ async fn initialize_state(app: tauri::AppHandle) -> api::Result<()> {
     theseus::EventState::init(app.clone()).await?;
     tracing::info!("Initializing app state...");
     State::init().await?;
-    tracing::info!("AstralRinth state successfully initialized.");
+    tracing::info!("BlockEra Launcher state successfully initialized.");
     let state = State::get().await?;
     app.asset_protocol_scope()
         .allow_directory(state.directories.caches_dir(), true)?;
@@ -111,9 +111,16 @@ fn main() {
     */
     let _log_guard = theseus::start_logger();
 
-    tracing::info!("Initialized tracing subscriber. Loading AstralRinth App!");
+    tracing::info!(
+        "Initialized tracing subscriber. Loading BlockEra Launcher!"
+    );
 
     let mut builder = tauri::Builder::default();
+
+    #[cfg(feature = "updater")]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
 
     builder = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
@@ -144,12 +151,16 @@ fn main() {
                     {
                         std::env::current_dir()
                             .ok()
-                            .map(|dir| dir.join("UserData/app-window-state.json").to_string_lossy().into_owned())
+                            .map(|dir| {
+                                dir.join("UserData/app-window-state.json")
+                                    .to_string_lossy()
+                                    .into_owned()
+                            })
                             .unwrap()
                     } else {
                         "app-window-state.json".to_string()
                     },
-				)
+                )
                 // Use *only* POSITION and SIZE state flags, because saving VISIBLE causes the `visible: false` to not take effect
                 .with_state_flags(
                     tauri_plugin_window_state::StateFlags::POSITION
@@ -157,7 +168,7 @@ fn main() {
                         | tauri_plugin_window_state::StateFlags::MAXIMIZED,
                 )
                 .build(),
-		)
+        )
         .setup(|app| {
             #[cfg(target_os = "macos")]
             {
@@ -318,7 +329,7 @@ fn main() {
                     DialogBuilder::message()
                         .set_level(MessageLevel::Error)
                         .set_title("Initialization error")
-                        .set_text("Your Microsoft Edge WebView2 installation is corrupt.\n\nMicrosoft Edge WebView2 is required to run Modrinth App.\n\nLearn how to repair it at https://support.modrinth.com/en/articles/8797765-corrupted-microsoft-edge-webview2-installation")
+                        .set_text("Your Microsoft Edge WebView2 installation is corrupt.\n\nMicrosoft Edge WebView2 is required to run BlockEra Launcher.\n\nLearn how to repair it at https://support.modrinth.com/en/articles/8797765-corrupted-microsoft-edge-webview2-installation")
                         .alert()
                         .show()
                         .unwrap();

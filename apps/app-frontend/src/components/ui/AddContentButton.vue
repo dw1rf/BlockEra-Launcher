@@ -39,7 +39,7 @@ const handleSearchContent = async () => {
 		<ButtonStyled>
 			<button @click="handleSearchContent">
 				<PlusIcon />
-				Install content
+				Найти моды
 			</button>
 		</ButtonStyled>
 		<ButtonStyled>
@@ -54,7 +54,7 @@ const handleSearchContent = async () => {
 				<DropdownIcon />
 				<template #from_file>
 					<FolderOpenIcon />
-					<span class="no-wrap"> Add from file </span>
+					<span class="no-wrap"> Добавить из файла </span>
 				</template>
 			</OverflowMenu>
 		</ButtonStyled>

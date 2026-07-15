@@ -3,8 +3,8 @@ import {
 	CoffeeIcon,
 	GameIcon,
 	GaugeIcon,
-	AstralRinthLogo,
 	DownloadIcon,
+	BlockEraLogo,
 	SpinnerIcon,
 	LanguagesIcon,
 	PaintbrushIcon,
@@ -68,16 +68,16 @@ const developerModeEnabled = defineMessage({
 const tabs = [
 	{
 		name: defineMessage({
-			id: 'app.settings.tabs.appearance',
-			defaultMessage: 'Appearance',
+			id: 'blockera.settings.tabs.interface',
+			defaultMessage: 'Интерфейс',
 		}),
 		icon: PaintbrushIcon,
 		content: AppearanceSettings,
 	},
 	{
 		name: defineMessage({
-			id: 'app.settings.tabs.language',
-			defaultMessage: 'Language',
+			id: 'blockera.settings.tabs.language',
+			defaultMessage: 'Язык',
 		}),
 		icon: LanguagesIcon,
 		content: LanguageSettings,
@@ -85,32 +85,32 @@ const tabs = [
 	},
 	{
 		name: defineMessage({
-			id: 'app.settings.tabs.privacy',
-			defaultMessage: 'Privacy',
+			id: 'blockera.settings.tabs.privacy',
+			defaultMessage: 'Конфиденциальность',
 		}),
 		icon: ShieldIcon,
 		content: PrivacySettings,
 	},
 	{
 		name: defineMessage({
-			id: 'app.settings.tabs.java-installations',
-			defaultMessage: 'Java installations',
+			id: 'blockera.settings.tabs.java',
+			defaultMessage: 'Java',
 		}),
 		icon: CoffeeIcon,
 		content: JavaSettings,
 	},
 	{
 		name: defineMessage({
-			id: 'app.settings.tabs.default-instance-options',
-			defaultMessage: 'Default instance options',
+			id: 'blockera.settings.tabs.game-launch',
+			defaultMessage: 'Запуск игры',
 		}),
 		icon: GameIcon,
 		content: DefaultInstanceSettings,
 	},
 	{
 		name: defineMessage({
-			id: 'app.settings.tabs.resource-management',
-			defaultMessage: 'Resource management',
+			id: 'blockera.settings.tabs.storage',
+			defaultMessage: 'Файлы и загрузки',
 		}),
 		icon: GaugeIcon,
 		content: ResourceManagementSettings,
@@ -172,11 +172,17 @@ const messages = defineMessages({
 })
 </script>
 <template>
-	<ModalWrapper ref="modal">
+	<ModalWrapper
+		ref="modal"
+		class="settings-cinematic"
+		max-width="72rem"
+		width="min(72rem, calc(100vw - 3rem))"
+	>
 		<template #title>
-			<span class="flex items-center gap-2 text-lg font-extrabold text-contrast">
-				<SettingsIcon /> Settings
-			</span>
+			<div class="settings-title">
+				<span class="settings-title-icon"><SettingsIcon /></span>
+				<span><strong>Настройки BlockEra Launcher</strong><small>Персонализируйте запуск, Java и ресурсы игры</small></span>
+			</div>
 		</template>
 
 		<TabbedModal :tabs="tabs.filter((t) => !t.developerOnly || themeStore.devMode)">
@@ -202,10 +208,10 @@ const messages = defineMessages({
 							}"
 							@click="devModeCount"
 						>
-							<AstralRinthLogo class="w-6 h-6" />
+							<BlockEraLogo class="w-6 h-6" />
 						</button>
 						<div>
-							<p class="m-0">AstralRinth App {{ version }}</p>
+							<p class="m-0">BlockEra Launcher {{ version }}</p>
 							<p class="m-0">
 								<span v-if="osPlatform === 'macos'">macOS</span>
 								<span v-else class="capitalize">{{ osPlatform }}</span>
@@ -225,17 +231,17 @@ const messages = defineMessages({
 			</template>
 		</TabbedModal>
 		<!-- [AR] Feature -->
-    	<ModalWrapper ref="updateModalView" :has-to-type="false" header="Request to update the AstralRinth launcher">
+		<ModalWrapper ref="updateModalView" :has-to-type="false" header="Request to update BlockEra Launcher">
     	  <div class="space-y-4">
     	    <div class="space-y-2">
-    	      <strong>The new version of the AstralRinth launcher is available!</strong>
+				<strong>The new version of BlockEra Launcher is available!</strong>
     	      <p>Your version is outdated. We recommend that you update to the latest version.</p>
 			  <br/>
 			  <br/>
     	      <p><strong>⚠️ Please, read this notice before initialize update process</strong></p>
     	      <p>
     	        Before updating, make sure that you have saved and closed all running instances and made a backup copy of the launcher data such as
-				<code>%appdata%\Roaming\AstralRinthApp</code> on Windows or <code>~/Library/Application Support/AstralRinthApp</code> on macOS.
+				<code>%appdata%\Roaming\BlockEraLauncher</code> on Windows or <code>~/Library/Application Support/BlockEraLauncher</code> on macOS.
 				Remember that the authors of the product are not responsible for the breakdown of
     	        your files, so you should always make back up copies of them and keep them in a safe place.
     	      </p>
@@ -277,7 +283,7 @@ const messages = defineMessages({
 
     	    <div class="text-sm text-secondary">
     	      <p>
-    	        <strong>Local AstralRinth:</strong>
+				<strong>Local BlockEra Launcher:</strong>
     	        <span class="neon-text">v{{ version }}</span>
     	      </p>
     	    </div>
@@ -300,5 +306,208 @@ code {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+}
+
+.settings-title {
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	color: #fff;
+}
+
+.settings-title-icon {
+	display: grid;
+	place-items: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border: 1px solid rgba(168, 85, 247, 0.38);
+	border-radius: 0.75rem;
+	color: #c084fc;
+	background: rgba(126, 34, 206, 0.16);
+}
+
+.settings-title-icon :deep(svg) { width: 1.25rem; height: 1.25rem; }
+.settings-title > span:last-child { display: flex; flex-direction: column; gap: 0.2rem; }
+.settings-title strong { font-size: 1.05rem; }
+.settings-title small { color: rgba(226, 232, 240, 0.58); font-size: 0.76rem; font-weight: 500; }
+
+:deep(.settings-cinematic .modal-overlay.standard) {
+	background: rgba(2, 5, 11, 0.76);
+	backdrop-filter: blur(14px);
+}
+
+:deep(.settings-cinematic .modal-body) {
+	border: 1px solid rgba(168, 85, 247, 0.24);
+	background:
+		radial-gradient(circle at 14% 0%, rgba(126, 34, 206, 0.16), transparent 23rem),
+		#0b101a !important;
+	box-shadow: 0 32px 100px rgba(0, 0, 0, 0.55) !important;
+}
+
+:deep(.settings-cinematic .modal-body > div:first-child) {
+	border-color: rgba(255, 255, 255, 0.08) !important;
+	background: rgba(5, 8, 15, 0.45);
+}
+
+:deep(.settings-cinematic .modal-body > div:nth-child(2)) { padding: 1rem 1.25rem 1.25rem; }
+:deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:first-child) {
+	min-width: 14.5rem;
+	padding: 0.35rem 0.9rem 0.35rem 0;
+	border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:first-child button) {
+	min-height: 2.65rem;
+	border: 1px solid transparent;
+	border-radius: 0.7rem;
+	transition:
+		transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+		border-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:first-child button:hover) {
+	transform: translateX(2px);
+}
+
+:deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:first-child button.bg-button-bgSelected) {
+	border-color: rgba(168, 85, 247, 0.34);
+	background: rgba(126, 34, 206, 0.18) !important;
+	color: #e9d5ff !important;
+}
+
+:deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:last-child > div.overflow-y-auto) {
+	width: min(46rem, calc(100vw - 24rem));
+	height: min(36rem, calc(100vh - 12rem));
+	padding: 0.2rem 0.5rem 1.5rem 1.25rem;
+}
+
+:deep(.launcher-settings-page) {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+	padding-right: 0.55rem;
+}
+
+:deep(.settings-page-header) {
+	padding: 0.35rem 0 0.55rem;
+}
+
+:deep(.settings-page-header > p) {
+	margin: 0 0 0.45rem;
+	color: #c084fc;
+	font-size: 0.68rem;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+}
+
+:deep(.settings-page-header h2) {
+	margin: 0;
+	color: #fff;
+	font-size: 1.55rem;
+	line-height: 1.1;
+}
+
+:deep(.settings-page-header > span) {
+	display: block;
+	margin-top: 0.45rem;
+	color: rgba(226, 232, 240, 0.62);
+	font-size: 0.88rem;
+}
+
+:deep(.settings-section) {
+	padding: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.075);
+	border-radius: 0.9rem;
+	background: linear-gradient(135deg, rgba(21, 27, 40, 0.92), rgba(13, 18, 28, 0.92));
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+:deep(.settings-section-heading) {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.85rem;
+}
+
+:deep(.settings-section h3),
+:deep(.settings-row h3) {
+	margin: 0;
+	color: #f8fafc;
+	font-size: 0.92rem;
+	font-weight: 750;
+}
+
+:deep(.settings-section p),
+:deep(.settings-row p) {
+	margin: 0.25rem 0 0;
+	color: rgba(203, 213, 225, 0.58);
+	font-size: 0.78rem;
+	line-height: 1.35;
+}
+
+:deep(.settings-section-heading > strong) {
+	min-width: 4rem;
+	padding: 0.45rem 0.7rem;
+	border-radius: 0.6rem;
+	color: #d8b4fe;
+	background: rgba(126, 34, 206, 0.16);
+	text-align: center;
+}
+
+:deep(.settings-list) { padding-block: 0.3rem; }
+:deep(.settings-row) {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.5rem;
+	min-height: 3.45rem;
+	padding: 0.75rem 0.7rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+:deep(.settings-row:last-child) { border-bottom: 0; }
+:deep(.settings-row > div:first-child) { min-width: 0; }
+
+:deep(.settings-resolution) {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.7rem;
+	padding: 0.4rem 0.7rem 0.7rem;
+}
+
+:deep(.settings-fields) { display: grid; gap: 0.75rem; }
+:deep(.settings-fields label),
+:deep(.settings-resolution label) { display: grid; gap: 0.38rem; color: rgba(226, 232, 240, 0.72); font-size: 0.75rem; font-weight: 650; }
+:deep(.settings-fields input),
+:deep(.settings-resolution input) { width: 100%; box-sizing: border-box; background: rgba(5, 8, 15, 0.68); border-color: rgba(255, 255, 255, 0.09); }
+
+:deep(.java-stack) { padding: 0.35rem; }
+:deep(.java-version-row) {
+	display: grid;
+	grid-template-columns: 11rem minmax(0, 1fr);
+	align-items: center;
+	gap: 1rem;
+	padding: 0.8rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+:deep(.java-version-row:last-child) { border-bottom: 0; }
+:deep(.java-version-row > div:first-child) { display: flex; flex-direction: column; gap: 0.25rem; }
+:deep(.java-version-row strong) { color: #fff; font-size: 0.9rem; }
+:deep(.java-version-row span) { color: rgba(203, 213, 225, 0.52); font-size: 0.72rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+	:deep(.launcher-settings-page) { animation: settings-page-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+}
+
+@keyframes settings-page-enter {
+	from { opacity: 0; transform: translateY(6px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:deep(.settings-cinematic *) { transition: none !important; }
 }
 </style>

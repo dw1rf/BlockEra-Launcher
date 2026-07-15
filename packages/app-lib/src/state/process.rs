@@ -2,6 +2,7 @@ use crate::event::emit::{emit_process, emit_profile};
 use crate::event::{ProcessPayloadType, ProfilePayloadType};
 use crate::profile;
 use crate::util::io::IOError;
+use crate::util::offline_skin_server::OfflineSkinServer;
 use crate::util::rpc::RpcServer;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use dashmap::DashMap;
@@ -47,6 +48,7 @@ impl ProcessManager {
         logs_folder: PathBuf,
         xml_logging: bool,
         main_class_keep_alive: TempDir,
+        offline_skin_server: Option<OfflineSkinServer>,
         rpc_server: RpcServer,
         post_process_init: impl AsyncFnOnce(
             &ProcessMetadata,
@@ -71,6 +73,7 @@ impl ProcessManager {
             child: mc_proc,
             rpc_server,
             _main_class_keep_alive: main_class_keep_alive,
+            _offline_skin_server: offline_skin_server,
         };
 
         if let Err(e) =
@@ -219,6 +222,7 @@ struct Process {
     metadata: ProcessMetadata,
     child: Child,
     _main_class_keep_alive: TempDir,
+    _offline_skin_server: Option<OfflineSkinServer>,
     rpc_server: RpcServer,
 }
 

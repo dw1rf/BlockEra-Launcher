@@ -12,7 +12,7 @@ use crate::state::{
     AccountType, Credentials, JavaVersion, ProcessMetadata, ProfileInstallStage,
 };
 use crate::util::rpc::RpcServerBuilder;
-use crate::util::{io, utils};
+use crate::util::{io, offline_skin_server::OfflineSkinServer, utils};
 use crate::{State, get_resource_file, process, state as st};
 use chrono::Utc;
 use daedalus as d;
@@ -666,12 +666,60 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
-    // This code is modified by AstralRinth
+    let mut offline_skin_server = None;
+
     if credentials.account_type == AccountType::Pirate.as_lowercase_str() {
+        match crate::api::minecraft_skins::get_active_offline_skin(
+            credentials.offline_profile.id,
+        )
+        .await
+        {
+            Ok(Some(skin)) => {
+                match OfflineSkinServer::start(
+                    credentials.offline_profile.id,
+                    credentials.offline_profile.name.clone(),
+                    skin,
+                )
+                .await
+                {
+                    Ok(server) => match utils::get_elyby_injector_library()
+                        .await
+                    {
+                        Ok(injector) => {
+                            command.arg("-Dauthlibinjector.noShowServerName");
+                            command.arg(format!(
+                                "-javaagent:{}={}",
+                                injector.display(),
+                                server.info().api_root
+                            ));
+                            let _ = emit_info("[BlockEra] Offline-скин подключён к Minecraft.").await;
+                            offline_skin_server = Some(server);
+                        }
+                        Err(error) => {
+                            let _ = emit_info(&format!(
+								"[BlockEra] Не удалось подключить offline-скин: {error}. Игра продолжит запуск без него."
+							)).await;
+                        }
+                    },
+                    Err(error) => {
+                        let _ = emit_info(&format!(
+							"[BlockEra] Не удалось запустить локальный skin-сервис: {error}."
+						)).await;
+                    }
+                }
+            }
+            Ok(None) => {}
+            Err(error) => {
+                let _ = emit_info(&format!(
+					"[BlockEra] Не удалось прочитать выбранный offline-скин: {error}."
+				)).await;
+            }
+        }
+
         if version_jar == "1.16.4" || version_jar == "1.16.5" {
             let invalid_url = "https://invalid.invalid";
             let _ = emit_info(&format!(
-                "[AR] Detected launch of {} on the offline account. Applying 1.16.4/5 multiplayer fixes.",
+                "[BlockEra] Обнаружен запуск Minecraft {} через offline-аккаунт. Применяются исправления сетевой игры.",
                 version_jar
             	)
         	).await;
@@ -687,17 +735,15 @@ pub async fn launch_minecraft(
     } else if credentials.account_type == AccountType::ElyBy.as_lowercase_str()
     {
         let _ = emit_info(&format!(
-            "[AR] Detected launch of {} on the Ely.by account. Loading Ely.by AuthLib Injector...",
+            "[BlockEra] Запуск Minecraft {} через Ely.by. Подключается AuthLib Injector...",
             version_jar
 			)
         ).await;
         let path_buf = utils::get_elyby_injector_library().await?;
         let path = path_buf.to_str().unwrap();
-        let _ = emit_info(&format!(
-            "[AR] Launching minecraft instance with {}",
-            path
-        ))
-        .await;
+        let _ =
+            emit_info(&format!("[BlockEra] Minecraft запускается с {}", path))
+                .await;
         command.arg(format!("-javaagent:{}=ely.by", path));
     }
 
@@ -822,6 +868,7 @@ pub async fn launch_minecraft(
             state.directories.profile_logs_dir(&profile.path),
             version_info.logging.is_some(),
             main_class_keep_alive,
+            offline_skin_server,
             rpc_server,
             async |process: &ProcessMetadata, rpc_server| {
                 let process_start_time = process.start_time.to_rfc3339();

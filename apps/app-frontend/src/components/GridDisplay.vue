@@ -1,6 +1,7 @@
 <script setup>
 import {
 	ClipboardCopyIcon,
+	DownloadIcon,
 	EyeIcon,
 	FolderOpenIcon,
 	PlayIcon,
@@ -59,7 +60,14 @@ const handleRightClick = (event, profilePathId) => {
 	const baseOptions = [
 		{ name: 'add_content' },
 		{ type: 'divider' },
-		{ name: 'edit' },
+		{ name: 'settings' },
+		{ name: 'mods' },
+		{ name: 'resource_packs' },
+		{ name: 'shader_packs' },
+		{ name: 'saves' },
+		{ name: 'export' },
+		{ name: 'repair' },
+		{ type: 'divider' },
 		{ name: 'duplicate' },
 		{ name: 'open' },
 		{ name: 'copy' },
@@ -102,8 +110,26 @@ const handleOptionsClick = async (args) => {
 		case 'add_content':
 			await args.item.addContent()
 			break
-		case 'edit':
-			await args.item.seeInstance()
+		case 'settings':
+			await args.item.openSettings()
+			break
+		case 'mods':
+			await args.item.openContent('mod')
+			break
+		case 'resource_packs':
+			await args.item.openFolder('resource_packs')
+			break
+		case 'shader_packs':
+			await args.item.openFolder('shader_packs')
+			break
+		case 'saves':
+			await args.item.openFolder('saves')
+			break
+		case 'export':
+			await args.item.exportProfile()
+			break
+		case 'repair':
+			await args.item.repair(null)
 			break
 		case 'duplicate':
 			if (args.item.instance.install_stage == 'installed')
@@ -304,14 +330,20 @@ const filteredResults = computed(() => {
 		@proceed="deleteProfile"
 	/>
 	<ContextMenu ref="instanceOptions" @option-clicked="handleOptionsClick">
-		<template #play> <PlayIcon /> Play </template>
-		<template #stop> <StopCircleIcon /> Stop </template>
-		<template #add_content> <PlusIcon /> Add content </template>
-		<template #edit> <EyeIcon /> View instance </template>
-		<template #duplicate> <ClipboardCopyIcon /> Duplicate instance</template>
-		<template #delete> <TrashIcon /> Delete </template>
-		<template #open> <FolderOpenIcon /> Open folder </template>
-		<template #copy> <ClipboardCopyIcon /> Copy path </template>
+		<template #play> <PlayIcon /> Играть </template>
+		<template #stop> <StopCircleIcon /> Остановить </template>
+		<template #add_content> <PlusIcon /> Найти моды </template>
+		<template #settings> <EyeIcon /> Настройки сборки </template>
+		<template #mods> <PlusIcon /> Установленные моды </template>
+		<template #resource_packs> <FolderOpenIcon /> Текстуры </template>
+		<template #shader_packs> <FolderOpenIcon /> Шейдеры </template>
+		<template #saves> <FolderOpenIcon /> Миры </template>
+		<template #export> <ClipboardCopyIcon /> Экспорт </template>
+		<template #repair> <DownloadIcon /> Ремонт </template>
+		<template #duplicate> <ClipboardCopyIcon /> Дублировать</template>
+		<template #delete> <TrashIcon /> Удалить </template>
+		<template #open> <FolderOpenIcon /> Открыть папку </template>
+		<template #copy> <ClipboardCopyIcon /> Копировать путь </template>
 	</ContextMenu>
 </template>
 <style lang="scss" scoped>

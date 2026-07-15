@@ -1,119 +1,85 @@
-# 📘 Navigation
+<div align="center">
+  <img src="packages/assets/icons/blockera-logo.svg" width="112" alt="BlockEra Launcher">
 
-- [🔧 Install Instructions](#install-instructions)
-- [✨ Features](#features)
-- [🚀 Getting Started](#getting-started)
-- [⚠️ Disclaimer](#disclaimer)
-- [💰 Donate](#support-our-project-crypto-wallets)
+# BlockEra Launcher
 
-## Other languages
-> [Русский](readme/ru_ru/README.md)
+**Современный Minecraft-лаунчер для сборок, модов и персонализации игры.**
 
-## Support channel
-> [Telegram](https://me.astralium.su/ref/telegram_channel)
+[![Latest release](https://img.shields.io/github/v/release/dw1rf/BlockEra-Launcher?style=for-the-badge&color=9c42ef)](https://github.com/dw1rf/BlockEra-Launcher/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/dw1rf/BlockEra-Launcher/total?style=for-the-badge&color=6f2bd9)](https://github.com/dw1rf/BlockEra-Launcher/releases)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-171b2a?style=for-the-badge&logo=windows)](https://github.com/dw1rf/BlockEra-Launcher/releases/latest)
+[![License](https://img.shields.io/badge/license-GPL--3.0-171b2a?style=for-the-badge)](COPYING.md)
 
----
+### [⬇ Скачать BlockEra Launcher Setup.exe](https://github.com/dw1rf/BlockEra-Launcher/releases/latest/download/BlockEra.Launcher.Setup.exe)
 
-# About Project
+[Все релизы](https://github.com/dw1rf/BlockEra-Launcher/releases) · [Сообщить об ошибке](https://github.com/dw1rf/BlockEra-Launcher/issues/new) · [Предложить функцию](https://github.com/dw1rf/BlockEra-Launcher/discussions)
 
-## **AstralRinth • Empowering Your Minecraft Experience**
-
-**AstralRinth** — a powerful fork of Modrinth, reimagined to enhance your Minecraft journey. Whether you're a GUI enthusiast or a developer building with Modrinth’s API, **Theseus Core** is your launchpad into a new era of Minecraft gameplay.
-
-## **About the Software**
-
-**AstralRinth** is a dedicated branch of the Modrinth (a.k.a Theseus) project, focused on **offline authentication**, offering you more flexibility and control. Play Minecraft without the need for constant online verification — a user-first approach to modern modded gaming.
+</div>
 
 ---
 
-# Install Instructions
+## Возможности
 
-To install the launcher:
+- **Сборки в одном месте** — Fabric, Forge, NeoForge, Quilt и Vanilla.
+- **Каталог контента** — установка модов, текстур, шейдеров и датапаков прямо в выбранную сборку.
+- **Быстрые действия** — настройки, ремонт, экспорт и открытие нужных папок по правому клику.
+- **Аккаунты** — Microsoft, Ely.by и локальные offline-профили.
+- **Offline-скины** — отдельные скины Classic/Slim для каждого локального аккаунта.
+- **Управление Java** — автоматический подбор и загрузка подходящей версии среды.
+- **Приватность** — аналитика и персонализированная реклама выключены по умолчанию.
+- **Подписанные обновления** — проверка и установка новых версий через GitHub Releases.
 
-1. Visit the [releases page](https://git.astralium.su/didirus/AstralRinth/releases) to download the correct version for your system.
-2. Run the downloaded file or extract and launch it, depending on the format.
+## Интерфейс
 
-### Downloadable File Extensions
+### Каталог модов выбранной сборки
 
-| Extension | OS      | Notes                                                                 |
-| --------- | ------- | --------------------------------------------------------------------- |
-| `.msi`    | Windows | Supported on all recent Windows versions (10/11)                              |
-| `.dmg`    | macOS   | Works on Ventura, Sonoma, Sequoia, Tahoe _(may also support older versions)_ |
-| `.deb`    | Linux   | Basic support; compatibility may vary by distribution                 |
+![Каталог модов BlockEra Launcher](docs/screenshots/mods.png)
 
-### Installation Warnings
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/settings.png" alt="Настройки BlockEra Launcher"></td>
+    <td width="50%"><img src="docs/screenshots/instance-actions.png" alt="Быстрые действия сборки"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Настройки лаунчера</b></td>
+    <td align="center"><b>Действия со сборкой</b></td>
+  </tr>
+</table>
 
-Avoid using builds with these prefixes — they may be unstable or experimental:
+## Установка
 
-- `dev`
-- `nightly`
-- `dirty`
-- `dirty-dev`
-- `dirty-nightly`
-- `dirty_dev`
-- `dirty_nightly`
+1. Скачайте **BlockEra.Launcher.Setup.exe** со страницы [последнего релиза](https://github.com/dw1rf/BlockEra-Launcher/releases/latest).
+2. Запустите установщик и завершите установку для текущего пользователя.
+3. Откройте BlockEra Launcher и добавьте аккаунт.
 
----
+> Windows SmartScreen может показать предупреждение, пока установщик не подписан коммерческим EV/OV-сертификатом. Файлы автообновлений при этом защищены отдельной криптографической подписью Tauri.
 
-# Features
+## Автообновления без backend
 
-> _The launcher provides an opportunity to use the well-known Modrinth, but with an improved user experience._
+Отдельный сервер не нужен. GitHub Releases хранит `setup.exe`, файл `latest.json` и подпись обновления. Лаунчер автоматически проверяет последний релиз, но устанавливает его только после действия пользователя.
 
-## Included exclusive features
+Релизы собираются workflow-файлом [`.github/workflows/release.yml`](.github/workflows/release.yml). Подробная инструкция находится в [`docs/RELEASING.md`](docs/RELEASING.md).
 
-- No ads in the entire launcher.
-- Custom `.svg` vector icons for a distinct UI.
-- Improved compatibility with both licensed and pirate accounts.
-  - Use **official microsoft accounts** or **offline/pirate accounts**.
-  - Supports license-free access for testing or personal use.
-  - No dependence on official authentication services.
-- Discord Rich Presence integration:
-  - Dynamic status messages.
-  - In-game timer and AFK counter.
-- Strict disabling of statistics and other Modrinth metrics.
-- Optimized archive/package size.
-- Integrated update fetcher for seamless version management.
-  - Built-in update alerts for new versions posted on Git Astralium.
-  - Automatic download and installation capabilities.
-- Database migration fixes, when error occurred (Interactive Mode) (Modrinth issue)
-- Ely.by full integration
-  - The official account skin system is managed by ely.by
-  - Offline accounts must install AuthLib through the instance settings
+## Разработка
 
----
+Требуются Node.js из `.nvmrc`, pnpm 9, Rust stable, Java 17 и зависимости Tauri для вашей ОС.
 
-# Getting Started
+```bash
+pnpm install
+pnpm --filter=@modrinth/app-frontend run tsc:check
+pnpm --filter=@modrinth/app run tauri dev
+```
 
-To begin using AstralRinth:
+Production installer для Windows:
 
-1. **Download Latest Release**
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY="path-to-private-key"
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD="your-password"
+pnpm --filter=@modrinth/app run tauri build --bundles nsis --features updater
+```
 
-   - Go to the [releases page](https://git.astralium.su/didirus/AstralRinth/releases)
-   - [How to choose a file](#downloadable-file-extensions)
-   - [How to choose a release](#installation-warnings)
+## Происхождение и лицензия
 
-2. **Log in or create new offline account**
+BlockEra Launcher основан на открытом коде Modrinth App / Theseus и распространяется с соблюдением лицензий исходных компонентов. Проект не связан с Mojang Studios, Microsoft или Modrinth. Minecraft является товарным знаком Microsoft.
 
-   - Use your official Microsoft account (MSA), or test using a non-licensed account (Offline).
-
-3. **Launch Minecraft**
-   - Start Minecraft from the launcher.
-   - The launcher will auto-detect the recommended JVM version.
-   - You can also configure Java manually in the settings.
-
----
-
-# Disclaimer
-
-- **AstralRinth** is intended **solely for educational and experimental use**.
-- We **do not condone piracy** — users are encouraged to purchase a legitimate Minecraft license.
-- Respect all relevant licensing agreements and support Minecraft developers.
-
----
-
-# Support Our Project (Crypto Wallets)
-
-If you'd like to support development, you can donate via the following crypto wallets:
-
-- Toncoin (TON): UQA5pGOJhIz9UAVEOh5t2ur1QVbNr_FC1eq9bOb3GwTgaiqk
-- USDT (TON): UQA5pGOJhIz9UAVEOh5t2ur1QVbNr_FC1eq9bOb3GwTgaiqk
+Сведения о лицензиях и ограничениях на использование стороннего брендинга находятся в [`COPYING.md`](COPYING.md).

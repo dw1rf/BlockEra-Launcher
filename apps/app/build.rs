@@ -235,6 +235,7 @@ fn main() {
                         "should_disable_mouseover",
                         "highlight_in_folder",
                         "open_path",
+                        "open_profile_folder",
                         "show_launcher_logs_folder",
                         "progress_bars_list",
                         "get_opening_command",

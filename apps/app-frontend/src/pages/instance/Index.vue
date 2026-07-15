@@ -1,113 +1,49 @@
 <template>
-	<div>
-		<div
-			class="p-6 pr-2 pb-4"
+	<div v-if="instance" class="blockera-instance">
+		<section
+			class="instance-hero"
 			@contextmenu.prevent.stop="(event) => handleRightClick(event, instance.path)"
 		>
 			<ExportModal ref="exportModal" :instance="instance" />
 			<InstanceSettingsModal ref="settingsModal" :instance="instance" :offline="offline" />
-			<ContentPageHeader>
-				<template #icon>
-					<Avatar :src="icon" :alt="instance.name" size="96px" :tint-by="instance.path" />
-				</template>
-				<template #title>
-					{{ instance.name }}
-				</template>
-				<template #summary> </template>
-				<template #stats>
-					<div
-						class="flex items-center gap-2 font-semibold transform capitalize border-0 border-solid border-divider pr-4 md:border-r"
-					>
-						<GameIcon class="h-6 w-6 text-secondary" />
-						{{ instance.loader }} {{ instance.game_version }}
+			<div class="instance-hero-main">
+				<Avatar :src="icon" :alt="instance.name" size="88px" :tint-by="instance.path" />
+				<div class="instance-identity">
+					<span class="instance-eyebrow">ТЕКУЩАЯ СБОРКА</span>
+					<h1>{{ instance.name }}</h1>
+					<div class="instance-meta">
+						<span><GameIcon /> {{ instance.game_version }}</span>
+						<span class="capitalize">{{ instance.loader }}</span>
+						<span><TimerIcon /> {{ timePlayed > 0 ? timePlayedHumanized : 'Ещё не запускалась' }}</span>
 					</div>
-					<div class="flex items-center gap-2 font-semibold">
-						<TimerIcon class="h-6 w-6 text-secondary" />
-						<template v-if="timePlayed > 0">
-							{{ timePlayedHumanized }}
-						</template>
-						<template v-else> Never played </template>
-					</div>
-				</template>
-				<template #actions>
-					<div class="flex gap-2">
-						<ButtonStyled
-							v-if="
-								['installing', 'pack_installing', 'minecraft_installing'].includes(
-									instance.install_stage,
-								)
-							"
-							color="brand"
-							size="large"
-						>
-							<button disabled>Installing...</button>
-						</ButtonStyled>
-						<ButtonStyled
-							v-else-if="instance.install_stage !== 'installed'"
-							color="brand"
-							size="large"
-						>
-							<button @click="repairInstance()">
-								<DownloadIcon />
-								Repair
-							</button>
-						</ButtonStyled>
-						<ButtonStyled v-else-if="playing === true" color="red" size="large">
-							<button @click="stopInstance('InstancePage')">
-								<StopCircleIcon />
-								Stop
-							</button>
-						</ButtonStyled>
-						<ButtonStyled
-							v-else-if="playing === false && loading === false"
-							color="brand"
-							size="large"
-						>
-							<button @click="startInstance('InstancePage')">
-								<PlayIcon />
-								Play
-							</button>
-						</ButtonStyled>
-						<ButtonStyled
-							v-else-if="loading === true && playing === false"
-							color="brand"
-							size="large"
-						>
-							<button disabled>Loading...</button>
-						</ButtonStyled>
-						<ButtonStyled size="large" circular>
-							<button v-tooltip="'Instance settings'" @click="settingsModal.show()">
-								<SettingsIcon />
-							</button>
-						</ButtonStyled>
-						<ButtonStyled size="large" type="transparent" circular>
-							<OverflowMenu
-								:options="[
-									{
-										id: 'open-folder',
-										action: () => showProfileInFolder(instance.path),
-									},
-									{
-										id: 'export-mrpack',
-										action: () => $refs.exportModal.show(),
-									},
-								]"
-							>
-								<MoreVerticalIcon />
-								<template #share-instance> <UserPlusIcon /> Share instance </template>
-								<template #host-a-server> <ServerIcon /> Create a server </template>
-								<template #open-folder> <FolderOpenIcon /> Open folder </template>
-								<template #export-mrpack> <PackageIcon /> Export modpack </template>
-							</OverflowMenu>
-						</ButtonStyled>
-					</div>
-				</template>
-			</ContentPageHeader>
-		</div>
-		<div class="px-6">
-			<NavTabs :links="tabs" />
-		</div>
-		<div v-if="!!instance" class="p-6 pt-4">
+				</div>
+			</div>
+			<div class="instance-primary-actions">
+				<button
+					v-if="instance.install_stage !== 'installed'"
+					class="instance-play repair"
+					:disabled="repairing"
+					@click="repairInstance()"
+				><DownloadIcon /> {{ repairing ? 'Исправляем…' : 'Исправить сборку' }}</button>
+				<button v-else-if="playing" class="instance-play stop" @click="stopInstance('InstancePage')"><StopCircleIcon /> Остановить</button>
+				<button v-else class="instance-play" :disabled="loading" @click="startInstance('InstancePage')"><PlayIcon /> {{ loading ? 'Запуск…' : 'Играть' }}</button>
+				<button class="instance-icon-action" aria-label="Настройки сборки" @click="settingsModal.show()"><SettingsIcon /></button>
+				<button class="instance-icon-action" aria-label="Экспорт сборки" @click="$refs.exportModal.show()"><PackageIcon /></button>
+			</div>
+		</section>
+
+		<section class="instance-health-strip">
+			<div><span class="health-dot" :class="healthState.tone"></span><span><small>СОСТОЯНИЕ</small><strong>{{ healthState.label }}</strong></span></div>
+			<div><DownloadIcon /><span><small>ОБНОВЛЕНИЯ</small><strong>{{ updateSummary }}</strong></span></div>
+			<div><GameIcon /><span><small>JAVA</small><strong>{{ optimalJavaLabel }}</strong></span></div>
+			<div><PackageIcon /><span><small>БЭКАПЫ</small><strong>Перед важными действиями</strong></span></div>
+		</section>
+
+		<div class="instance-layout">
+			<main class="instance-content-card">
+				<nav class="instance-tabs" aria-label="Разделы сборки">
+					<router-link v-for="tab in tabs" :key="tab.href" :to="tab.href">{{ tab.label }}</router-link>
+				</nav>
 			<RouterView v-slot="{ Component }" :key="instance.path">
 				<template v-if="Component">
 					<Suspense
@@ -132,6 +68,18 @@
 					</Suspense>
 				</template>
 			</RouterView>
+			</main>
+			<aside class="instance-quick-panel">
+				<div class="quick-panel-heading"><span>БЫСТРЫЙ ДОСТУП</span><strong>Файлы сборки</strong></div>
+				<button v-for="folder in quickFolders" :key="folder.id" @click="openProfileFolder(instance.path, folder.id)">
+					<FolderOpenIcon /><span><strong>{{ folder.label }}</strong><small>{{ folder.description }}</small></span>
+				</button>
+				<button class="backup-toggle" @click="toggleAutomaticBackups">
+					<span class="toggle-indicator" :class="{ enabled: automaticBackups }"></span>
+					<span><strong>Автоматические бэкапы</strong><small>{{ automaticBackups ? 'Включены' : 'Выключены' }}</small></span>
+				</button>
+				<button class="quick-repair" :disabled="repairing" @click="repairInstance"><DownloadIcon /><span><strong>Проверить файлы</strong><small>Переустановить повреждённые компоненты</small></span></button>
+			</aside>
 		</div>
 		<ContextMenu ref="options" @option-clicked="handleOptionsClick">
 			<template #play> <PlayIcon /> Play </template>
@@ -149,9 +97,7 @@
 			<template #disable><XIcon />Disable selected</template>
 			<template #enable><CheckCircleIcon />Enable selected</template>
 			<template #hide_show><EyeIcon />Show/Hide unselected</template>
-			<template #update_all
-				><UpdatedIcon />Update {{ selected.length > 0 ? 'selected' : 'all' }}</template
-			>
+			<template #update_all><UpdatedIcon />Обновить выбранное</template>
 			<template #filter_update><UpdatedIcon />Select Updatable</template>
 		</ContextMenu>
 	</div>
@@ -168,26 +114,16 @@ import {
 	GameIcon,
 	GlobeIcon,
 	HashIcon,
-	MoreVerticalIcon,
 	PackageIcon,
 	PlayIcon,
 	PlusIcon,
-	ServerIcon,
 	SettingsIcon,
 	StopCircleIcon,
 	TimerIcon,
 	UpdatedIcon,
-	UserPlusIcon,
 	XIcon,
 } from '@modrinth/assets'
-import {
-	Avatar,
-	ButtonStyled,
-	ContentPageHeader,
-	injectNotificationManager,
-	LoadingIndicator,
-	OverflowMenu,
-} from '@modrinth/ui'
+import { Avatar, injectNotificationManager, LoadingIndicator } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
@@ -198,14 +134,19 @@ import { useRoute, useRouter } from 'vue-router'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import ExportModal from '@/components/ui/ExportModal.vue'
 import InstanceSettingsModal from '@/components/ui/modal/InstanceSettingsModal.vue'
-import NavTabs from '@/components/ui/NavTabs.vue'
 import { trackEvent } from '@/helpers/analytics'
+import {
+	automaticWorldBackupsEnabled,
+	backupProfileWorlds,
+	setAutomaticWorldBackups,
+} from '@/helpers/backups'
 import { get_project, get_version_many } from '@/helpers/cache.js'
 import { process_listener, profile_listener } from '@/helpers/events'
 import { get_by_profile_path } from '@/helpers/process'
-import { finish_install, get, get_full_path, kill, run } from '@/helpers/profile'
-import { showProfileInFolder } from '@/helpers/utils.js'
+import { finish_install, get, get_full_path, get_optimal_jre_key, kill, run } from '@/helpers/profile'
+import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
+import { useSelectedInstance } from '@/store/selected-instance'
 import { useBreadcrumbs, useLoading } from '@/store/state'
 
 dayjs.extend(duration)
@@ -216,6 +157,7 @@ const route = useRoute()
 
 const router = useRouter()
 const breadcrumbs = useBreadcrumbs()
+const selectedInstanceStore = useSelectedInstance()
 
 const offline = ref(!navigator.onLine)
 window.addEventListener('offline', () => {
@@ -229,9 +171,13 @@ const instance = ref()
 const modrinthVersions = ref([])
 const playing = ref(false)
 const loading = ref(false)
+const repairing = ref(false)
+const optimalJavaLabel = ref('Определяем…')
+const automaticBackups = ref(automaticWorldBackupsEnabled())
 
 async function fetchInstance() {
 	instance.value = await get(route.params.id).catch(handleError)
+	if (instance.value?.path) selectedInstanceStore.setSelectedInstance(instance.value.path)
 
 	if (!offline.value && instance.value.linked_data && instance.value.linked_data.project_id) {
 		get_project(instance.value.linked_data.project_id, 'must_revalidate')
@@ -250,6 +196,10 @@ async function fetchInstance() {
 	}
 
 	await updatePlayState()
+	const optimalJava = await get_optimal_jre_key(route.params.id).catch(() => null)
+	optimalJavaLabel.value = optimalJava
+		? `Java ${String(optimalJava).replace(/\D/g, '') || optimalJava}`
+		: 'Автоматический выбор'
 }
 
 async function updatePlayState() {
@@ -272,15 +222,15 @@ const basePath = computed(() => `/instance/${encodeURIComponent(route.params.id)
 
 const tabs = computed(() => [
 	{
-		label: 'Content',
+		label: 'Контент',
 		href: `${basePath.value}`,
 	},
 	{
-		label: 'Worlds',
+		label: 'Миры',
 		href: `${basePath.value}/worlds`,
 	},
 	{
-		label: 'Logs',
+		label: 'Логи',
 		href: `${basePath.value}/logs`,
 	},
 ])
@@ -331,8 +281,56 @@ const stopInstance = async (context) => {
 }
 
 const repairInstance = async () => {
+	if (repairing.value) return
+	repairing.value = true
+	if (automaticBackups.value) {
+		try {
+			const backup = await backupProfileWorlds(instance.value.path)
+			if (
+				backup.failures.length > 0 &&
+				!window.confirm(`Не удалось создать ${backup.failures.length} резервных копий. Продолжить ремонт без них?`)
+			) {
+				repairing.value = false
+				return
+			}
+		} catch {
+			if (!window.confirm('Не удалось создать резервные копии миров. Продолжить ремонт без них?')) {
+				repairing.value = false
+				return
+			}
+		}
+	}
 	await finish_install(instance.value).catch(handleError)
+	repairing.value = false
 }
+
+function toggleAutomaticBackups() {
+	automaticBackups.value = !automaticBackups.value
+	setAutomaticWorldBackups(automaticBackups.value)
+}
+
+const quickFolders = [
+	{ id: 'root', label: 'Корень сборки', description: 'Все файлы профиля' },
+	{ id: 'mods', label: 'Моды', description: 'Установленные модификации' },
+	{ id: 'resource_packs', label: 'Текстуры', description: 'Наборы ресурсов' },
+	{ id: 'shader_packs', label: 'Шейдеры', description: 'Графические наборы' },
+	{ id: 'saves', label: 'Миры', description: 'Сохранения Minecraft' },
+	{ id: 'backups', label: 'Резервные копии', description: 'Архивы миров' },
+]
+
+const healthState = computed(() => {
+	if (offline.value) return { label: 'Офлайн-режим', tone: 'warning' }
+	if (instance.value?.install_stage !== 'installed') return { label: 'Требуется ремонт', tone: 'danger' }
+	return { label: 'Готова к запуску', tone: 'success' }
+})
+
+const updateSummary = computed(() => {
+	if (offline.value) return 'Проверка недоступна'
+	if (instance.value?.linked_data && modrinthVersions.value[0]?.id !== instance.value.linked_data.version_id) {
+		return 'Доступна новая версия'
+	}
+	return 'Всё актуально'
+})
 
 const handleRightClick = (event) => {
 	const baseOptions = [
@@ -417,6 +415,19 @@ const icon = computed(() =>
 )
 
 const settingsModal = ref()
+const exportModal = ref()
+
+watch(
+	() => route.query.action,
+	async (action) => {
+		if (!action) return
+		await new Promise((resolve) => setTimeout(resolve, 0))
+		if (action === 'settings') settingsModal.value?.show()
+		if (action === 'export') exportModal.value?.show()
+		await router.replace({ path: route.path, query: {} })
+	},
+	{ immediate: true, flush: 'post' },
+)
 
 const timePlayed = computed(() => {
 	return instance.value.recent_time_played + instance.value.submitted_time_played
@@ -426,16 +437,16 @@ const timePlayedHumanized = computed(() => {
 	const duration = dayjs.duration(timePlayed.value, 'seconds')
 	const hours = Math.floor(duration.asHours())
 	if (hours >= 1) {
-		return hours + ' hour' + (hours > 1 ? 's' : '')
+		return `${hours} ч.`
 	}
 
 	const minutes = Math.floor(duration.asMinutes())
 	if (minutes >= 1) {
-		return minutes + ' minute' + (minutes > 1 ? 's' : '')
+		return `${minutes} мин.`
 	}
 
 	const seconds = Math.floor(duration.asSeconds())
-	return seconds + ' second' + (seconds > 1 ? 's' : '')
+	return `${seconds} сек.`
 })
 
 onUnmounted(() => {
@@ -639,5 +650,140 @@ Button {
 			display: none;
 		}
 	}
+}
+
+.blockera-instance {
+	min-height: 100%;
+	padding: 22px 28px 34px;
+	box-sizing: border-box;
+	color: #f8f7fc;
+	background:
+		radial-gradient(circle at 16% -10%, rgba(118, 50, 211, .18), transparent 31rem),
+		linear-gradient(180deg, #090d16 0%, #0b111b 100%);
+}
+
+.instance-hero {
+	position: relative;
+	padding: 25px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	background: linear-gradient(125deg, rgba(21, 27, 39, .98), rgba(17, 18, 31, .96));
+	border: 1px solid rgba(171, 91, 255, .26);
+	border-radius: 20px;
+	box-shadow: 0 24px 55px rgba(0, 0, 0, .26);
+	overflow: hidden;
+
+	&::after {
+		content: '';
+		position: absolute;
+		width: 360px;
+		height: 220px;
+		right: -90px;
+		top: -100px;
+		background: radial-gradient(circle, rgba(151, 63, 241, .23), transparent 68%);
+		pointer-events: none;
+	}
+}
+
+.instance-hero-main,
+.instance-primary-actions,
+.instance-meta,
+.instance-health-strip > div,
+.instance-quick-panel button { display: flex; align-items: center; }
+.instance-hero-main { min-width: 0; gap: 17px; position: relative; z-index: 1; }
+.instance-identity { min-width: 0; }
+.instance-eyebrow { color: #c47cff; font-size: 10px; font-weight: 850; letter-spacing: .13em; }
+.instance-identity h1 { max-width: 620px; margin: 5px 0 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(28px, 3vw, 42px); line-height: 1; }
+.instance-meta { flex-wrap: wrap; gap: 8px; }
+.instance-meta span { min-height: 27px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; color: #c4c7d0; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.075); border-radius: 9px; font-size: 12px; }
+.instance-meta svg { width: 14px; height: 14px; color: #be72ff; }
+.instance-primary-actions { position: relative; z-index: 1; gap: 9px; }
+.instance-play,
+.instance-icon-action {
+	width: auto !important;
+	height: 46px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 9px;
+	color: white;
+	border: 1px solid rgba(255,255,255,.1);
+	border-radius: 12px;
+	cursor: pointer;
+	transition: transform 170ms ease, filter 170ms ease, border-color 170ms ease;
+}
+.instance-play { min-width: 154px; padding: 0 21px; background: linear-gradient(135deg, #8d35ef, #6520c8); font-size: 15px; font-weight: 800; box-shadow: 0 13px 28px rgba(108, 34, 209, .26); }
+.instance-play.stop { background: linear-gradient(135deg, #d83c67, #9d2448); }
+.instance-play.repair { background: linear-gradient(135deg, #a347ec, #6b27c4); }
+.instance-icon-action { width: 46px !important; padding: 0; background: rgba(255,255,255,.055); }
+.instance-play:hover:not(:disabled), .instance-icon-action:hover { transform: translateY(-1px); filter: brightness(1.12); border-color: rgba(196,119,255,.5); }
+.instance-play:disabled { opacity: .58; cursor: wait; }
+.instance-play svg, .instance-icon-action svg { width: 19px; height: 19px; }
+
+.instance-health-strip {
+	margin: 13px 0;
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	background: rgba(16, 22, 33, .84);
+	border: 1px solid rgba(255,255,255,.07);
+	border-radius: 16px;
+	overflow: hidden;
+}
+.instance-health-strip > div { min-width: 0; gap: 10px; padding: 14px 16px; border-right: 1px solid rgba(255,255,255,.065); }
+.instance-health-strip > div:last-child { border-right: 0; }
+.instance-health-strip svg { width: 19px; color: #af63f6; }
+.instance-health-strip span:not(.health-dot) { min-width: 0; display: flex; flex-direction: column; }
+.instance-health-strip small { color: #777e8e; font-size: 9px; font-weight: 800; letter-spacing: .11em; }
+.instance-health-strip strong { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.health-dot { width: 10px; height: 10px; border-radius: 999px; box-shadow: 0 0 12px currentColor; }
+.health-dot.success { color: #55d489; background: currentColor; }
+.health-dot.warning { color: #f0b45d; background: currentColor; }
+.health-dot.danger { color: #ff6688; background: currentColor; }
+
+.instance-layout { display: grid; grid-template-columns: minmax(0, 1fr) 268px; gap: 13px; align-items: start; }
+.instance-content-card,
+.instance-quick-panel { background: rgba(14, 20, 30, .88); border: 1px solid rgba(255,255,255,.075); border-radius: 18px; }
+.instance-content-card { min-width: 0; padding: 0 18px 18px; overflow: hidden; }
+.instance-tabs { margin: 0 -18px 18px; padding: 0 18px; display: flex; gap: 6px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.instance-tabs a { position: relative; padding: 16px 14px 14px; color: #8f96a5; text-decoration: none; font-size: 13px; font-weight: 750; }
+.instance-tabs a.router-link-exact-active { color: #f7eeff; }
+.instance-tabs a.router-link-exact-active::after { content: ''; position: absolute; height: 2px; left: 12px; right: 12px; bottom: -1px; background: #a94fff; box-shadow: 0 0 12px #9a3eef; }
+.instance-quick-panel { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.quick-panel-heading { padding: 5px 5px 10px; display: flex; flex-direction: column; }
+.quick-panel-heading span { color: #aa65ed; font-size: 9px; font-weight: 850; letter-spacing: .13em; }
+.quick-panel-heading strong { margin-top: 2px; font-size: 16px; }
+.instance-quick-panel button { width: 100%; padding: 10px; gap: 10px; color: #eef0f5; text-align: left; background: rgba(255,255,255,.032); border: 1px solid transparent; border-radius: 11px; cursor: pointer; transition: background 160ms ease, border-color 160ms ease; }
+.instance-quick-panel button:hover { background: rgba(149,72,231,.12); border-color: rgba(175,96,255,.25); }
+.instance-quick-panel button > svg { width: 18px; color: #a95af2; }
+.instance-quick-panel button span { min-width: 0; display: flex; flex-direction: column; }
+.instance-quick-panel button strong { font-size: 12px; }
+.instance-quick-panel button small { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #868d9c; font-size: 10px; }
+.instance-quick-panel .quick-repair { margin-top: 5px; color: #e8d2ff; background: rgba(139,59,218,.1); border-color: rgba(176,89,255,.18); }
+.instance-quick-panel .backup-toggle { margin-top: 5px; }
+.toggle-indicator { width: 30px; height: 17px; flex: 0 0 auto; position: relative; background: #313746; border-radius: 999px; transition: background 160ms ease; }
+.toggle-indicator::after { content: ''; position: absolute; width: 11px; height: 11px; left: 3px; top: 3px; background: #a4a9b5; border-radius: 50%; transition: transform 160ms ease, background 160ms ease; }
+.toggle-indicator.enabled { background: rgba(151,65,238,.58); }
+.toggle-indicator.enabled::after { transform: translateX(13px); background: #e8cfff; }
+
+@media (max-width: 1120px) {
+	.instance-hero { align-items: flex-start; flex-direction: column; }
+	.instance-health-strip { grid-template-columns: repeat(2, 1fr); }
+	.instance-layout { grid-template-columns: 1fr; }
+	.instance-quick-panel { display: grid; grid-template-columns: repeat(2, 1fr); }
+	.quick-panel-heading { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+	.blockera-instance { padding: 14px; }
+	.instance-hero-main { align-items: flex-start; }
+	.instance-health-strip { grid-template-columns: 1fr; }
+	.instance-health-strip > div { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.065); }
+	.instance-quick-panel { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.instance-play, .instance-icon-action, .instance-quick-panel button { transition-duration: 1ms !important; }
 }
 </style>

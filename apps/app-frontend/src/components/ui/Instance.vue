@@ -17,10 +17,12 @@ import { trackEvent } from '@/helpers/analytics'
 import { process_listener } from '@/helpers/events'
 import { get_by_profile_path } from '@/helpers/process'
 import { finish_install, kill, run } from '@/helpers/profile'
-import { showProfileInFolder } from '@/helpers/utils.js'
+import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
+import { useSelectedInstance } from '@/store/selected-instance'
 
 const { handleError } = injectNotificationManager()
+const selectedInstanceStore = useSelectedInstance()
 const formatRelativeTime = useRelativeTime()
 
 const props = defineProps({
@@ -54,6 +56,7 @@ const installed = computed(() => props.instance.install_stage === 'installed')
 const router = useRouter()
 
 const seeInstance = async () => {
+	selectedInstanceStore.setSelectedInstance(props.instance.path)
 	await router.push(`/instance/${encodeURIComponent(props.instance.path)}`)
 }
 
@@ -65,6 +68,7 @@ const checkProcess = async () => {
 
 const play = async (e, context) => {
 	e?.stopPropagation()
+	selectedInstanceStore.setSelectedInstance(props.instance.path)
 	loading.value = true
 	await run(props.instance.path)
 		.catch((err) => handleSevereError(err, { profilePath: props.instance.path }))
@@ -97,8 +101,28 @@ const repair = async (e) => {
 	await finish_install(props.instance).catch(handleError)
 }
 
-const openFolder = async () => {
-	await showProfileInFolder(props.instance.path)
+const openFolder = async (folder = 'root') => {
+	if (folder === 'root') await showProfileInFolder(props.instance.path)
+	else await openProfileFolder(props.instance.path, folder)
+}
+
+const openContent = async (type = '') => {
+	const suffix = type ? `/projects/${type}` : ''
+	await router.push(`/instance/${encodeURIComponent(props.instance.path)}${suffix}`)
+}
+
+const openSettings = async () => {
+	await router.push({
+		path: `/instance/${encodeURIComponent(props.instance.path)}`,
+		query: { action: 'settings' },
+	})
+}
+
+const exportProfile = async () => {
+	await router.push({
+		path: `/instance/${encodeURIComponent(props.instance.path)}`,
+		query: { action: 'export' },
+	})
 }
 
 const addContent = async () => {
@@ -113,6 +137,10 @@ defineExpose({
 	stop,
 	seeInstance,
 	openFolder,
+	openContent,
+	openSettings,
+	exportProfile,
+	repair,
 	addContent,
 	instance: props.instance,
 })

@@ -2,10 +2,11 @@
 	<!-- eslint-disable vue/no-undef-components -->
 	<div ref="skinPreviewContainer" class="relative w-full h-full cursor-grab" @click="onCanvasClick">
 		<div
+			v-if="hint"
 			class="absolute bottom-[18%] left-0 right-0 flex flex-col justify-center items-center mb-2 pointer-events-none z-10 gap-2"
 		>
 			<span class="text-primary text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-				Drag to rotate
+				{{ hint }}
 			</span>
 		</div>
 		<div
@@ -144,6 +145,7 @@ const props = withDefaults(
 		fov?: number
 		initialRotation?: number
 		animationConfig?: AnimationConfig
+		hint?: string | null
 	}>(),
 	{
 		variant: 'CLASSIC',
@@ -152,6 +154,7 @@ const props = withDefaults(
 		capeSrc: undefined,
 		initialRotation: 15.75,
 		nametag: undefined,
+		hint: 'Drag to rotate',
 		animationConfig: () => ({
 			baseAnimation: 'idle',
 			randomAnimations: ['idle_sub_1', 'idle_sub_2', 'idle_sub_3'],

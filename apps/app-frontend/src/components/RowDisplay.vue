@@ -22,8 +22,8 @@ import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
 import ProjectCard from '@/components/ui/ProjectCard.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_by_profile_path } from '@/helpers/process.js'
-import { duplicate, kill, remove, run } from '@/helpers/profile.js'
-import { showProfileInFolder } from '@/helpers/utils.js'
+import { duplicate, finish_install, kill, remove, run } from '@/helpers/profile.js'
+import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
 import { install as installVersion } from '@/store/install.js'
 
@@ -73,7 +73,14 @@ const handleInstanceRightClick = async (event, passedInstance) => {
 	const baseOptions = [
 		{ name: 'add_content' },
 		{ type: 'divider' },
-		{ name: 'edit' },
+		{ name: 'settings' },
+		{ name: 'mods' },
+		{ name: 'resource_packs' },
+		{ name: 'shader_packs' },
+		{ name: 'saves' },
+		{ name: 'export' },
+		{ name: 'repair' },
+		{ type: 'divider' },
 		{ name: 'duplicate' },
 		{ name: 'open_folder' },
 		{ name: 'copy_path' },
@@ -146,10 +153,28 @@ const handleOptionsClick = async (args) => {
 				query: { i: args.item.path },
 			})
 			break
-		case 'edit':
+		case 'settings':
 			await router.push({
-				path: `/instance/${encodeURIComponent(args.item.path)}/`,
+				path: `/instance/${encodeURIComponent(args.item.path)}`,
+				query: { action: 'settings' },
 			})
+			break
+		case 'mods':
+			await router.push(`/instance/${encodeURIComponent(args.item.path)}/projects/mod`)
+			break
+		case 'resource_packs':
+		case 'shader_packs':
+		case 'saves':
+			await openProfileFolder(args.item.path, args.option)
+			break
+		case 'export':
+			await router.push({
+				path: `/instance/${encodeURIComponent(args.item.path)}`,
+				query: { action: 'export' },
+			})
+			break
+		case 'repair':
+			await finish_install(args.item).catch(handleError)
 			break
 		case 'duplicate':
 			if (args.item.install_stage == 'installed') await duplicateProfile(args.item.path)
@@ -282,14 +307,20 @@ onUnmounted(() => {
 		</div>
 	</div>
 	<ContextMenu ref="instanceOptions" @option-clicked="handleOptionsClick">
-		<template #play> <PlayIcon /> Play </template>
-		<template #stop> <StopCircleIcon /> Stop </template>
-		<template #add_content> <PlusIcon /> Add content </template>
-		<template #edit> <EyeIcon /> View instance </template>
-		<template #delete> <TrashIcon /> Delete </template>
-		<template #open_folder> <FolderOpenIcon /> Open folder </template>
-		<template #duplicate> <ClipboardCopyIcon /> Duplicate instance</template>
-		<template #copy_path> <ClipboardCopyIcon /> Copy path </template>
+		<template #play> <PlayIcon /> Играть </template>
+		<template #stop> <StopCircleIcon /> Остановить </template>
+		<template #add_content> <PlusIcon /> Найти моды </template>
+		<template #settings> <EyeIcon /> Настройки сборки </template>
+		<template #mods> <PlusIcon /> Установленные моды </template>
+		<template #resource_packs> <FolderOpenIcon /> Текстуры </template>
+		<template #shader_packs> <FolderOpenIcon /> Шейдеры </template>
+		<template #saves> <FolderOpenIcon /> Миры </template>
+		<template #export> <ClipboardCopyIcon /> Экспорт </template>
+		<template #repair> <DownloadIcon /> Ремонт </template>
+		<template #delete> <TrashIcon /> Удалить </template>
+		<template #open_folder> <FolderOpenIcon /> Открыть папку </template>
+		<template #duplicate> <ClipboardCopyIcon /> Дублировать</template>
+		<template #copy_path> <ClipboardCopyIcon /> Копировать путь </template>
 		<template #install> <DownloadIcon /> Install </template>
 		<template #open_link> <GlobeIcon /> Open in Modrinth <ExternalIcon /> </template>
 		<template #copy_link> <ClipboardCopyIcon /> Copy link </template>

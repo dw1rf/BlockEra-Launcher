@@ -46,6 +46,10 @@ export async function openPath(path) {
 	return await invoke('plugin:utils|open_path', { path })
 }
 
+export async function openProfileFolder(profilePath, folder = 'root') {
+	return await invoke('plugin:utils|open_profile_folder', { profilePath, folder })
+}
+
 export async function highlightInFolder(path) {
 	return await invoke('plugin:utils|highlight_in_folder', { path })
 }
