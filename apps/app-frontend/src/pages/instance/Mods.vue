@@ -379,6 +379,7 @@ const exportModal = ref(null)
 const projects = ref<ProjectListEntry[]>([])
 const loadingProjects = ref(true)
 const projectsError = ref('')
+const PROJECTS_TIMEOUT_MS = 15_000
 const selectedFiles = ref<string[]>([])
 const selectedProjects = computed(() =>
 	projects.value.filter((x) => selectedFiles.value.includes(x.file_name)),
@@ -386,7 +387,7 @@ const selectedProjects = computed(() =>
 
 const selectionMap = ref(new Map())
 
-const initProjects = async (cacheBehaviour?: CacheBehaviour) => {
+const initProjects = async (cacheBehaviour?: CacheBehaviour, request?: { active: boolean }) => {
 	const newProjects: ProjectListEntry[] = []
 
 	const profileProjects = ((await get_projects(props.instance.path, cacheBehaviour)) ??
@@ -493,6 +494,8 @@ const initProjects = async (cacheBehaviour?: CacheBehaviour) => {
 		})
 	}
 
+	if (request && !request.active) return
+
 	projects.value = newProjects ?? []
 
 	const newSelectionMap = new Map()
@@ -518,16 +521,35 @@ function getProjectsErrorMessage(error: unknown) {
 	}
 }
 
+let activeProjectsRequest: { active: boolean } | null = null
+
 async function loadProjects(cacheBehaviour?: CacheBehaviour) {
+	if (activeProjectsRequest) activeProjectsRequest.active = false
+	const request = { active: true }
+	activeProjectsRequest = request
+	let timeoutId: ReturnType<typeof setTimeout> | undefined
 	loadingProjects.value = true
 	projectsError.value = ''
 	try {
-		await initProjects(cacheBehaviour)
+		await Promise.race([
+			initProjects(cacheBehaviour, request),
+			new Promise<never>(
+				(_, reject) =>
+					(timeoutId = setTimeout(
+						() => reject(new Error('Анализ файлов сборки не завершился за 15 секунд.')),
+						PROJECTS_TIMEOUT_MS,
+					)),
+			),
+		])
 	} catch (error) {
-		projectsError.value = getProjectsErrorMessage(error)
-		console.error('Не удалось загрузить контент сборки:', error)
+		request.active = false
+		if (activeProjectsRequest === request) {
+			projectsError.value = getProjectsErrorMessage(error)
+			console.error('Не удалось загрузить контент сборки:', error)
+		}
 	} finally {
-		loadingProjects.value = false
+		if (timeoutId) clearTimeout(timeoutId)
+		if (activeProjectsRequest === request) loadingProjects.value = false
 	}
 }
 

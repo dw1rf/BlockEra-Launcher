@@ -140,6 +140,7 @@ impl State {
 
         tracing::info!("Fetching app settings");
         let mut settings = Settings::get(&pool).await?;
+        DirectoryInfo::normalize_legacy_launcher_directory(&mut settings);
 
         let fetch_semaphore =
             FetchSemaphore(Semaphore::new(settings.max_concurrent_downloads));

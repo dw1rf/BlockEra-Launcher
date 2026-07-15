@@ -231,7 +231,7 @@ const loading = ref(true)
 type SearchState = 'idle' | 'loading' | 'success' | 'error'
 const searchState = ref<SearchState>('idle')
 const searchError = ref('')
-const SEARCH_TIMEOUT_MS = 20_000
+const SEARCH_TIMEOUT_MS = 15_000
 
 const projectType = ref(route.params.projectType)
 
@@ -355,8 +355,9 @@ async function refreshSearch() {
 	searchState.value = 'loading'
 	searchError.value = ''
 	try {
-		await syncSearchRoute()
-		if (requestId !== searchRequestId) return
+		void syncSearchRoute().catch((error) => {
+			console.warn('Не удалось синхронизировать адрес каталога:', error)
+		})
 		const rawResults = await withSearchTimeout(get_search_results(requestParams.value))
 		if (requestId !== searchRequestId) return
 		const normalizedResults = rawResults?.result ?? {

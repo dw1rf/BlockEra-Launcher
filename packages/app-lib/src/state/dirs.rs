@@ -57,6 +57,40 @@ impl DirectoryInfo {
         })
     }
 
+    pub fn normalize_legacy_launcher_directory(settings: &mut Settings) {
+        let Some(app_dir) = Self::get_initial_settings_dir() else {
+            return;
+        };
+        let Some(config_dir) =
+            settings.custom_dir.as_deref().map(PathBuf::from)
+        else {
+            return;
+        };
+
+        if config_dir == app_dir {
+            return;
+        }
+
+        let Some(data_dir) = dirs::data_dir() else {
+            return;
+        };
+        let legacy_directories = [
+            data_dir.join("LLauncherApp"),
+            data_dir.join("AstralRinthApp"),
+        ];
+
+        if legacy_directories.iter().any(|path| *path == config_dir) {
+            tracing::info!(
+                "Migrating legacy launcher directory {} to {}",
+                config_dir.display(),
+                app_dir.display()
+            );
+            settings.prev_custom_dir =
+                Some(config_dir.to_string_lossy().to_string());
+            settings.custom_dir = Some(app_dir.to_string_lossy().to_string());
+        }
+    }
+
     /// Get the Minecraft instance metadata directory
     #[inline]
     pub fn metadata_dir(&self) -> PathBuf {
@@ -282,6 +316,13 @@ impl DirectoryInfo {
                     {
                         let relative_path = entry_path.strip_prefix(source)?;
                         let new_path = destination.join(relative_path);
+                        if new_path.exists() {
+                            tracing::warn!(
+                                "Keeping existing file while merging launcher directories: {}",
+                                new_path.display()
+                            );
+                            continue;
+                        }
                         let path_size =
                             entry_path.metadata().map(|x| x.len()).unwrap_or(0);
 

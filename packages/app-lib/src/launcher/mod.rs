@@ -161,9 +161,21 @@ pub async fn get_java_version_from_profile(
 
     let state = State::get().await?;
 
-    let java_version = JavaVersion::get(key, &state.pool).await?;
+    let Some(java_version) = JavaVersion::get(key, &state.pool).await? else {
+        return Ok(None);
+    };
 
-    Ok(java_version)
+    match crate::api::jre::check_jre(java_version.path.clone().into()).await {
+        Ok(java_version) => Ok(Some(java_version)),
+        Err(error) => {
+            tracing::warn!(
+                "Ignoring missing or invalid Java {} installation at {}: {error}",
+                key,
+                java_version.path
+            );
+            Ok(None)
+        }
+    }
 }
 
 pub async fn get_loader_version_from_profile(

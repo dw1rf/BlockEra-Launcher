@@ -959,6 +959,10 @@ impl Profile {
             }
         }
 
+        if keys.is_empty() {
+            return Ok(DashMap::new());
+        }
+
         let file_hashes = CachedEntry::get_file_hash_many(
             &keys.iter().map(|s| &*s.cache_key).collect::<Vec<_>>(),
             None,
