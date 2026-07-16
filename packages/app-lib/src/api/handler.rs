@@ -14,6 +14,16 @@ use crate::{
 /// (Does not include modrinth://)
 pub async fn handle_url(sublink: &str) -> crate::Result<CommandPayload> {
     Ok(match sublink.split_once('/') {
+        // /profile/{path} - Launches an installed profile from a desktop shortcut
+        Some(("profile", encoded_path)) => CommandPayload::LaunchProfile {
+            path: urlencoding::decode(encoded_path)
+                .map_err(|error| {
+                    crate::ErrorKind::InputError(format!(
+                        "Invalid profile path in launch command: {error}"
+                    ))
+                })?
+                .into_owned(),
+        },
         // /mod/{id}   -    Installs a mod of mod id
         Some(("mod", id)) => CommandPayload::InstallMod { id: id.to_string() },
         // /version/{id}   -    Installs a specific version of id

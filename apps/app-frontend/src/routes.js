@@ -75,6 +75,16 @@ export default new createRouter({
 					name: 'Custom',
 					component: Library.Custom,
 				},
+				{
+					path: 'recommended',
+					name: 'RecommendedPacks',
+					component: Library.Recommended,
+				},
+				{
+					path: 'recommended/:slug',
+					name: 'RecommendedPack',
+					component: Library.RecommendedPack,
+				},
 			],
 		},
 		{

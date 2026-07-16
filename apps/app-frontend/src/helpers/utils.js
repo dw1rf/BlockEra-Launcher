@@ -2,6 +2,14 @@ import { invoke } from '@tauri-apps/api/core'
 
 import { get_full_path, get_mod_full_path } from '@/helpers/profile'
 
+export async function createDesktopShortcut(profilePath, profileName) {
+	return await invoke('plugin:utils|create_desktop_shortcut', { profilePath, profileName })
+}
+
+export async function saveCustomBackground(sourcePath, scope) {
+	return await invoke('plugin:utils|save_custom_background', { sourcePath, scope })
+}
+
 export async function isDev() {
 	return await invoke('is_dev')
 }
@@ -29,13 +37,18 @@ export async function getOS() {
 
 // This code is modified by AstralRinth
 export async function initUpdateLauncher(downloadUrl, filename, osType, autoUpdateSupported) {
-  console.log('Downloading build', downloadUrl, filename, osType, autoUpdateSupported)
-  return await invoke('plugin:utils|init_update_launcher', { downloadUrl, filename, osType, autoUpdateSupported })
+	console.log('Downloading build', downloadUrl, filename, osType, autoUpdateSupported)
+	return await invoke('plugin:utils|init_update_launcher', {
+		downloadUrl,
+		filename,
+		osType,
+		autoUpdateSupported,
+	})
 }
 
 // This code is modified by AstralRinth
 export async function applyMigrationFix(eol) {
-  return await invoke('plugin:utils|apply_migration_fix', { eol })
+	return await invoke('plugin:utils|apply_migration_fix', { eol })
 }
 
 export async function isNetworkMetered() {

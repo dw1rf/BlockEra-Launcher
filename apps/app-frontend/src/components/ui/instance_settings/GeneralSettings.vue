@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { CopyIcon, EditIcon, PlusIcon, SpinnerIcon, TrashIcon, UploadIcon } from '@modrinth/assets'
+import {
+	CopyIcon,
+	EditIcon,
+	MonitorIcon,
+	PlusIcon,
+	SpinnerIcon,
+	TrashIcon,
+	UploadIcon,
+} from '@modrinth/assets'
 import {
 	Avatar,
 	ButtonStyled,
@@ -14,9 +22,11 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { computed, type Ref, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import BackgroundPicker from '@/components/ui/BackgroundPicker.vue'
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { duplicate, edit, edit_icon, list, remove } from '@/helpers/profile'
+import { createDesktopShortcut } from '@/helpers/utils'
 
 import type { GameInstance, InstanceSettingsTabProps } from '../../../helpers/types'
 
@@ -33,6 +43,8 @@ const icon: Ref<string | undefined> = ref(props.instance.icon_path)
 const groups = ref(props.instance.groups)
 
 const newCategoryInput = ref('')
+const shortcutPending = ref(false)
+const shortcutCreated = ref(false)
 
 const installing = computed(() => props.instance.install_stage !== 'installed')
 
@@ -42,6 +54,19 @@ async function duplicateProfile() {
 		loader: props.instance.loader,
 		game_version: props.instance.game_version,
 	})
+}
+
+async function addDesktopShortcut() {
+	shortcutPending.value = true
+	shortcutCreated.value = false
+	try {
+		await createDesktopShortcut(props.instance.path, props.instance.name)
+		shortcutCreated.value = true
+	} catch (error) {
+		handleError(error)
+	} finally {
+		shortcutPending.value = false
+	}
 }
 
 const allInstances = ref((await list()) as GameInstance[])
@@ -274,6 +299,30 @@ const messages = defineMessages({
 					@click="duplicateProfile"
 				>
 					<CopyIcon /> {{ formatMessage(messages.duplicateButton) }}
+				</button>
+			</ButtonStyled>
+		</template>
+		<h2 class="m-0 mt-4 mb-1 text-lg font-extrabold text-contrast block">Фон сборки</h2>
+		<p class="m-0 mb-2">
+			Выбранный кадр используется на главной странице и в карточках этой сборки.
+		</p>
+		<BackgroundPicker :scope="`instance:${props.instance.path}`" label="Выбрать фон сборки" />
+		<template v-if="instance.install_stage == 'installed'">
+			<h2 class="m-0 mt-4 mb-1 text-lg font-extrabold text-contrast block">Быстрый запуск</h2>
+			<p class="m-0 mb-2">
+				Создайте ярлык на рабочем столе. Он откроет BlockEra Launcher и сразу запустит эту сборку.
+			</p>
+			<ButtonStyled>
+				<button :disabled="shortcutPending" @click="addDesktopShortcut">
+					<SpinnerIcon v-if="shortcutPending" class="animate-spin" />
+					<MonitorIcon v-else />
+					{{
+						shortcutCreated
+							? 'Ярлык создан'
+							: shortcutPending
+								? 'Создаём ярлык…'
+								: 'Добавить на рабочий стол'
+					}}
 				</button>
 			</ButtonStyled>
 		</template>

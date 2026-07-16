@@ -210,6 +210,9 @@ pub struct InfoPayload {
 #[derive(Serialize, Clone)]
 #[serde(tag = "event")]
 pub enum CommandPayload {
+    LaunchProfile {
+        path: String,
+    },
     InstallMod {
         id: String,
     },
