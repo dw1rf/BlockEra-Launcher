@@ -10,7 +10,7 @@
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-171b2a?style=for-the-badge&logo=windows)](https://github.com/dw1rf/BlockEra-Launcher/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL--3.0-171b2a?style=for-the-badge)](COPYING.md)
 
-### [⬇ Скачать BlockEra Launcher Setup.exe](https://github.com/dw1rf/BlockEra-Launcher/releases/latest/download/BlockEra.Launcher.Setup.exe)
+### [⬇ Скачать BlockEra Launcher Setup.exe](https://github.com/dw1rf/BlockEra-Launcher/releases)
 
 [Все релизы](https://github.com/dw1rf/BlockEra-Launcher/releases) · [Сообщить об ошибке](https://github.com/dw1rf/BlockEra-Launcher/issues/new) · [Предложить функцию](https://github.com/dw1rf/BlockEra-Launcher/discussions)
 
