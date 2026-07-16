@@ -8,6 +8,13 @@ export type ReleaseNote = {
 
 export const releaseNotes: ReleaseNote[] = [
 	{
+		version: '0.10.2717',
+		date: '17 июля 2026',
+		highlights: ['Добавлена интеграция Discord Rich Presence для BlockEra Launcher.'],
+		fixes: [],
+		improvements: [],
+	},
+	{
 		version: '0.10.2716',
 		date: '17 июля 2026',
 		highlights: [],
