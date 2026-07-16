@@ -14,9 +14,10 @@ import {
 	useSearch,
 	useVIntl,
 } from '@modrinth/ui'
+import { fetch as httpFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import type { Ref } from 'vue'
-import { computed, nextTick, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import type { LocationQuery } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -25,7 +26,6 @@ import type Instance from '@/components/ui/Instance.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import NavTabs from '@/components/ui/NavTabs.vue'
 import SearchCard from '@/components/ui/SearchCard.vue'
-import { get_search_results } from '@/helpers/cache.js'
 import { get as getInstance, get_projects as getInstanceProjects } from '@/helpers/profile.js'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { useBreadcrumbs } from '@/store/breadcrumbs'
@@ -251,6 +251,7 @@ type SearchResults = {
 
 const results: Ref<SearchResults | null> = shallowRef(null)
 let searchRequestId = 0
+let activeSearchController: AbortController | null = null
 const pageCount = computed(() =>
 	results.value ? Math.ceil(results.value.total_hits / results.value.limit) : 1,
 )
@@ -302,22 +303,7 @@ function getSearchErrorMessage(error: unknown) {
 	}
 }
 
-async function withSearchTimeout<T>(request: Promise<T>): Promise<T> {
-	let timeoutId: ReturnType<typeof setTimeout> | undefined
-	const timeout = new Promise<never>((_, reject) => {
-		timeoutId = setTimeout(
-			() => reject(new Error('Сервер каталога не ответил за 20 секунд.')),
-			SEARCH_TIMEOUT_MS,
-		)
-	})
-	try {
-		return await Promise.race([request, timeout])
-	} finally {
-		if (timeoutId) clearTimeout(timeoutId)
-	}
-}
-
-async function syncSearchRoute() {
+function syncSearchUrl() {
 	const persistentParams: LocationQuery = {}
 
 	for (const [key, value] of Object.entries(route.query)) {
@@ -345,7 +331,42 @@ async function syncSearchRoute() {
 	})
 	const nextRoute = router.resolve({ path: route.path, query: params })
 	if (nextRoute.fullPath !== route.fullPath) {
-		await router.replace({ path: route.path, query: params })
+		window.history.replaceState(
+			{ ...(window.history.state ?? {}), current: nextRoute.fullPath, replaced: true },
+			'',
+			nextRoute.href,
+		)
+	}
+}
+
+async function fetchSearchResults(params: string, requestId: number): Promise<SearchResults> {
+	activeSearchController?.abort()
+	const controller = new AbortController()
+	activeSearchController = controller
+	const timeoutId = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS)
+
+	try {
+		const response = await httpFetch(`https://api.modrinth.com/v2/search${params}`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'User-Agent': 'BlockEra Launcher (https://github.com/dw1rf/BlockEra-Launcher)',
+			},
+			signal: controller.signal,
+			connectTimeout: 10_000,
+		})
+		if (!response.ok) {
+			throw new Error(`Сервер каталога вернул ошибку ${response.status}.`)
+		}
+		return (await response.json()) as SearchResults
+	} catch (error) {
+		if (controller.signal.aborted && requestId === searchRequestId) {
+			throw new Error('Сервер каталога не ответил за 15 секунд.')
+		}
+		throw error
+	} finally {
+		clearTimeout(timeoutId)
+		if (activeSearchController === controller) activeSearchController = null
 	}
 }
 
@@ -355,12 +376,10 @@ async function refreshSearch() {
 	searchState.value = 'loading'
 	searchError.value = ''
 	try {
-		void syncSearchRoute().catch((error) => {
-			console.warn('Не удалось синхронизировать адрес каталога:', error)
-		})
-		const rawResults = await withSearchTimeout(get_search_results(requestParams.value))
+		syncSearchUrl()
+		const rawResults = await fetchSearchResults(requestParams.value, requestId)
 		if (requestId !== searchRequestId) return
-		const normalizedResults = rawResults?.result ?? {
+		const normalizedResults = rawResults ?? {
 			hits: [],
 			total_hits: 0,
 			limit: maxResults.value,
@@ -386,6 +405,8 @@ async function refreshSearch() {
 		if (requestId === searchRequestId) loading.value = false
 	}
 }
+
+onBeforeUnmount(() => activeSearchController?.abort())
 
 async function setPage(newPageNumber: number) {
 	if (newPageNumber === currentPage.value || newPageNumber < 1) return
