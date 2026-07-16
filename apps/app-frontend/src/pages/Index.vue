@@ -20,8 +20,7 @@ import {
 import { Avatar, injectNotificationManager, SkinPreviewRenderer } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import dayjs from 'dayjs'
-import { computed, inject, onUnmounted, ref, watch, type Ref } from 'vue'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, inject, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import steveSkin from '@/assets/skins/steve.png'
