@@ -22,6 +22,12 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+          cache-on-failure: true
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4.4.0
         with:
@@ -38,6 +44,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            packages/app-lib/java/*.gradle.kts
+            packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Cache Turbo build
+        uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
 
       - name: Prepare environment
         shell: pwsh
