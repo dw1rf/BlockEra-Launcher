@@ -62,4 +62,5 @@ jobs:
             Скачайте NSIS setup.exe из списка файлов ниже. Лаунчер проверяет подпись обновления перед установкой.
           releaseDraft: false
           prerelease: false
+          retryAttempts: 5
           args: --bundles nsis --features updater
