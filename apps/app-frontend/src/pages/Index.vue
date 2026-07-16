@@ -20,6 +20,7 @@ import {
 import { Avatar, injectNotificationManager, SkinPreviewRenderer } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import dayjs from 'dayjs'
+import { computed, inject, onUnmounted, ref, watch, type Ref } from 'vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -63,6 +64,7 @@ const route = useRoute()
 const router = useRouter()
 const breadcrumbs = useBreadcrumbs()
 const selectedInstanceStore = useSelectedInstance()
+const accountRevision = inject<Ref<number>>('accountRevision', ref(0))
 
 breadcrumbs.setRootContext({ name: 'Home', link: route.path })
 
@@ -181,13 +183,15 @@ async function refreshPlayerLook() {
 	try {
 		const availableSkins = await get_available_skins()
 		activeSkin.value = availableSkins.find((skin) => skin.is_equipped) ?? null
-		if (activeSkin.value) {
-			skinTexture.value = await get_normalized_skin_texture(activeSkin.value)
-		}
+		skinTexture.value = activeSkin.value
+			? await get_normalized_skin_texture(activeSkin.value)
+			: steveSkin
 	} catch (error) {
 		console.warn('Не удалось загрузить скин для главной страницы.', error)
 	}
 }
+
+watch(accountRevision, () => void refreshPlayerLook())
 
 function selectInstance(instance: GameInstance) {
 	selectedPath.value = instance.path

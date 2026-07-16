@@ -12,7 +12,7 @@ use crate::{Result, State};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use tokio::{fs, io};
 
 const PACKAGE_JSON_CONTENT: &str =
@@ -66,8 +66,16 @@ pub async fn get_elyby_injector_library() -> Result<PathBuf> {
         }
     }
 
-    let latest_local = local_injectors.first().cloned();
-    // let latest_local_name = latest_local.as_ref().map(|p| p.0.file_name().unwrap().to_string_lossy().to_string());
+    // Launching an offline profile must not depend on the Ely.by metadata
+    // service. A cached injector is already usable, so prefer it immediately
+    // and only access the network when the library has not been downloaded yet.
+    if let Some((local_path, _)) = local_injectors.first() {
+        tracing::info!(
+            "[AR] • Using cached AuthLib Injector: {}",
+            local_path.display()
+        );
+        return Ok(local_path.clone());
+    }
 
     // Remote (fallback to empty strings)
     let (remote_name, remote_url) =
@@ -87,28 +95,6 @@ pub async fn get_elyby_injector_library() -> Result<PathBuf> {
     } else {
         None
     };
-
-    if let Some(local_path) = &latest_local {
-        let local_name = local_path.0.file_name().unwrap().to_string_lossy();
-        if let Some(rp) = &remote_path {
-            let remote_name = rp.file_name().unwrap().to_string_lossy();
-            if local_name == remote_name {
-                tracing::info!("[AR] • Versions match: {}", local_name);
-                return Ok(local_path.0.clone());
-            }
-        } else {
-            tracing::info!(
-                "[AR] • No remote info, using local: {}",
-                local_name
-            );
-            let _ = emit_info(&format!(
-                "[AR] No remote info, using local: {}",
-                local_name
-            ))
-            .await;
-            return Ok(local_path.0.clone());
-        }
-    }
 
     let Some(rp) = remote_path else {
         return Err(crate::ErrorKind::NetworkErrorOccurred {
@@ -139,7 +125,23 @@ async fn extract_metadata_from_elyby_file(
 ) -> Result<(String, String)> {
     const URL: &str = "https://git.astralium.su/api/v1/repos/didirus/ElyIntegration/releases/latest";
 
-    let response = reqwest::get(URL).await.map_err(|e| {
+    const METADATA_TIMEOUT: Duration = Duration::from_secs(5);
+    let response = tokio::time::timeout(METADATA_TIMEOUT, reqwest::get(URL))
+        .await
+        .map_err(|_| {
+            tracing::error!(
+                "[AR] • ElyIntegration metadata request timed out after {} seconds",
+                METADATA_TIMEOUT.as_secs()
+            );
+            crate::ErrorKind::NetworkErrorOccurred {
+                error: format!(
+                    "ElyIntegration metadata request timed out after {} seconds",
+                    METADATA_TIMEOUT.as_secs()
+                ),
+            }
+            .as_error()
+        })?
+        .map_err(|e| {
         tracing::error!(
             "[AR] • Failed to fetch ElyIntegration release JSON: {:?}",
             e
@@ -151,9 +153,35 @@ async fn extract_metadata_from_elyby_file(
             ),
         }
         .as_error()
+    })?
+    .error_for_status()
+    .map_err(|e| {
+        tracing::error!("[AR] • ElyIntegration returned an error: {:?}", e);
+        crate::ErrorKind::NetworkErrorOccurred {
+            error: format!("ElyIntegration returned an error: {e}"),
+        }
+        .as_error()
     })?;
 
-    let json: serde_json::Value = response.json().await.map_err(|e| {
+    let json: serde_json::Value = tokio::time::timeout(
+        METADATA_TIMEOUT,
+        response.json(),
+    )
+    .await
+    .map_err(|_| {
+        tracing::error!(
+            "[AR] • ElyIntegration response body timed out after {} seconds",
+            METADATA_TIMEOUT.as_secs()
+        );
+        crate::ErrorKind::NetworkErrorOccurred {
+            error: format!(
+                "ElyIntegration response body timed out after {} seconds",
+                METADATA_TIMEOUT.as_secs()
+            ),
+        }
+        .as_error()
+    })?
+    .map_err(|e| {
         tracing::error!("[AR] • Failed to parse ElyIntegration JSON: {:?}", e);
         crate::ErrorKind::ParseError {
             reason: format!("Failed to parse ElyIntegration JSON: {}", e),
