@@ -26,6 +26,7 @@ import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/
 import { computed, ref, watch } from 'vue'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import AboutBlockEraSettings from '@/components/ui/settings/AboutBlockEraSettings.vue'
 import AppearanceSettings from '@/components/ui/settings/AppearanceSettings.vue'
 import DefaultInstanceSettings from '@/components/ui/settings/DefaultInstanceSettings.vue'
 import FeatureFlagSettings from '@/components/ui/settings/FeatureFlagSettings.vue'
@@ -131,6 +132,14 @@ const tabs = [
 		icon: ReportIcon,
 		content: FeatureFlagSettings,
 		developerOnly: true,
+	},
+	{
+		name: defineMessage({
+			id: 'blockera.settings.tabs.about',
+			defaultMessage: 'О BlockEra',
+		}),
+		icon: BlockEraLogo,
+		content: AboutBlockEraSettings,
 	},
 ]
 

@@ -188,3 +188,64 @@ async fn respond(
     stream.write_all(body).await?;
     stream.shutdown().await
 }
+
+#[cfg(test)]
+mod tests {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    use super::*;
+
+    async fn request(address: SocketAddr, path: &str) -> Vec<u8> {
+        let mut stream = TcpStream::connect(address).await.unwrap();
+        stream
+            .write_all(
+                format!(
+                    "GET {path} HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n"
+                )
+                .as_bytes(),
+            )
+            .await
+            .unwrap();
+        let mut response = Vec::new();
+        stream.read_to_end(&mut response).await.unwrap();
+        response
+    }
+
+    #[tokio::test]
+    async fn serves_local_profile_and_selected_texture() {
+        let texture = vec![137, 80, 78, 71, 13, 10, 26, 10];
+        let texture_key = "local-test-skin".to_string();
+        let server = OfflineSkinServer::start(
+            Uuid::new_v4(),
+            "LocalPlayer".to_string(),
+            ActiveOfflineSkin {
+                texture_key: texture_key.clone(),
+                variant: MinecraftSkinVariant::Slim,
+                texture: texture.clone(),
+            },
+        )
+        .await
+        .unwrap();
+        let address: SocketAddr = server
+            .info()
+            .api_root
+            .trim_start_matches("http://")
+            .trim_end_matches('/')
+            .parse()
+            .unwrap();
+
+        let metadata = request(address, "/").await;
+        let metadata = String::from_utf8_lossy(&metadata);
+        assert!(metadata.starts_with("HTTP/1.1 200 OK"));
+        assert!(metadata.contains("blockera-offline-skins"));
+
+        let response =
+            request(address, &format!("/textures/{texture_key}")).await;
+        let body_start = response
+            .windows(4)
+            .position(|window| window == b"\r\n\r\n")
+            .unwrap()
+            + 4;
+        assert_eq!(&response[body_start..], texture.as_slice());
+    }
+}

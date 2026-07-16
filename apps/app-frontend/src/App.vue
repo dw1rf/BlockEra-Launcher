@@ -1140,8 +1140,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	z-index: 30;
 	display: flex;
 	align-items: center;
+	min-width: 0;
 	height: var(--top-bar-height);
 	padding-left: 1.25rem;
+	overflow: hidden;
 	background: rgba(7, 10, 17, 0.94);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
@@ -1153,6 +1155,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	align-items: center;
 	gap: 0.7rem;
 	min-width: 15.5rem;
+	flex: 0 0 auto;
 	color: var(--color-contrast);
 	text-decoration: none;
 }
@@ -1185,6 +1188,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 
 .cinematic-nav {
 	display: flex;
+	min-width: 0;
+	flex: 1 1 auto;
 	align-items: center;
 	gap: 0.45rem;
 	height: 100%;
@@ -1196,6 +1201,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	justify-content: center;
 	gap: 0.65rem;
 	min-width: 7.35rem;
+	flex: 0 1 auto;
 	height: 2.75rem;
 	padding: 0 1rem;
 	border: 1px solid transparent;
@@ -1235,7 +1241,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	display: flex;
 	align-items: center;
 	gap: 0.7rem;
-	min-width: 0;
+	min-width: max-content;
+	flex: 0 0 auto;
 	margin-left: auto;
 }
 
@@ -1250,7 +1257,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	height: var(--top-bar-height);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
 	.cinematic-brand {
 		min-width: auto;
 		margin-right: 0.5rem;
@@ -1267,7 +1274,14 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	}
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1024px) {
+	.cinematic-account {
+		width: 3.5rem;
+		max-width: 3.5rem;
+	}
+}
+
+@media (max-width: 800px) {
 	.cinematic-topbar {
 		padding-left: 0.5rem;
 	}
@@ -1279,6 +1293,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 
 	.cinematic-topbar-actions {
 		width: 100%;
+		min-width: 0;
 		gap: 0.4rem;
 	}
 
@@ -1293,9 +1308,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	}
 }
 
-@media (max-width: 480px) {
-	.cinematic-window-controls .titlebar-button:nth-child(2) {
-		display: none;
+@media (max-width: 600px) {
+	.cinematic-topbar {
+		padding-left: 0.25rem;
+	}
+
+	.cinematic-topbar-actions {
+		gap: 0.25rem;
 	}
 }
 

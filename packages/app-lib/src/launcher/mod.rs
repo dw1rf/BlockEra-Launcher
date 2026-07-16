@@ -21,9 +21,11 @@ use daedalus::modded::LoaderVersion;
 use rand::seq::SliceRandom; // This code is modified by AstralRinth
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use st::Profile;
 use std::fmt::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tokio::process::Command;
 
 mod args;
@@ -34,7 +36,7 @@ pub mod quick_play_version;
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OfflineSkinProvider {
-    ElyBy,
+    Local,
     Disabled,
 }
 
@@ -42,7 +44,24 @@ pub enum OfflineSkinProvider {
 pub struct OfflineSkinProviderResult {
     pub provider: OfflineSkinProvider,
     pub injector_active: bool,
+    pub api_root: Option<String>,
+    pub texture_key: Option<String>,
     pub error: Option<String>,
+}
+
+const BUNDLED_AUTHLIB_INJECTOR_SHA256: &str =
+    "9c7f4343e6c82034958ffb48c14a2cb0c85928be7283103ce17da00c6d5a7b10";
+
+fn verify_bundled_authlib_injector(path: &Path) -> Result<(), String> {
+    let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
+    let actual = format!("{:x}", Sha256::digest(bytes));
+    if actual == BUNDLED_AUTHLIB_INJECTOR_SHA256 {
+        Ok(())
+    } else {
+        Err(format!(
+            "checksum mismatch: expected {BUNDLED_AUTHLIB_INJECTOR_SHA256}, got {actual}"
+        ))
+    }
 }
 
 use crate::state::ACTIVE_STATE;
@@ -692,38 +711,144 @@ pub async fn launch_minecraft(
         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
     }
 
-    let offline_skin_server: Option<OfflineSkinServer> = None;
+    let mut offline_skin_server: Option<OfflineSkinServer> = None;
+    // Keep the extracted bundled agent alive until the Java process is
+    // spawned. The JVM loads the agent during process startup.
+    let mut _offline_injector_resource = None;
 
     if credentials.account_type == AccountType::Pirate.as_lowercase_str() {
-        let offline_skin_provider = match utils::get_elyby_injector_library()
-            .await
+        let offline_skin_provider = match tokio::time::timeout(
+            Duration::from_secs(3),
+            crate::api::minecraft_skins::get_active_offline_skin(
+                credentials.offline_profile.id,
+            ),
+        )
+        .await
         {
-            Ok(injector) => {
-                command.arg("-Dauthlibinjector.noShowServerName");
-                command
-                    .arg(format!("-javaagent:{}=ely.by", injector.display()));
-                let _ = emit_info(
-                    "[BlockEra] Сетевые offline-скины подключены через Ely.by.",
-                )
-                .await;
-                OfflineSkinProviderResult {
-                    provider: OfflineSkinProvider::ElyBy,
-                    injector_active: true,
-                    error: None,
+            Ok(Ok(Some(skin))) => {
+                let injector_resource = get_resource_file!(
+                    env "AUTHLIB_INJECTOR_DIR" / "authlib-injector-1.2.8.jar"
+                );
+                match injector_resource {
+                    Ok((resource_dir, injector)) => {
+                        match verify_bundled_authlib_injector(&injector) {
+                            Ok(()) => match tokio::time::timeout(
+                                Duration::from_secs(3),
+                                OfflineSkinServer::start(
+                                    credentials.offline_profile.id,
+                                    credentials.offline_profile.name.clone(),
+                                    skin,
+                                ),
+                            )
+                            .await
+                            {
+                                Ok(Ok(server)) => {
+                                    command.arg(
+                                        "-Dauthlibinjector.noShowServerName",
+                                    );
+                                    command.arg(format!(
+                                        "-javaagent:{}={}",
+                                        injector.display(),
+                                        server.info().api_root
+                                    ));
+                                    let _ = emit_info(&format!(
+                                    "[BlockEra] Локальный offline-скин подключён: {}.",
+                                    server.info().texture_key
+                                ))
+                                .await;
+                                    let api_root =
+                                        server.info().api_root.clone();
+                                    let texture_key =
+                                        server.info().texture_key.clone();
+                                    offline_skin_server = Some(server);
+                                    _offline_injector_resource =
+                                        Some(resource_dir);
+                                    OfflineSkinProviderResult {
+                                        provider: OfflineSkinProvider::Local,
+                                        injector_active: true,
+                                        api_root: Some(api_root),
+                                        texture_key: Some(texture_key),
+                                        error: None,
+                                    }
+                                }
+                                Ok(Err(error)) => {
+                                    let error = error.to_string();
+                                    let _ = emit_info(&format!(
+                                    "[BlockEra] Локальный сервер скинов недоступен: {error}. Игра продолжит запуск со стандартным скином."
+                                ))
+                                .await;
+                                    OfflineSkinProviderResult {
+                                        provider: OfflineSkinProvider::Disabled,
+                                        injector_active: false,
+                                        api_root: None,
+                                        texture_key: None,
+                                        error: Some(error),
+                                    }
+                                }
+                                Err(_) => OfflineSkinProviderResult {
+                                    provider: OfflineSkinProvider::Disabled,
+                                    injector_active: false,
+                                    api_root: None,
+                                    texture_key: None,
+                                    error: Some(
+                                        "local skin server startup timed out"
+                                            .to_string(),
+                                    ),
+                                },
+                            },
+                            Err(error) => OfflineSkinProviderResult {
+                                provider: OfflineSkinProvider::Disabled,
+                                injector_active: false,
+                                api_root: None,
+                                texture_key: None,
+                                error: Some(error),
+                            },
+                        }
+                    }
+                    Err(error) => {
+                        let error = error.to_string();
+                        let _ = emit_info(&format!(
+                            "[BlockEra] Встроенный компонент локальных скинов повреждён: {error}. Игра продолжит запуск со стандартным скином."
+                        ))
+                        .await;
+                        OfflineSkinProviderResult {
+                            provider: OfflineSkinProvider::Disabled,
+                            injector_active: false,
+                            api_root: None,
+                            texture_key: None,
+                            error: Some(error),
+                        }
+                    }
                 }
             }
-            Err(error) => {
+            Ok(Ok(None)) => OfflineSkinProviderResult {
+                provider: OfflineSkinProvider::Disabled,
+                injector_active: false,
+                api_root: None,
+                texture_key: None,
+                error: None,
+            },
+            Ok(Err(error)) => {
                 let error = error.to_string();
                 let _ = emit_info(&format!(
-                    "[BlockEra] Не удалось подключить сетевые offline-скины Ely.by: {error}. Игра продолжит запуск без них."
+                    "[BlockEra] Не удалось прочитать локальный скин: {error}. Игра продолжит запуск со стандартным скином."
                 ))
                 .await;
                 OfflineSkinProviderResult {
                     provider: OfflineSkinProvider::Disabled,
                     injector_active: false,
+                    api_root: None,
+                    texture_key: None,
                     error: Some(error),
                 }
             }
+            Err(_) => OfflineSkinProviderResult {
+                provider: OfflineSkinProvider::Disabled,
+                injector_active: false,
+                api_root: None,
+                texture_key: None,
+                error: Some("local skin lookup timed out".to_string()),
+            },
         };
         tracing::info!(
             ?offline_skin_provider,

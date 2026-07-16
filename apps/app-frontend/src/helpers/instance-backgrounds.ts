@@ -1,10 +1,10 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
 
-import heroVibrant from '@/assets/launcher/hero-vibrant.jpg'
-import autumnVillage from '@/assets/launcher/instance-backgrounds/autumn-village.jpg'
-import jungleRuins from '@/assets/launcher/instance-backgrounds/jungle-ruins.jpg'
-import skyIslands from '@/assets/launcher/instance-backgrounds/sky-islands.jpg'
-import violetCastle from '@/assets/launcher/instance-backgrounds/violet-castle.jpg'
+import autumnVillage from '@/assets/launcher/cinematic/autumn-village-v2.webp'
+import frozenCitadel from '@/assets/launcher/cinematic/frozen-citadel-v2.webp'
+import heroVibrant from '@/assets/launcher/cinematic/hero-cinematic-v2.webp'
+import jungleRuins from '@/assets/launcher/cinematic/jungle-ruins-v2.webp'
+import skyIslands from '@/assets/launcher/cinematic/sky-islands-v2.webp'
 
 export type LauncherBackground = {
 	id: string
@@ -15,10 +15,10 @@ export type LauncherBackground = {
 
 export const launcherBackgrounds: LauncherBackground[] = [
 	{
-		id: 'violet-castle',
-		label: 'Фиолетовый замок',
-		description: 'Ночной замок и магическое небо',
-		src: violetCastle,
+		id: 'frozen-citadel',
+		label: 'Ледяная цитадель',
+		description: 'Полярная крепость под северным сиянием',
+		src: frozenCitadel,
 	},
 	{
 		id: 'autumn-village',

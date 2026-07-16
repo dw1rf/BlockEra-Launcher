@@ -571,6 +571,7 @@ onUnmounted(() => {
 .title-row {
 	display: flex;
 	align-items: center;
+	min-width: 0;
 	gap: 1.1rem;
 }
 
@@ -584,11 +585,24 @@ onUnmounted(() => {
 	text-shadow: 0 4px 22px rgba(0, 0, 0, 0.35);
 }
 
+.title-row h1 {
+	min-width: 0;
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	text-overflow: ellipsis;
+	overflow-wrap: anywhere;
+}
+
 .icon-action {
 	display: grid;
 	place-items: center;
 	width: 2.8rem;
+	min-width: 2.8rem;
 	height: 2.8rem;
+	min-height: 2.8rem;
+	flex: 0 0 2.8rem;
 	padding: 0;
 	border: 1px solid rgba(196, 181, 253, 0.34);
 	border-radius: 0.55rem;

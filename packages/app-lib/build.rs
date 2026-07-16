@@ -10,6 +10,14 @@ fn main() {
     println!("cargo::rerun-if-changed=java/build.gradle.kts");
     println!("cargo::rerun-if-changed=java/settings.gradle.kts");
     println!("cargo::rerun-if-changed=java/gradle.properties");
+    println!("cargo::rerun-if-changed=resources/authlib-injector-1.2.8.jar");
+
+    let authlib_injector_dir =
+        fs::canonicalize("resources").expect("Missing bundled resources");
+    println!(
+        "cargo::rustc-env=AUTHLIB_INJECTOR_DIR={}",
+        authlib_injector_dir.display()
+    );
 
     set_env();
     build_java_jars();

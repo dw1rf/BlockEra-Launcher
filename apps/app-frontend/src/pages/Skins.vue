@@ -338,10 +338,10 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 		<div v-if="currentUser && offlineAccount" class="offline-skin-notice">
 			<UpdatedIcon />
 			<div>
-				<strong>Сетевые скины работают через Ely.by</strong>
+				<strong>Локальный скин офлайн-профиля</strong>
 				<span
-					>В мультиплеере BlockEra загружает скин Ely.by по вашему offline-нику. Локальные PNG из
-					гардероба остаются доступны для выбора и предпросмотра.</span
+					>PNG хранится только на этом компьютере и подключается без Ely.by. Вы всегда увидите
+					его в своей игре; другим игрокам нужна совместимая серверная или клиентская поддержка.</span
 				>
 			</div>
 		</div>

@@ -706,7 +706,7 @@ onBeforeUnmount(() => {
 	text-decoration: none;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
 	.compact .download-status-button {
 		width: 2.75rem;
 		min-width: 2.75rem;
@@ -717,6 +717,16 @@ onBeforeUnmount(() => {
 	.compact .download-status-copy,
 	.compact .download-percent {
 		display: none;
+	}
+
+	.compact .download-status-icon {
+		background:
+			linear-gradient(rgba(20, 14, 34, 0.96), rgba(20, 14, 34, 0.96)) padding-box,
+			conic-gradient(
+				#a947f2 calc(var(--download-progress) * 1turn),
+				rgba(255, 255, 255, 0.1) 0
+			) border-box;
+		border: 2px solid transparent;
 	}
 }
 

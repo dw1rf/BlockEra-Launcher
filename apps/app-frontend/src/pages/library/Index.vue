@@ -5,7 +5,7 @@ import { computed, onUnmounted, ref, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { NewInstanceImage } from '@/assets/icons'
-import heroVibrant from '@/assets/launcher/hero-vibrant.jpg'
+import heroVibrant from '@/assets/launcher/cinematic/hero-cinematic-v2.webp'
 import InstanceCreationModal from '@/components/ui/InstanceCreationModal.vue'
 import NavTabs from '@/components/ui/NavTabs.vue'
 import { profile_listener } from '@/helpers/events.js'
