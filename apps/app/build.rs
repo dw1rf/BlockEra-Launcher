@@ -239,6 +239,8 @@ fn main() {
                         "show_launcher_logs_folder",
                         "progress_bars_list",
                         "get_opening_command",
+                        "create_desktop_shortcut",
+                        "save_custom_background",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
