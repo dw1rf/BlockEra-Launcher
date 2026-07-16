@@ -14,7 +14,7 @@ export type WorldBackupSummary = {
 export const AUTO_BACKUP_STORAGE_KEY = 'blockera:auto-world-backups'
 
 export function automaticWorldBackupsEnabled(): boolean {
-	return localStorage.getItem(AUTO_BACKUP_STORAGE_KEY) !== 'false'
+	return localStorage.getItem(AUTO_BACKUP_STORAGE_KEY) === 'true'
 }
 
 export function setAutomaticWorldBackups(enabled: boolean): void {

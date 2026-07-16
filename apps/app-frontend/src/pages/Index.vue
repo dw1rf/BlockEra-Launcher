@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+	BlockEraLogo,
 	ChangeSkinIcon,
 	CheckCircleIcon,
 	ChevronRightIcon,
@@ -20,7 +21,7 @@ import {
 import { Avatar, injectNotificationManager, SkinPreviewRenderer } from '@modrinth/ui'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import dayjs from 'dayjs'
-import { computed, inject, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
+import { computed, inject, onMounted, onUnmounted, type Ref, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import steveSkin from '@/assets/skins/steve.png'
@@ -369,51 +370,68 @@ onUnmounted(() => {
 				</button>
 			</div>
 
-			<aside class="character-hud" aria-label="Персонаж и активность">
-				<div class="character-hud-top">
-					<div>
-						<span>ВАШ ПЕРСОНАЖ</span>
-						<strong>{{ playerName }}</strong>
-					</div>
-					<button
-						v-tooltip="'Настроить скин'"
-						aria-label="Настроить скин"
-						@click="router.push('/skins')"
-					>
-						<ChangeSkinIcon />
-					</button>
-				</div>
-				<div class="character-stage">
-					<SkinPreviewRenderer
-						:texture-src="skinTexture"
-						:variant="activeSkin?.variant ?? 'CLASSIC'"
-						:initial-rotation="Math.PI / 7"
-						:scale="1.16"
-						:fov="34"
-						:hint="null"
-					/>
-				</div>
-				<div class="hud-status">
-					<div v-if="activeDownloads.length" class="activity-body">
-						<div class="activity-row">
-							<strong>{{ activeDownloads[0].title }}</strong>
-							<span>{{ activeDownloads[0].progress }}%</span>
-						</div>
-						<div class="progress-track">
-							<span :style="{ transform: `scaleX(${activeDownloads[0].progress / 100})` }"></span>
-						</div>
-					</div>
-					<template v-else>
-						<span class="status-dot" :class="{ active: playing }"></span>
+			<div class="character-column">
+				<a
+					class="home-support-card"
+					href="https://boosty.to/blockera/donate"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					<BlockEraLogo aria-hidden="true" />
+					<span>
+						<small>ПОДДЕРЖАТЬ ПРОЕКТ</small>
+						<strong>Помогите BlockEra развиваться</strong>
+					</span>
+					<b>Boosty</b>
+				</a>
+				<aside class="character-hud" aria-label="Персонаж и активность">
+					<div class="character-hud-top">
 						<div>
-							<strong>{{ playing ? `${selectedInstance.name} запущена` : 'Готов к игре' }}</strong>
-							<small>{{
-								playing ? 'Minecraft работает' : `Последний запуск: ${lastPlayedText}`
-							}}</small>
+							<span>ВАШ ПЕРСОНАЖ</span>
+							<strong>{{ playerName }}</strong>
 						</div>
-					</template>
-				</div>
-			</aside>
+						<button
+							v-tooltip="'Настроить скин'"
+							aria-label="Настроить скин"
+							@click="router.push('/skins')"
+						>
+							<ChangeSkinIcon />
+						</button>
+					</div>
+					<div class="character-stage">
+						<SkinPreviewRenderer
+							:texture-src="skinTexture"
+							:variant="activeSkin?.variant ?? 'CLASSIC'"
+							:initial-rotation="Math.PI / 7"
+							:scale="1.16"
+							:fov="34"
+							:hint="null"
+						/>
+					</div>
+					<div class="hud-status">
+						<div v-if="activeDownloads.length" class="activity-body">
+							<div class="activity-row">
+								<strong>{{ activeDownloads[0].title }}</strong>
+								<span>{{ activeDownloads[0].progress }}%</span>
+							</div>
+							<div class="progress-track">
+								<span :style="{ transform: `scaleX(${activeDownloads[0].progress / 100})` }"></span>
+							</div>
+						</div>
+						<template v-else>
+							<span class="status-dot" :class="{ active: playing }"></span>
+							<div>
+								<strong>{{
+									playing ? `${selectedInstance.name} запущена` : 'Готов к игре'
+								}}</strong>
+								<small>{{
+									playing ? 'Minecraft работает' : `Последний запуск: ${lastPlayedText}`
+								}}</small>
+							</div>
+						</template>
+					</div>
+				</aside>
+			</div>
 		</section>
 
 		<section v-else class="empty-home">
@@ -550,14 +568,16 @@ onUnmounted(() => {
 .hero-content {
 	position: relative;
 	align-self: end;
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(19rem, min(23rem, 32vw));
 	align-items: flex-end;
-	justify-content: space-between;
 	gap: 3rem;
+	min-width: 0;
 }
 
 .hero-copy {
-	width: min(39rem, 54vw);
+	width: auto;
+	min-width: 0;
 }
 
 .eyebrow {
@@ -569,10 +589,8 @@ onUnmounted(() => {
 }
 
 .title-row {
-	display: flex;
-	align-items: center;
+	display: block;
 	min-width: 0;
-	gap: 1.1rem;
 }
 
 .title-row h1,
@@ -586,23 +604,19 @@ onUnmounted(() => {
 }
 
 .title-row h1 {
-	min-width: 0;
-	overflow: hidden;
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
-	text-overflow: ellipsis;
+	display: inline;
 	overflow-wrap: anywhere;
 }
 
 .icon-action {
-	display: grid;
+	display: inline-grid;
 	place-items: center;
 	width: 2.8rem;
 	min-width: 2.8rem;
 	height: 2.8rem;
 	min-height: 2.8rem;
 	flex: 0 0 2.8rem;
+	margin-left: 1.1rem;
 	padding: 0;
 	border: 1px solid rgba(196, 181, 253, 0.34);
 	border-radius: 0.55rem;
@@ -610,6 +624,7 @@ onUnmounted(() => {
 	color: #d8b4fe;
 	box-shadow: none;
 	cursor: pointer;
+	vertical-align: 0.28em;
 	transition:
 		transform 180ms var(--smooth),
 		background-color 180ms ease;
@@ -718,9 +733,78 @@ onUnmounted(() => {
 	animation: spin 900ms linear infinite;
 }
 
+.character-column {
+	display: flex;
+	width: 100%;
+	min-width: 0;
+	flex: 0 0 auto;
+	flex-direction: column;
+	gap: 0.8rem;
+}
+
+.home-support-card {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 0.8rem;
+	min-height: 4.8rem;
+	padding: 0.8rem 0.9rem;
+	border: 1px solid rgba(216, 180, 254, 0.26);
+	border-radius: 0.8rem;
+	background: linear-gradient(135deg, rgba(91, 33, 182, 0.78), rgba(28, 17, 52, 0.88));
+	box-shadow: 0 14px 34px rgba(30, 12, 60, 0.24);
+	color: white;
+	text-decoration: none;
+	backdrop-filter: blur(16px);
+	transition:
+		transform 180ms var(--smooth),
+		filter 180ms ease,
+		border-color 180ms ease;
+}
+
+.home-support-card:hover {
+	transform: translateY(-2px);
+	filter: brightness(1.08);
+	border-color: rgba(216, 180, 254, 0.48);
+}
+
+.home-support-card > svg {
+	width: 2.15rem;
+	height: 2.15rem;
+	color: #e9d5ff;
+}
+
+.home-support-card > span {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 0.18rem;
+}
+
+.home-support-card small {
+	color: rgba(233, 213, 255, 0.68);
+	font-size: 0.58rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+}
+
+.home-support-card strong {
+	overflow: hidden;
+	font-size: 0.78rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.home-support-card b {
+	padding: 0.48rem 0.62rem;
+	border-radius: 0.5rem;
+	background: #f15f2c;
+	font-size: 0.68rem;
+}
+
 .character-hud {
 	position: relative;
-	width: min(23rem, 32vw);
+	width: 100%;
 	height: min(25rem, 46vh);
 	min-height: 20rem;
 	overflow: hidden;
@@ -1080,10 +1164,11 @@ onUnmounted(() => {
 
 @media (max-width: 960px) {
 	.hero-content {
+		grid-template-columns: minmax(0, 1fr);
 		padding-bottom: 1rem;
 	}
 
-	.character-hud {
+	.character-column {
 		display: none;
 	}
 

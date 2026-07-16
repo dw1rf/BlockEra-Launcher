@@ -58,11 +58,43 @@ pub async fn save_custom_background(
     let backgrounds_dir = state.directories.caches_dir().join("backgrounds");
     tokio::fs::create_dir_all(&backgrounds_dir).await?;
 
-    let mut hasher = DefaultHasher::new();
-    scope.hash(&mut hasher);
-    let destination =
-        backgrounds_dir.join(format!("{:016x}.{extension}", hasher.finish()));
-    tokio::fs::copy(source_path, &destination).await?;
+    let source = tokio::fs::read(source_path).await?;
+
+    let mut scope_hasher = DefaultHasher::new();
+    scope.hash(&mut scope_hasher);
+    let scope_hash = format!("{:016x}", scope_hasher.finish());
+
+    let mut content_hasher = DefaultHasher::new();
+    source.hash(&mut content_hasher);
+    let destination = backgrounds_dir.join(format!(
+        "{scope_hash}-{:016x}.{extension}",
+        content_hasher.finish()
+    ));
+    tokio::fs::write(&destination, source).await?;
+
+    let mut entries = tokio::fs::read_dir(&backgrounds_dir).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        if path == destination {
+            continue;
+        }
+
+        let Some(file_name) = path.file_name().and_then(|value| value.to_str())
+        else {
+            continue;
+        };
+        if file_name.starts_with(&format!("{scope_hash}-"))
+            || file_name.starts_with(&format!("{scope_hash}."))
+        {
+            if let Err(error) = tokio::fs::remove_file(&path).await {
+                tracing::warn!(
+                    "Failed to remove stale custom background {}: {}",
+                    path.display(),
+                    error
+                );
+            }
+        }
+    }
 
     Ok(destination)
 }

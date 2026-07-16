@@ -385,6 +385,25 @@ const handleClose = async () => {
 	await getCurrentWindow().close()
 }
 
+function handleWindowDrag(event) {
+	if (event.button !== 0) return
+
+	const target = event.target
+	if (
+		!(target instanceof Element) ||
+		target.closest(
+			'a, button, input, select, textarea, summary, [role="button"], [contenteditable="true"], [data-tauri-drag-region-exclude]',
+		)
+	) {
+		return
+	}
+
+	event.preventDefault()
+	void getCurrentWindow()
+		.startDragging()
+		.catch((error) => console.warn('Failed to start dragging the launcher window.', error))
+}
+
 const router = useRouter()
 router.afterEach((to, from, failure) => {
 	trackEvent('PageView', {
@@ -852,15 +871,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				</section>
 			</section>
 		</div>
-		<header v-else data-tauri-drag-region class="cinematic-topbar">
-			<router-link to="/" class="cinematic-brand" data-tauri-drag-region-exclude>
+		<header v-else class="cinematic-topbar" @mousedown="handleWindowDrag">
+			<router-link to="/" class="cinematic-brand">
 				<BlockEraLogo aria-hidden="true" />
 				<span class="cinematic-brand-copy">
 					<strong>BLOCKERA</strong>
 					<small>GAME LAUNCHER</small>
 				</span>
 			</router-link>
-			<nav class="cinematic-nav" aria-label="Основная навигация" data-tauri-drag-region-exclude>
+			<nav class="cinematic-nav" aria-label="Основная навигация">
 				<router-link to="/" class="cinematic-nav-link">
 					<HomeIcon />
 					<span>Главная</span>
@@ -890,11 +909,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					<BlockEraUpdateCenter />
 				</Suspense>
 				<Suspense>
-					<AccountsCard
-						mode="small"
-						class="cinematic-account"
-						@change="handleAccountChange"
-					/>
+					<AccountsCard mode="small" class="cinematic-account" @change="handleAccountChange" />
 				</Suspense>
 				<section v-if="!nativeDecorations" class="window-controls cinematic-window-controls">
 					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
@@ -1143,11 +1158,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	min-width: 0;
 	height: var(--top-bar-height);
 	padding-left: 1.25rem;
-	overflow: hidden;
+	overflow: visible;
 	background: rgba(7, 10, 17, 0.94);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
 	backdrop-filter: blur(20px);
+	user-select: none;
+	-webkit-user-select: none;
 }
 
 .cinematic-brand {

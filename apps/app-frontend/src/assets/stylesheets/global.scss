@@ -85,6 +85,14 @@ a {
 	}
 }
 
+button,
+summary,
+[role='button'] {
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
 input {
 	border: none !important;
 }
