@@ -14,7 +14,6 @@ import {
 	useSearch,
 	useVIntl,
 } from '@modrinth/ui'
-import { fetch as httpFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import type { Ref } from 'vue'
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
@@ -343,18 +342,23 @@ async function fetchSearchResults(params: string, requestId: number): Promise<Se
 	activeSearchController?.abort()
 	const controller = new AbortController()
 	activeSearchController = controller
-	const timeoutId = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS)
+	let timeoutId: ReturnType<typeof setTimeout> | undefined
+	const timeout = new Promise<never>((_, reject) => {
+		timeoutId = setTimeout(() => {
+			controller.abort()
+			reject(new Error('Сервер каталога не ответил за 15 секунд.'))
+		}, SEARCH_TIMEOUT_MS)
+	})
 
 	try {
-		const response = await httpFetch(`https://api.modrinth.com/v2/search${params}`, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'User-Agent': 'BlockEra Launcher (https://github.com/dw1rf/BlockEra-Launcher)',
-			},
-			signal: controller.signal,
-			connectTimeout: 10_000,
-		})
+		const response = await Promise.race([
+			fetch(`https://api.modrinth.com/v2/search${params}`, {
+				method: 'GET',
+				headers: { Accept: 'application/json' },
+				signal: controller.signal,
+			}),
+			timeout,
+		])
 		if (!response.ok) {
 			throw new Error(`Сервер каталога вернул ошибку ${response.status}.`)
 		}
@@ -365,7 +369,7 @@ async function fetchSearchResults(params: string, requestId: number): Promise<Se
 		}
 		throw error
 	} finally {
-		clearTimeout(timeoutId)
+		if (timeoutId) clearTimeout(timeoutId)
 		if (activeSearchController === controller) activeSearchController = null
 	}
 }
@@ -406,7 +410,10 @@ async function refreshSearch() {
 	}
 }
 
-onBeforeUnmount(() => activeSearchController?.abort())
+onBeforeUnmount(() => {
+	searchRequestId += 1
+	activeSearchController?.abort()
+})
 
 async function setPage(newPageNumber: number) {
 	if (newPageNumber === currentPage.value || newPageNumber < 1) return
