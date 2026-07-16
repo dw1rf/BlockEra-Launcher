@@ -489,6 +489,12 @@ onMounted(() => {
 
 const accounts = ref(null)
 provide('accountsCard', accounts)
+const accountRevision = ref(0)
+provide('accountRevision', accountRevision)
+
+function handleAccountChange() {
+	accountRevision.value += 1
+}
 
 command_listener(handleCommand)
 async function handleCommand(e) {
@@ -876,10 +882,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</nav>
 			<div class="cinematic-topbar-actions" data-tauri-drag-region-exclude>
 				<Suspense>
+					<RunningAppBar compact />
+				</Suspense>
+				<Suspense>
 					<BlockEraUpdateCenter />
 				</Suspense>
 				<Suspense>
-					<AccountsCard mode="small" class="cinematic-account" />
+					<AccountsCard
+						mode="small"
+						class="cinematic-account"
+						@change="handleAccountChange"
+					/>
 				</Suspense>
 				<section v-if="!nativeDecorations" class="window-controls cinematic-window-controls">
 					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
@@ -994,7 +1007,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					>
 						<h3 class="text-base text-primary font-medium m-0">Playing as</h3>
 						<suspense>
-							<AccountsCard ref="accounts" mode="small" />
+							<AccountsCard ref="accounts" mode="small" @change="handleAccountChange" />
 						</suspense>
 					</div>
 					<div class="py-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid">
@@ -1227,7 +1240,57 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 }
 
 .cinematic-window-controls {
+	flex: 0 0 auto;
 	height: var(--top-bar-height);
+}
+
+@media (max-width: 1200px) {
+	.cinematic-brand {
+		min-width: auto;
+		margin-right: 0.5rem;
+	}
+
+	.cinematic-brand-copy,
+	.cinematic-nav-link span {
+		display: none;
+	}
+
+	.cinematic-nav-link {
+		min-width: 2.75rem;
+		padding: 0;
+	}
+}
+
+@media (max-width: 720px) {
+	.cinematic-topbar {
+		padding-left: 0.5rem;
+	}
+
+	.cinematic-brand,
+	.cinematic-nav {
+		display: none;
+	}
+
+	.cinematic-topbar-actions {
+		width: 100%;
+		gap: 0.4rem;
+	}
+
+	.cinematic-account {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.cinematic-topbar-actions :deep(.account-trigger) {
+		width: min(270px, calc(100vw - 17rem));
+		min-width: 0;
+	}
+}
+
+@media (max-width: 480px) {
+	.cinematic-window-controls .titlebar-button:nth-child(2) {
+		display: none;
+	}
 }
 
 .app-contents.cinematic-shell-contents {
