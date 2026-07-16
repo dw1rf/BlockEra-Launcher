@@ -458,27 +458,45 @@ function convertRawStringToUUIDv4(rawId) {
 }
 
 const equippedSkin = ref(null)
+const equippedSkinUserId = ref(null)
 const headUrlCache = ref(new Map())
+let skinRequestId = 0
 
-async function refreshValues() {
-	defaultUser.value = await get_default_user().catch(handleError)
-	accounts.value = await users().catch(handleError)
+async function refreshEquippedSkin(userId) {
+	const requestId = ++skinRequestId
+	equippedSkin.value = null
+	equippedSkinUserId.value = null
+	if (!userId) return
 
 	try {
 		const skins = await get_available_skins()
-		equippedSkin.value = skins.find((skin) => skin.is_equipped)
+		if (requestId !== skinRequestId || defaultUser.value !== userId) return
+
+		equippedSkin.value = skins.find((skin) => skin.is_equipped) ?? null
+		equippedSkinUserId.value = equippedSkin.value ? userId : null
 
 		if (equippedSkin.value) {
 			try {
 				const headUrl = await getPlayerHeadUrl(equippedSkin.value)
-				headUrlCache.value.set(equippedSkin.value.texture_key, headUrl)
+				if (requestId === skinRequestId && defaultUser.value === userId) {
+					headUrlCache.value.set(equippedSkin.value.texture_key, headUrl)
+				}
 			} catch (error) {
 				console.warn('Failed to get head render for equipped skin:', error)
 			}
 		}
 	} catch {
-		equippedSkin.value = null
+		if (requestId === skinRequestId) {
+			equippedSkin.value = null
+			equippedSkinUserId.value = null
+		}
 	}
+}
+
+async function refreshValues() {
+	defaultUser.value = await get_default_user().catch(handleError)
+	accounts.value = await users().catch(handleError)
+	await refreshEquippedSkin(defaultUser.value)
 }
 
 function setLoginDisabled(value) {
@@ -493,7 +511,10 @@ defineExpose({
 await refreshValues()
 
 const avatarUrl = computed(() => {
-	if (equippedSkin.value?.texture_key) {
+	if (
+		equippedSkinUserId.value === selectedAccount.value?.profile?.id &&
+		equippedSkin.value?.texture_key
+	) {
 		const cachedUrl = headUrlCache.value.get(equippedSkin.value.texture_key)
 		if (cachedUrl) {
 			return cachedUrl
@@ -508,7 +529,7 @@ const avatarUrl = computed(() => {
 
 function getAccountAvatarUrl(account) {
 	if (
-		account.profile.id === selectedAccount.value?.profile?.id &&
+		account.profile.id === equippedSkinUserId.value &&
 		equippedSkin.value?.texture_key
 	) {
 		const cachedUrl = headUrlCache.value.get(equippedSkin.value.texture_key)
@@ -524,8 +545,13 @@ const selectedAccount = computed(() =>
 )
 
 async function setAccount(account) {
+	if (account.profile.id === defaultUser.value) return
+
 	defaultUser.value = account.profile.id
+	equippedSkin.value = null
+	equippedSkinUserId.value = null
 	await set_default_user(account.profile.id).catch(handleError)
+	await refreshEquippedSkin(account.profile.id)
 	emit('change')
 }
 
