@@ -7,7 +7,6 @@ import {
 	defineMessages,
 	DropdownSelect,
 	injectNotificationManager,
-	LoadingIndicator,
 	Pagination,
 	SearchFilterControl,
 	SearchSidebarFilter,
@@ -356,13 +355,15 @@ async function fetchSearchResults(params: string, requestId: number): Promise<Se
 				method: 'GET',
 				headers: { Accept: 'application/json' },
 				signal: controller.signal,
+			}).then(async (response) => {
+				if (!response.ok) {
+					throw new Error(`Сервер каталога вернул ошибку ${response.status}.`)
+				}
+				return (await response.json()) as SearchResults
 			}),
 			timeout,
 		])
-		if (!response.ok) {
-			throw new Error(`Сервер каталога вернул ошибку ${response.status}.`)
-		}
-		return (await response.json()) as SearchResults
+		return response
 	} catch (error) {
 		if (controller.signal.aborted && requestId === searchRequestId) {
 			throw new Error('Сервер каталога не ответил за 15 секунд.')
@@ -549,47 +550,6 @@ void refreshSearch()
 </script>
 
 <template>
-	<Teleport v-if="filters && instance" to="#sidebar-teleport-target">
-		<div
-			v-if="instance"
-			class="border-0 border-b-[1px] p-4 last:border-b-0 border-[--brand-gradient-border] border-solid"
-		>
-			<Checkbox
-				v-model="instanceHideInstalled"
-				label="Скрыть установленное"
-				class="filter-checkbox"
-				@update:model-value="onSearchChangeToTop()"
-				@click.prevent.stop
-			/>
-		</div>
-		<SearchSidebarFilter
-			v-for="filter in filters.filter((f) => f.display !== 'none')"
-			:key="`filter-${filter.id}`"
-			v-model:selected-filters="currentFilters"
-			v-model:toggled-groups="toggledGroups"
-			v-model:overridden-provided-filter-types="overriddenProvidedFilterTypes"
-			:provided-filters="instanceFilters"
-			:filter-type="filter"
-			class="border-0 border-b-[1px] [&:first-child>button]:pt-4 last:border-b-0 border-[--brand-gradient-border] border-solid"
-			button-class="button-animation flex flex-col gap-1 px-4 py-3 w-full bg-transparent cursor-pointer border-none hover:bg-button-bg"
-			content-class="mb-3"
-			inner-panel-class="ml-2 mr-3"
-			:open-by-default="
-				filter.id.startsWith('category') || filter.id === 'environment' || filter.id === 'license'
-			"
-		>
-			<template #header>
-				<h3 class="text-base m-0">{{ filterLabel(filter) }}</h3>
-			</template>
-			<template #locked-game_version>
-				{{ formatMessage(messages.gameVersionProvidedByInstance) }}
-			</template>
-			<template #locked-mod_loader>
-				{{ formatMessage(messages.modLoaderProvidedByInstance) }}
-			</template>
-			<template #sync-button> {{ formatMessage(messages.syncFilterButton) }} </template>
-		</SearchSidebarFilter>
-	</Teleport>
 	<main ref="searchWrapper" class="browse-page">
 		<template v-if="instance">
 			<InstanceIndicator :instance="instance" />
@@ -618,6 +578,14 @@ void refreshSearch()
 
 		<div class="browse-layout">
 			<aside v-if="filters" class="browse-filters">
+				<div v-if="instance" class="instance-filter-toggle">
+					<Checkbox
+						v-model="instanceHideInstalled"
+						label="Скрыть установленное"
+						class="filter-checkbox"
+						@update:model-value="onSearchChangeToTop()"
+					/>
+				</div>
 				<div class="filter-title">
 					<span>Фильтры</span><small>{{ results?.total_hits ?? 0 }} проектов</small>
 				</div>
@@ -686,8 +654,18 @@ void refreshSearch()
 					:provided-message="messages.providedByInstance"
 				/>
 				<div class="search browse-search-results">
-					<section v-if="loading" class="offline">
-						<LoadingIndicator />
+					<section v-if="loading" class="browse-loading" role="status" aria-live="polite">
+						<div class="browse-loading-heading">
+							<span class="browse-loading-spinner" aria-hidden="true"></span>
+							<div>
+								<strong>Загружаем каталог</strong>
+								<small>Подбираем совместимый контент для вашей сборки</small>
+							</div>
+						</div>
+						<div v-for="index in 3" :key="index" class="browse-loading-card" aria-hidden="true">
+							<span class="browse-loading-icon"></span>
+							<div><i></i><i></i><i></i></div>
+						</div>
 					</section>
 					<section v-else-if="searchState === 'error'" class="offline browse-error" role="alert">
 						<strong>Не удалось загрузить каталог</strong>
@@ -820,6 +798,10 @@ void refreshSearch()
 	align-self: start;
 	overflow: hidden;
 }
+.instance-filter-toggle {
+	padding: 0.9rem 1rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
 .filter-title {
 	display: flex;
 	align-items: center;
@@ -843,10 +825,95 @@ void refreshSearch()
 }
 .browse-toolbar {
 	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
 	gap: 0.5rem;
 }
 .browse-search-results {
 	margin-top: 0.75rem;
+}
+.browse-loading {
+	display: grid;
+	gap: 0.7rem;
+	min-height: 24rem;
+}
+.browse-loading-heading {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	padding: 0.25rem 0.15rem 0.45rem;
+}
+.browse-loading-heading div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+.browse-loading-heading strong {
+	color: #f8fafc;
+	font-size: 0.95rem;
+}
+.browse-loading-heading small {
+	color: rgba(226, 232, 240, 0.56);
+}
+.browse-loading-spinner {
+	width: 1.25rem;
+	height: 1.25rem;
+	border: 2px solid rgba(192, 132, 252, 0.22);
+	border-top-color: #c084fc;
+	border-radius: 50%;
+	animation: browse-spin 700ms linear infinite;
+}
+.browse-loading-card {
+	display: grid;
+	grid-template-columns: 5.4rem minmax(0, 1fr);
+	gap: 1rem;
+	min-height: 7.2rem;
+	padding: 1rem;
+	box-sizing: border-box;
+	border: 1px solid rgba(255, 255, 255, 0.055);
+	border-radius: 0.9rem;
+	background: rgba(18, 24, 36, 0.72);
+	overflow: hidden;
+}
+.browse-loading-icon,
+.browse-loading-card i {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	border-radius: 0.55rem;
+	background: rgba(255, 255, 255, 0.055);
+}
+.browse-loading-icon::after,
+.browse-loading-card i::after {
+	position: absolute;
+	inset: 0;
+	content: '';
+	background: linear-gradient(
+		100deg,
+		transparent 20%,
+		rgba(192, 132, 252, 0.12) 50%,
+		transparent 80%
+	);
+	transform: translateX(-100%);
+	animation: browse-shimmer 1.4s ease-in-out infinite;
+}
+.browse-loading-card > div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.65rem;
+	padding-top: 0.15rem;
+}
+.browse-loading-card i:nth-child(1) {
+	width: min(15rem, 55%);
+	height: 1.05rem;
+}
+.browse-loading-card i:nth-child(2) {
+	width: min(34rem, 90%);
+	height: 0.75rem;
+}
+.browse-loading-card i:nth-child(3) {
+	width: min(22rem, 65%);
+	height: 0.75rem;
 }
 .browse-error {
 	display: flex;
@@ -915,6 +982,24 @@ void refreshSearch()
 	to {
 		opacity: 1;
 		transform: translateY(0);
+	}
+}
+@keyframes browse-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@keyframes browse-shimmer {
+	to {
+		transform: translateX(100%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.browse-loading-spinner,
+	.browse-loading-icon::after,
+	.browse-loading-card i::after {
+		animation: none;
 	}
 }
 </style>

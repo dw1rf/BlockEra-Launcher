@@ -11,6 +11,7 @@ license = "GPL-3.0-only"
 chrono = { workspace = true }
 daedalus = { workspace = true }
 dashmap = { workspace = true }
+dirs = { workspace = true }
 either = { workspace = true }
 enumset = { workspace = true, features = ["serde"] }
 hyper = { workspace = true, features = ["server"] }

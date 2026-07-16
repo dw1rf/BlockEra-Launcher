@@ -19,8 +19,12 @@ const breadcrumbs = useBreadcrumbs()
 breadcrumbs.setRootContext({ name: 'Library', link: route.path })
 
 const instances = shallowRef(await list().catch(handleError))
-const downloadedCount = computed(() => instances.value.filter((instance) => instance.linked_data).length)
-const customCount = computed(() => instances.value.filter((instance) => !instance.linked_data).length)
+const downloadedCount = computed(
+	() => instances.value.filter((instance) => instance.linked_data).length,
+)
+const customCount = computed(
+	() => instances.value.filter((instance) => !instance.linked_data).length,
+)
 
 const offline = ref(!navigator.onLine)
 window.addEventListener('offline', () => {
@@ -47,9 +51,18 @@ onUnmounted(() => {
 				<p class="library-subtitle">Все ваши миры, модпаки и профили запуска — в одном месте.</p>
 			</div>
 			<div class="library-stats" aria-label="Статистика библиотеки">
-				<div><strong>{{ instances.length }}</strong><span>всего</span></div>
-				<div><strong>{{ downloadedCount }}</strong><span>готовых</span></div>
-				<div><strong>{{ customCount }}</strong><span>своих</span></div>
+				<div>
+					<strong>{{ instances.length }}</strong
+					><span>всего</span>
+				</div>
+				<div>
+					<strong>{{ downloadedCount }}</strong
+					><span>готовых</span>
+				</div>
+				<div>
+					<strong>{{ customCount }}</strong
+					><span>своих</span>
+				</div>
 			</div>
 			<Button color="primary" :disabled="offline" @click="$refs.installationModal.show()">
 				<PlusIcon />
@@ -61,14 +74,15 @@ onUnmounted(() => {
 			<NavTabs
 				class="library-tabs"
 				:links="[
-				{ label: 'Все сборки', href: `/library` },
-				{ label: 'Загруженные', href: `/library/downloaded` },
-				{ label: 'Пользовательские', href: `/library/custom` },
-				{ label: 'Shared with me', href: `/library/shared`, shown: false },
-				{ label: 'Saved', href: `/library/saved`, shown: false },
+					{ label: 'Все сборки', href: `/library` },
+					{ label: 'Загруженные', href: `/library/downloaded` },
+					{ label: 'Пользовательские', href: `/library/custom` },
+					{ label: 'Рекомендуемые', href: `/library/recommended` },
+					{ label: 'Shared with me', href: `/library/shared`, shown: false },
+					{ label: 'Saved', href: `/library/saved`, shown: false },
 				]"
 			/>
-			<template v-if="instances.length > 0">
+			<template v-if="instances.length > 0 || route.path.startsWith('/library/recommended')">
 				<RouterView :instances="instances" />
 			</template>
 			<div v-else class="no-instance">
@@ -91,8 +105,7 @@ onUnmounted(() => {
 	box-sizing: border-box;
 	overflow-y: auto;
 	background:
-		radial-gradient(circle at 82% 4%, rgba(126, 34, 206, 0.16), transparent 28rem),
-		#060a12;
+		radial-gradient(circle at 82% 4%, rgba(126, 34, 206, 0.16), transparent 28rem), #060a12;
 }
 
 .library-hero {
@@ -107,7 +120,12 @@ onUnmounted(() => {
 	border: 1px solid rgba(168, 85, 247, 0.28);
 	border-radius: 1.15rem;
 	background:
-		linear-gradient(90deg, rgba(5, 9, 18, 0.98) 0%, rgba(7, 11, 20, 0.86) 50%, rgba(8, 10, 17, 0.36) 100%),
+		linear-gradient(
+			90deg,
+			rgba(5, 9, 18, 0.98) 0%,
+			rgba(7, 11, 20, 0.86) 50%,
+			rgba(8, 10, 17, 0.36) 100%
+		),
 		var(--library-hero) center 57% / cover;
 	box-shadow: 0 22px 60px rgba(0, 0, 0, 0.3);
 }
@@ -151,8 +169,14 @@ onUnmounted(() => {
 	backdrop-filter: blur(14px);
 }
 
-.library-stats strong { color: #fff; font-size: 1.3rem; }
-.library-stats span { color: rgba(226, 232, 240, 0.58); font-size: 0.72rem; }
+.library-stats strong {
+	color: #fff;
+	font-size: 1.3rem;
+}
+.library-stats span {
+	color: rgba(226, 232, 240, 0.58);
+	font-size: 0.72rem;
+}
 
 .library-workspace {
 	display: flex;
@@ -166,7 +190,9 @@ onUnmounted(() => {
 	box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
 }
 
-.library-tabs { align-self: flex-start; }
+.library-tabs {
+	align-self: flex-start;
+}
 
 :deep(.library-workspace > .flex.gap-2) {
 	padding: 0.25rem;
@@ -223,18 +249,32 @@ onUnmounted(() => {
 }
 
 @media (max-width: 980px) {
-	.library-hero { grid-template-columns: 1fr auto; }
-	.library-stats { display: none; }
+	.library-hero {
+		grid-template-columns: 1fr auto;
+	}
+	.library-stats {
+		display: none;
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
 	.library-hero,
-	.library-workspace { animation: library-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-	.library-workspace { animation-delay: 70ms; }
+	.library-workspace {
+		animation: library-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+	.library-workspace {
+		animation-delay: 70ms;
+	}
 }
 
 @keyframes library-enter {
-	from { opacity: 0; transform: translateY(8px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 </style>

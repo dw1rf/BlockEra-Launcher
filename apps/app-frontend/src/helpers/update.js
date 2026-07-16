@@ -1,7 +1,7 @@
 import { check } from '@tauri-apps/plugin-updater'
 import { ref, shallowRef } from 'vue'
 
-import { areUpdatesEnabled, enqueueUpdateForInstallation, restartApp } from '@/helpers/utils.js'
+import { areUpdatesEnabled, restartApp } from '@/helpers/utils.js'
 
 export const allowState = ref(false)
 export const installState = ref(false)
@@ -72,7 +72,15 @@ export async function installLauncherUpdate() {
 	installState.value = true
 	updateError.value = ''
 	try {
-		await enqueueUpdateForInstallation(update.rid)
+		// Install while the updater resource is still alive. Deferring installation until the
+		// app's Exit event races Tauri's restart path on Windows and can reopen the old binary.
+		await update.downloadAndInstall()
+		availableUpdate.value = null
+		updateState.value = false
+		allowState.value = false
+
+		// The Windows updater exits the process while installing. Platforms where installation
+		// returns still need an explicit restart to load the new binary.
 		await restartApp()
 	} catch (error) {
 		updateError.value = formatUpdaterError(error)

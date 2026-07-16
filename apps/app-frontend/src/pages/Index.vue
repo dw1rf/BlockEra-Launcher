@@ -21,14 +21,20 @@ import { Avatar, injectNotificationManager, SkinPreviewRenderer } from '@modrint
 import { convertFileSrc } from '@tauri-apps/api/core'
 import dayjs from 'dayjs'
 import { computed, inject, onUnmounted, ref, watch, type Ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import steveSkin from '@/assets/skins/steve.png'
+import BackgroundPicker from '@/components/ui/BackgroundPicker.vue'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_default_user, users } from '@/helpers/auth'
 import { loading_listener, process_listener, profile_listener } from '@/helpers/events'
-import { instanceBackgroundFor } from '@/helpers/instance-backgrounds'
+import {
+	BACKGROUND_CHANGED_EVENT,
+	homeBackgroundFor,
+	instanceBackgroundFor,
+} from '@/helpers/instance-backgrounds'
 import { get_by_profile_path } from '@/helpers/process'
 import { finish_install, kill, list, run } from '@/helpers/profile.js'
 import { get_available_skins, get_normalized_skin_texture, type Skin } from '@/helpers/skins'
@@ -72,9 +78,12 @@ const instanceFolderMenu = ref<InstanceType<typeof ContextMenu> | null>(null)
 const activeSkin = ref<Skin | null>(null)
 const skinTexture = ref(steveSkin)
 const playerName = ref('Minecraft игрок')
+const backgroundRevision = ref(0)
 
 const selectedInstance = computed(() => {
-	return instances.value.find((instance) => instance.path === selectedPath.value) ?? instances.value[0]
+	return (
+		instances.value.find((instance) => instance.path === selectedPath.value) ?? instances.value[0]
+	)
 })
 
 const visibleInstances = computed(() => instances.value.slice(0, 8))
@@ -121,7 +130,10 @@ const activeDownloads = computed(() =>
 
 const lastPlayedText = computed(() => {
 	if (!selectedInstance.value?.last_played) return 'Ещё не запускалась'
-	return dayjs(selectedInstance.value.last_played).fromNow?.() ?? dayjs(selectedInstance.value.last_played).format('DD.MM.YYYY')
+	return (
+		dayjs(selectedInstance.value.last_played).fromNow?.() ??
+		dayjs(selectedInstance.value.last_played).format('DD.MM.YYYY')
+	)
 })
 
 watch(
@@ -147,7 +159,8 @@ async function refreshPlaying() {
 		playing.value = false
 		return
 	}
-	const processes = (await get_by_profile_path(selectedInstance.value.path).catch(handleError)) ?? []
+	const processes =
+		(await get_by_profile_path(selectedInstance.value.path).catch(handleError)) ?? []
 	playing.value = processes.length > 0
 }
 
@@ -275,7 +288,15 @@ function cardBackgroundPosition(index: number) {
 }
 
 function instanceBackground(path: string) {
-	return instanceBackgroundFor(path)
+	return backgroundRevision.value >= 0 ? instanceBackgroundFor(path) : ''
+}
+
+function homeBackground(path: string) {
+	return backgroundRevision.value >= 0 ? homeBackgroundFor(path) : ''
+}
+
+function refreshBackground() {
+	backgroundRevision.value += 1
 }
 
 await Promise.all([fetchInstances(), refreshDownloads()])
@@ -292,7 +313,10 @@ const unlistenLoading = await loading_listener(async () => {
 	await refreshDownloads()
 })
 
+onMounted(() => window.addEventListener(BACKGROUND_CHANGED_EVENT, refreshBackground))
+
 onUnmounted(() => {
+	window.removeEventListener(BACKGROUND_CHANGED_EVENT, refreshBackground)
 	unlistenProfile()
 	unlistenProcess()
 	unlistenLoading()
@@ -302,17 +326,22 @@ onUnmounted(() => {
 <template>
 	<main
 		class="cinematic-home"
-		:style="{ '--cinematic-hero': `url(${instanceBackground(selectedInstance?.path ?? 'blockera')})` }"
+		:style="{ '--cinematic-hero': `url(${homeBackground(selectedInstance?.path ?? 'blockera')})` }"
 	>
 		<div class="cinematic-scene" aria-hidden="true"></div>
 		<div class="cinematic-shade" aria-hidden="true"></div>
+		<BackgroundPicker class="home-background-picker" scope="home" compact />
 
 		<section v-if="selectedInstance" class="hero-content" aria-labelledby="selected-instance-title">
 			<div class="hero-copy">
 				<p class="eyebrow">ТЕКУЩАЯ СБОРКА</p>
 				<div class="title-row">
 					<h1 id="selected-instance-title">{{ selectedInstance.name }}</h1>
-					<button v-tooltip="'Открыть настройки сборки'" class="icon-action" @click="openSelectedInstance">
+					<button
+						v-tooltip="'Открыть настройки сборки'"
+						class="icon-action"
+						@click="openSelectedInstance"
+					>
 						<EditIcon />
 					</button>
 				</div>
@@ -347,7 +376,11 @@ onUnmounted(() => {
 						<span>ВАШ ПЕРСОНАЖ</span>
 						<strong>{{ playerName }}</strong>
 					</div>
-					<button v-tooltip="'Настроить скин'" aria-label="Настроить скин" @click="router.push('/skins')">
+					<button
+						v-tooltip="'Настроить скин'"
+						aria-label="Настроить скин"
+						@click="router.push('/skins')"
+					>
 						<ChangeSkinIcon />
 					</button>
 				</div>
@@ -367,13 +400,17 @@ onUnmounted(() => {
 							<strong>{{ activeDownloads[0].title }}</strong>
 							<span>{{ activeDownloads[0].progress }}%</span>
 						</div>
-						<div class="progress-track"><span :style="{ transform: `scaleX(${activeDownloads[0].progress / 100})` }"></span></div>
+						<div class="progress-track">
+							<span :style="{ transform: `scaleX(${activeDownloads[0].progress / 100})` }"></span>
+						</div>
 					</div>
 					<template v-else>
 						<span class="status-dot" :class="{ active: playing }"></span>
 						<div>
 							<strong>{{ playing ? `${selectedInstance.name} запущена` : 'Готов к игре' }}</strong>
-							<small>{{ playing ? 'Minecraft работает' : `Последний запуск: ${lastPlayedText}` }}</small>
+							<small>{{
+								playing ? 'Minecraft работает' : `Последний запуск: ${lastPlayedText}`
+							}}</small>
 						</div>
 					</template>
 				</div>
@@ -383,14 +420,20 @@ onUnmounted(() => {
 		<section v-else class="empty-home">
 			<p class="eyebrow">ДОБРО ПОЖАЛОВАТЬ</p>
 			<h1>Создайте первую сборку</h1>
-			<p>Выберите версию Minecraft, загрузчик и любимые моды — остальное сделает BlockEra Launcher.</p>
+			<p>
+				Выберите версию Minecraft, загрузчик и любимые моды — остальное сделает BlockEra Launcher.
+			</p>
 			<button class="play-button" @click="router.push('/library')">
 				<span>Открыть библиотеку</span>
 				<ChevronRightIcon />
 			</button>
 		</section>
 
-		<section v-if="visibleInstances.length" class="instance-dock" aria-labelledby="instance-dock-title">
+		<section
+			v-if="visibleInstances.length"
+			class="instance-dock"
+			aria-labelledby="instance-dock-title"
+		>
 			<div class="dock-heading">
 				<h2 id="instance-dock-title">МОИ СБОРКИ</h2>
 				<button @click="router.push('/library')">Все сборки <ChevronRightIcon /></button>
@@ -405,7 +448,10 @@ onUnmounted(() => {
 					@click="selectInstance(instance)"
 					@contextmenu.prevent.stop="openInstanceFolderMenu($event, instance)"
 				>
-					<span class="card-image" :style="{ backgroundImage: `url(${instanceBackground(instance.path)})` }"></span>
+					<span
+						class="card-image"
+						:style="{ backgroundImage: `url(${instanceBackground(instance.path)})` }"
+					></span>
 					<span class="card-shade"></span>
 					<Avatar
 						class="instance-avatar"
@@ -464,6 +510,13 @@ onUnmounted(() => {
 	pointer-events: none;
 }
 
+.home-background-picker {
+	position: absolute;
+	z-index: 8;
+	top: 1.25rem;
+	right: clamp(2.25rem, 3.1vw, 3.75rem);
+}
+
 .cinematic-scene {
 	z-index: -3;
 	background-image: var(--cinematic-hero);
@@ -471,14 +524,28 @@ onUnmounted(() => {
 	background-position: center 48%;
 	filter: saturate(0.92) contrast(1.06) brightness(0.78);
 	transform: scale(1.02);
-	transition: transform 600ms var(--smooth), filter 600ms var(--smooth);
+	transition:
+		transform 600ms var(--smooth),
+		filter 600ms var(--smooth);
 }
 
 .cinematic-shade {
 	z-index: -2;
 	background:
-		linear-gradient(180deg, rgba(4, 7, 13, 0.12) 0%, rgba(4, 8, 15, 0.04) 34%, rgba(4, 8, 15, 0.95) 84%, #050912 100%),
-		linear-gradient(90deg, rgba(2, 6, 13, 0.84) 0%, rgba(3, 7, 14, 0.38) 34%, transparent 66%, rgba(2, 6, 13, 0.22) 100%);
+		linear-gradient(
+			180deg,
+			rgba(4, 7, 13, 0.12) 0%,
+			rgba(4, 8, 15, 0.04) 34%,
+			rgba(4, 8, 15, 0.95) 84%,
+			#050912 100%
+		),
+		linear-gradient(
+			90deg,
+			rgba(2, 6, 13, 0.84) 0%,
+			rgba(3, 7, 14, 0.38) 34%,
+			transparent 66%,
+			rgba(2, 6, 13, 0.22) 100%
+		);
 }
 
 .hero-content {
@@ -530,7 +597,9 @@ onUnmounted(() => {
 	color: #d8b4fe;
 	box-shadow: none;
 	cursor: pointer;
-	transition: transform 180ms var(--smooth), background-color 180ms ease;
+	transition:
+		transform 180ms var(--smooth),
+		background-color 180ms ease;
 }
 
 .icon-action:hover {
@@ -601,7 +670,10 @@ onUnmounted(() => {
 	font-size: 1.28rem;
 	font-weight: 750;
 	cursor: pointer;
-	transition: transform 180ms var(--smooth), filter 180ms ease, box-shadow 180ms ease;
+	transition:
+		transform 180ms var(--smooth),
+		filter 180ms ease,
+		box-shadow 180ms ease;
 }
 
 .play-button:hover:not(:disabled) {
@@ -694,7 +766,9 @@ onUnmounted(() => {
 	box-shadow: 0 9px 24px rgba(30, 12, 60, 0.3);
 	color: #e9d5ff;
 	cursor: pointer;
-	transition: transform 180ms var(--smooth), background-color 180ms ease;
+	transition:
+		transform 180ms var(--smooth),
+		background-color 180ms ease;
 }
 
 .character-hud-top button:hover {
@@ -886,7 +960,10 @@ onUnmounted(() => {
 	color: white;
 	text-align: left;
 	cursor: pointer;
-	transition: transform 180ms var(--smooth), border-color 180ms ease, box-shadow 180ms ease;
+	transition:
+		transform 180ms var(--smooth),
+		border-color 180ms ease,
+		box-shadow 180ms ease;
 }
 
 .instance-card:hover {
@@ -896,7 +973,9 @@ onUnmounted(() => {
 
 .instance-card.selected {
 	border-color: #a855f7;
-	box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.45), 0 10px 28px rgba(88, 28, 135, 0.25);
+	box-shadow:
+		0 0 0 1px rgba(168, 85, 247, 0.45),
+		0 10px 28px rgba(88, 28, 135, 0.25);
 }
 
 .card-image,
@@ -909,7 +988,9 @@ onUnmounted(() => {
 	background-position: inherit;
 	background-size: 190%;
 	filter: saturate(0.86) brightness(0.72);
-	transition: transform 350ms var(--smooth), filter 350ms var(--smooth);
+	transition:
+		transform 350ms var(--smooth),
+		filter 350ms var(--smooth);
 }
 
 .instance-card:hover .card-image,
@@ -919,7 +1000,12 @@ onUnmounted(() => {
 }
 
 .card-shade {
-	background: linear-gradient(180deg, transparent 18%, rgba(3, 7, 13, 0.22) 46%, rgba(3, 7, 13, 0.96) 100%);
+	background: linear-gradient(
+		180deg,
+		transparent 18%,
+		rgba(3, 7, 13, 0.22) 46%,
+		rgba(3, 7, 13, 0.96) 100%
+	);
 }
 
 .instance-avatar {
@@ -974,7 +1060,9 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-	to { transform: rotate(360deg); }
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 @media (max-width: 960px) {

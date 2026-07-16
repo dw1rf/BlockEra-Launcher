@@ -2,5 +2,7 @@ import Custom from './Custom.vue'
 import Downloaded from './Downloaded.vue'
 import Index from './Index.vue'
 import Overview from './Overview.vue'
+import Recommended from './Recommended.vue'
+import RecommendedPack from './RecommendedPack.vue'
 
-export { Custom, Downloaded, Index, Overview }
+export { Custom, Downloaded, Index, Overview, Recommended, RecommendedPack }

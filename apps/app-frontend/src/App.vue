@@ -75,21 +75,16 @@ import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { debugAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
 import { get_user } from '@/helpers/cache.js'
-import { command_listener, info_listener,warning_listener } from '@/helpers/events.js'
+import { command_listener, info_listener, warning_listener } from '@/helpers/events.js'
 import { useFetch } from '@/helpers/fetch.js'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
-import { list } from '@/helpers/profile.js'
+import { list, run } from '@/helpers/profile.js'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_opening_command, initialize_state } from '@/helpers/state'
 import { getRemote, updateState } from '@/helpers/update.js'
-import {
-	getOS,
-	isDev
-} from '@/helpers/utils.js'
+import { getOS, isDev } from '@/helpers/utils.js'
 import i18n from '@/i18n.config'
-import {
-	provideAppUpdateDownloadProgress
-} from '@/providers/download-progress.ts'
+import { provideAppUpdateDownloadProgress } from '@/providers/download-progress.ts'
 import { useError } from '@/store/error.js'
 import { useInstall } from '@/store/install.js'
 import { useLoading, useSelectedInstance, useTheming } from '@/store/state'
@@ -277,11 +272,11 @@ async function setupApp() {
 	// This code is modified by AstralRinth
 	if (!telemetry) {
 		console.info('[BlockEra] Телеметрия отключена по умолчанию.')
-  	  optOutAnalytics()
-  	}
-  	if (!personalized_ads) {
+		optOutAnalytics()
+	}
+	if (!personalized_ads) {
 		console.info('[BlockEra] Персонализированная реклама отключена по умолчанию.')
-  	}
+	}
 	if (dev) debugAnalytics()
 	trackEvent('Launched', { version, dev, onboarded })
 
@@ -500,7 +495,9 @@ command_listener(handleCommand)
 async function handleCommand(e) {
 	if (!e) return
 
-	if (e.event === 'RunMRPack') {
+	if (e.event === 'LaunchProfile') {
+		await run(e.path).catch(handleError)
+	} else if (e.event === 'RunMRPack') {
 		// RunMRPack should directly install a local mrpack given a path
 		if (e.path.endsWith('.mrpack')) {
 			await create_profile_and_install_from_file(e.path).catch(handleError)
@@ -736,26 +733,31 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			<div class="flex flex-grow"></div>
 			<Transition name="nav-button-animated">
 				<div v-if="updateState">
-					<NavButton v-tooltip.right="'Доступно обновление BlockEra Launcher'" :to="() => $refs.settingsModal.show()">
+					<NavButton
+						v-tooltip.right="'Доступно обновление BlockEra Launcher'"
+						:to="() => $refs.settingsModal.show()"
+					>
 						<DownloadIcon class="text-brand" />
 					</NavButton>
 				</div>
 			</Transition>
 			<template v-if="updateState">
-			  <NavButton
-			    v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
-				class="neon-icon pulse"
-				:to="() => $refs.settingsModal.show()">
-				<SettingsIcon />
-			    </NavButton>
-      		</template>
-      		<template v-else>
-      		  <NavButton
-				v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
-				:to="() => $refs.settingsModal.show()">
-				<SettingsIcon />
-			  </NavButton>
-      		</template>
+				<NavButton
+					v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
+					class="neon-icon pulse"
+					:to="() => $refs.settingsModal.show()"
+				>
+					<SettingsIcon />
+				</NavButton>
+			</template>
+			<template v-else>
+				<NavButton
+					v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
+					:to="() => $refs.settingsModal.show()"
+				>
+					<SettingsIcon />
+				</NavButton>
+			</template>
 			<OverflowMenu
 				v-if="credentials"
 				v-tooltip.right="`Modrinth account`"
@@ -898,7 +900,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
 						<MinimizeIcon />
 					</Button>
-					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().toggleMaximize()">
+					<Button
+						class="titlebar-button"
+						icon-only
+						@click="() => getCurrentWindow().toggleMaximize()"
+					>
 						<RestoreIcon v-if="isMaximized" />
 						<MaximizeIcon v-else />
 					</Button>

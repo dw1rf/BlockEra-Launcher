@@ -8,8 +8,10 @@ use theseus::{
 
 use crate::api::{Result, TheseusSerializableError};
 use dashmap::DashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use theseus::prelude::canonicalize;
+use theseus::prelude::{State, canonicalize};
 use theseus::util::utils;
 use url::Url;
 
@@ -26,9 +28,73 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             open_profile_folder,
             show_launcher_logs_folder,
             progress_bars_list,
-            get_opening_command
+            get_opening_command,
+            create_desktop_shortcut,
+            save_custom_background
         ])
         .build()
+}
+
+#[tauri::command]
+pub async fn save_custom_background(
+    source_path: PathBuf,
+    scope: &str,
+) -> Result<PathBuf> {
+    let extension = source_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(str::to_ascii_lowercase)
+        .filter(|value| {
+            matches!(value.as_str(), "png" | "jpg" | "jpeg" | "webp")
+        })
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Background must be a PNG, JPG, JPEG, or WebP image",
+            )
+        })?;
+
+    let state = State::get().await?;
+    let backgrounds_dir = state.directories.caches_dir().join("backgrounds");
+    tokio::fs::create_dir_all(&backgrounds_dir).await?;
+
+    let mut hasher = DefaultHasher::new();
+    scope.hash(&mut hasher);
+    let destination =
+        backgrounds_dir.join(format!("{:016x}.{extension}", hasher.finish()));
+    tokio::fs::copy(source_path, &destination).await?;
+
+    Ok(destination)
+}
+
+#[tauri::command]
+pub async fn create_desktop_shortcut(
+    profile_path: &str,
+    profile_name: &str,
+) -> Result<PathBuf> {
+    let desktop = dirs::desktop_dir().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Desktop directory is not available",
+        )
+    })?;
+    let safe_name: String = profile_name
+        .chars()
+        .map(|character| match character {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+            _ => character,
+        })
+        .collect();
+    let shortcut_path = desktop.join(format!("{}.url", safe_name.trim()));
+    let executable = std::env::current_exe()?;
+    let contents = format!(
+        "[InternetShortcut]\r\nURL=modrinth://profile/{}\r\nIconFile={}\r\nIconIndex=0\r\n",
+        urlencoding::encode(profile_path),
+        executable.display()
+    );
+
+    tokio::fs::write(&shortcut_path, contents).await?;
+    Ok(shortcut_path)
 }
 
 #[derive(Debug, Clone, Deserialize)]
