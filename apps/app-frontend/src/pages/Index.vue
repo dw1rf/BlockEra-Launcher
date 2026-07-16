@@ -508,6 +508,8 @@ onUnmounted(() => {
 	grid-template-rows: minmax(0, 1fr) auto;
 	gap: 1rem;
 	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 	height: 100%;
 	min-height: 37rem;
 	overflow: hidden;
@@ -572,6 +574,8 @@ onUnmounted(() => {
 	grid-template-columns: minmax(0, 1fr) minmax(19rem, min(23rem, 32vw));
 	align-items: flex-end;
 	gap: 3rem;
+	width: 100%;
+	max-width: 100%;
 	min-width: 0;
 }
 
@@ -736,6 +740,7 @@ onUnmounted(() => {
 .character-column {
 	display: flex;
 	width: 100%;
+	max-width: 100%;
 	min-width: 0;
 	flex: 0 0 auto;
 	flex-direction: column;
@@ -986,6 +991,9 @@ onUnmounted(() => {
 .instance-dock {
 	position: relative;
 	z-index: 4;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 	padding: 1rem 1.2rem 1.15rem;
 	border: 1px solid rgba(255, 255, 255, 0.13);
 	border-radius: 0.8rem;
@@ -1037,6 +1045,9 @@ onUnmounted(() => {
 	grid-auto-columns: 18.5rem;
 	grid-auto-flow: column;
 	gap: 0.8rem;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 	overflow-x: auto;
 	padding: 0.15rem;
 	scrollbar-width: thin;

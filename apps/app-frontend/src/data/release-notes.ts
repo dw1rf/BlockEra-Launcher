@@ -8,6 +8,15 @@ export type ReleaseNote = {
 
 export const releaseNotes: ReleaseNote[] = [
 	{
+		version: '0.10.2716',
+		date: '17 июля 2026',
+		highlights: [],
+		fixes: [
+			'Правая колонка главного экрана больше не выходит за границы окна при уменьшении лаунчера.',
+		],
+		improvements: [],
+	},
+	{
 		version: '0.10.2715',
 		date: '16 июля 2026',
 		highlights: ['Поддержка проекта на Boosty перенесена на главный экран.'],

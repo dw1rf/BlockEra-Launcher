@@ -1340,7 +1340,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	top: var(--top-bar-height);
 	height: calc(100vh - var(--top-bar-height));
 	border-radius: 0;
-	grid-template-columns: 1fr;
+	grid-template-columns: minmax(0, 1fr);
 	background: #050912;
 }
 
@@ -1349,6 +1349,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 }
 
 .app-contents.cinematic-shell-contents .app-viewport {
+	min-width: 0;
 	overflow-y: auto;
 	overflow-x: hidden;
 }
