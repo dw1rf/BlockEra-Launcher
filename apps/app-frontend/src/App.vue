@@ -948,7 +948,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</nav>
 			<div class="cinematic-topbar-actions" data-tauri-drag-region-exclude>
 				<Suspense>
-					<RunningAppBar compact />
+					<RunningAppBar v-if="route.path !== '/'" compact />
 				</Suspense>
 				<Suspense>
 					<BlockEraUpdateCenter v-if="!showOnboarding" />
