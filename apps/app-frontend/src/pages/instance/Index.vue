@@ -14,7 +14,9 @@
 					<div class="instance-meta">
 						<span><GameIcon /> {{ instance.game_version }}</span>
 						<span class="capitalize">{{ instance.loader }}</span>
-						<span><TimerIcon /> {{ timePlayed > 0 ? timePlayedHumanized : 'Ещё не запускалась' }}</span>
+						<span
+							><TimerIcon /> {{ timePlayed > 0 ? timePlayedHumanized : 'Ещё не запускалась' }}</span
+						>
 					</div>
 				</div>
 			</div>
@@ -24,61 +26,123 @@
 					class="instance-play repair"
 					:disabled="repairing"
 					@click="repairInstance()"
-				><DownloadIcon /> {{ repairing ? 'Исправляем…' : 'Исправить сборку' }}</button>
-				<button v-else-if="playing" class="instance-play stop" @click="stopInstance('InstancePage')"><StopCircleIcon /> Остановить</button>
-				<button v-else class="instance-play" :disabled="loading" @click="startInstance('InstancePage')"><PlayIcon /> {{ loading ? 'Запуск…' : 'Играть' }}</button>
-				<button class="instance-icon-action" aria-label="Настройки сборки" @click="settingsModal.show()"><SettingsIcon /></button>
-				<button class="instance-icon-action" aria-label="Экспорт сборки" @click="$refs.exportModal.show()"><PackageIcon /></button>
+				>
+					<DownloadIcon /> {{ repairing ? 'Исправляем…' : 'Исправить сборку' }}
+				</button>
+				<button
+					v-else-if="playing"
+					class="instance-play stop"
+					@click="stopInstance('InstancePage')"
+				>
+					<StopCircleIcon /> Остановить
+				</button>
+				<button
+					v-else
+					class="instance-play"
+					:disabled="loading"
+					@click="startInstance('InstancePage')"
+				>
+					<PlayIcon /> {{ loading ? 'Запуск…' : 'Играть' }}
+				</button>
+				<button
+					class="instance-icon-action"
+					aria-label="Настройки сборки"
+					@click="settingsModal.show()"
+				>
+					<SettingsIcon />
+				</button>
+				<button
+					class="instance-icon-action"
+					aria-label="Экспорт сборки"
+					@click="$refs.exportModal.show()"
+				>
+					<PackageIcon />
+				</button>
 			</div>
 		</section>
 
 		<section class="instance-health-strip">
-			<div><span class="health-dot" :class="healthState.tone"></span><span><small>СОСТОЯНИЕ</small><strong>{{ healthState.label }}</strong></span></div>
-			<div><DownloadIcon /><span><small>ОБНОВЛЕНИЯ</small><strong>{{ updateSummary }}</strong></span></div>
-			<div><GameIcon /><span><small>JAVA</small><strong>{{ optimalJavaLabel }}</strong></span></div>
-			<div><PackageIcon /><span><small>БЭКАПЫ</small><strong>Перед важными действиями</strong></span></div>
+			<div>
+				<span class="health-dot" :class="healthState.tone"></span
+				><span
+					><small>СОСТОЯНИЕ</small><strong>{{ healthState.label }}</strong></span
+				>
+			</div>
+			<div>
+				<DownloadIcon /><span
+					><small>ОБНОВЛЕНИЯ</small><strong>{{ updateSummary }}</strong></span
+				>
+			</div>
+			<div>
+				<GameIcon /><span
+					><small>JAVA</small><strong>{{ optimalJavaLabel }}</strong></span
+				>
+			</div>
+			<div>
+				<PackageIcon /><span><small>БЭКАПЫ</small><strong>Перед важными действиями</strong></span>
+			</div>
 		</section>
 
 		<div class="instance-layout">
 			<main class="instance-content-card">
 				<nav class="instance-tabs" aria-label="Разделы сборки">
-					<router-link v-for="tab in tabs" :key="tab.href" :to="tab.href">{{ tab.label }}</router-link>
+					<router-link v-for="tab in tabs" :key="tab.href" :to="tab.href">{{
+						tab.label
+					}}</router-link>
+					<button type="button" @click="settingsModal.show()">Настройки</button>
 				</nav>
-			<RouterView v-slot="{ Component }" :key="instance.path">
-				<template v-if="Component">
-					<Suspense
-						:key="instance.path"
-						@pending="loadingBar.startLoading()"
-						@resolve="loadingBar.stopLoading()"
-					>
-						<component
-							:is="Component"
-							:instance="instance"
-							:options="options"
-							:offline="offline"
-							:playing="playing"
-							:versions="modrinthVersions"
-							:installed="instance.install_stage !== 'installed'"
-							@play="updatePlayState"
-							@stop="() => stopInstance('InstanceSubpage')"
-						></component>
-						<template #fallback>
-							<LoadingIndicator />
-						</template>
-					</Suspense>
-				</template>
-			</RouterView>
+				<RouterView v-slot="{ Component }" :key="instance.path">
+					<template v-if="Component">
+						<Suspense
+							:key="instance.path"
+							@pending="loadingBar.startLoading()"
+							@resolve="loadingBar.stopLoading()"
+						>
+							<component
+								:is="Component"
+								:instance="instance"
+								:options="options"
+								:offline="offline"
+								:playing="playing"
+								:versions="modrinthVersions"
+								:installed="instance.install_stage !== 'installed'"
+								@play="updatePlayState"
+								@stop="() => stopInstance('InstanceSubpage')"
+							></component>
+							<template #fallback>
+								<LoadingIndicator />
+							</template>
+						</Suspense>
+					</template>
+				</RouterView>
 			</main>
 			<aside class="instance-quick-panel">
-				<div class="quick-panel-heading"><span>БЫСТРЫЙ ДОСТУП</span><strong>Файлы сборки</strong></div>
-				<button v-for="folder in quickFolders" :key="folder.id" @click="openProfileFolder(instance.path, folder.id)">
-					<FolderOpenIcon /><span><strong>{{ folder.label }}</strong><small>{{ folder.description }}</small></span>
+				<div class="quick-panel-heading">
+					<span>БЫСТРЫЙ ДОСТУП</span><strong>Файлы сборки</strong>
+				</div>
+				<button
+					v-for="folder in quickFolders"
+					:key="folder.id"
+					@click="openProfileFolder(instance.path, folder.id)"
+				>
+					<FolderOpenIcon /><span
+						><strong>{{ folder.label }}</strong
+						><small>{{ folder.description }}</small></span
+					>
 				</button>
 				<button class="backup-toggle" @click="toggleAutomaticBackups">
 					<span class="toggle-indicator" :class="{ enabled: automaticBackups }"></span>
-					<span><strong>Автоматические бэкапы</strong><small>{{ automaticBackups ? 'Включены' : 'Выключены' }}</small></span>
+					<span
+						><strong>Автоматические бэкапы</strong
+						><small>{{ automaticBackups ? 'Включены' : 'Выключены' }}</small></span
+					>
 				</button>
-				<button class="quick-repair" :disabled="repairing" @click="repairInstance"><DownloadIcon /><span><strong>Проверить файлы</strong><small>Переустановить повреждённые компоненты</small></span></button>
+				<button class="quick-repair" :disabled="repairing" @click="repairInstance">
+					<DownloadIcon /><span
+						><strong>Проверить файлы</strong
+						><small>Переустановить повреждённые компоненты</small></span
+					>
+				</button>
 			</aside>
 		</div>
 		<ContextMenu ref="options" @option-clicked="handleOptionsClick">
@@ -88,11 +152,11 @@
 			<template #edit> <EditIcon /> Edit </template>
 			<template #copy_path> <ClipboardCopyIcon /> Copy path </template>
 			<template #open_folder> <FolderOpenIcon /> Open folder </template>
-			<template #copy_link> <ClipboardCopyIcon /> Copy link </template>
+			<template #copy_link> <ClipboardCopyIcon /> Копировать ссылку </template>
 			<template #open_link> <GlobeIcon /> Open in Modrinth <ExternalIcon /> </template>
 			<template #copy_names><EditIcon />Copy names</template>
 			<template #copy_slugs><HashIcon />Copy slugs</template>
-			<template #copy_links><GlobeIcon />Copy links</template>
+			<template #copy_links><GlobeIcon />Копировать ссылки</template>
 			<template #toggle><EditIcon />Toggle selected</template>
 			<template #disable><XIcon />Disable selected</template>
 			<template #enable><CheckCircleIcon />Enable selected</template>
@@ -142,8 +206,16 @@ import {
 } from '@/helpers/backups'
 import { get_project, get_version_many } from '@/helpers/cache.js'
 import { process_listener, profile_listener } from '@/helpers/events'
+import { formatJavaLabel } from '@/helpers/java-label'
 import { get_by_profile_path } from '@/helpers/process'
-import { finish_install, get, get_full_path, get_optimal_jre_key, kill, run } from '@/helpers/profile'
+import {
+	finish_install,
+	get,
+	get_full_path,
+	get_optimal_jre_key,
+	kill,
+	run,
+} from '@/helpers/profile'
 import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
 import { useSelectedInstance } from '@/store/selected-instance'
@@ -197,9 +269,7 @@ async function fetchInstance() {
 
 	await updatePlayState()
 	const optimalJava = await get_optimal_jre_key(route.params.id).catch(() => null)
-	optimalJavaLabel.value = optimalJava
-		? `Java ${String(optimalJava).replace(/\D/g, '') || optimalJava}`
-		: 'Автоматический выбор'
+	optimalJavaLabel.value = formatJavaLabel(optimalJava)
 }
 
 async function updatePlayState() {
@@ -222,8 +292,12 @@ const basePath = computed(() => `/instance/${encodeURIComponent(route.params.id)
 
 const tabs = computed(() => [
 	{
-		label: 'Контент',
+		label: 'Обзор',
 		href: `${basePath.value}`,
+	},
+	{
+		label: 'Контент',
+		href: `${basePath.value}/content`,
 	},
 	{
 		label: 'Миры',
@@ -288,7 +362,9 @@ const repairInstance = async () => {
 			const backup = await backupProfileWorlds(instance.value.path)
 			if (
 				backup.failures.length > 0 &&
-				!window.confirm(`Не удалось создать ${backup.failures.length} резервных копий. Продолжить ремонт без них?`)
+				!window.confirm(
+					`Не удалось создать ${backup.failures.length} резервных копий. Продолжить ремонт без них?`,
+				)
 			) {
 				repairing.value = false
 				return
@@ -320,13 +396,17 @@ const quickFolders = [
 
 const healthState = computed(() => {
 	if (offline.value) return { label: 'Офлайн-режим', tone: 'warning' }
-	if (instance.value?.install_stage !== 'installed') return { label: 'Требуется ремонт', tone: 'danger' }
+	if (instance.value?.install_stage !== 'installed')
+		return { label: 'Требуется ремонт', tone: 'danger' }
 	return { label: 'Готова к запуску', tone: 'success' }
 })
 
 const updateSummary = computed(() => {
 	if (offline.value) return 'Проверка недоступна'
-	if (instance.value?.linked_data && modrinthVersions.value[0]?.id !== instance.value.linked_data.version_id) {
+	if (
+		instance.value?.linked_data &&
+		modrinthVersions.value[0]?.id !== instance.value.linked_data.version_id
+	) {
 		return 'Доступна новая версия'
 	}
 	return 'Всё актуально'
@@ -658,7 +738,7 @@ Button {
 	box-sizing: border-box;
 	color: #f8f7fc;
 	background:
-		radial-gradient(circle at 16% -10%, rgba(118, 50, 211, .18), transparent 31rem),
+		radial-gradient(circle at 16% -10%, rgba(118, 50, 211, 0.18), transparent 31rem),
 		linear-gradient(180deg, #090d16 0%, #0b111b 100%);
 }
 
@@ -669,10 +749,10 @@ Button {
 	align-items: center;
 	justify-content: space-between;
 	gap: 20px;
-	background: linear-gradient(125deg, rgba(21, 27, 39, .98), rgba(17, 18, 31, .96));
-	border: 1px solid rgba(171, 91, 255, .26);
+	background: linear-gradient(125deg, rgba(21, 27, 39, 0.98), rgba(17, 18, 31, 0.96));
+	border: 1px solid rgba(171, 91, 255, 0.26);
 	border-radius: 20px;
-	box-shadow: 0 24px 55px rgba(0, 0, 0, .26);
+	box-shadow: 0 24px 55px rgba(0, 0, 0, 0.26);
 	overflow: hidden;
 
 	&::after {
@@ -682,7 +762,7 @@ Button {
 		height: 220px;
 		right: -90px;
 		top: -100px;
-		background: radial-gradient(circle, rgba(151, 63, 241, .23), transparent 68%);
+		background: radial-gradient(circle, rgba(151, 63, 241, 0.23), transparent 68%);
 		pointer-events: none;
 	}
 }
@@ -691,15 +771,60 @@ Button {
 .instance-primary-actions,
 .instance-meta,
 .instance-health-strip > div,
-.instance-quick-panel button { display: flex; align-items: center; }
-.instance-hero-main { min-width: 0; gap: 17px; position: relative; z-index: 1; }
-.instance-identity { min-width: 0; }
-.instance-eyebrow { color: #c47cff; font-size: 10px; font-weight: 850; letter-spacing: .13em; }
-.instance-identity h1 { max-width: 620px; margin: 5px 0 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(28px, 3vw, 42px); line-height: 1; }
-.instance-meta { flex-wrap: wrap; gap: 8px; }
-.instance-meta span { min-height: 27px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; color: #c4c7d0; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.075); border-radius: 9px; font-size: 12px; }
-.instance-meta svg { width: 14px; height: 14px; color: #be72ff; }
-.instance-primary-actions { position: relative; z-index: 1; gap: 9px; }
+.instance-quick-panel button {
+	display: flex;
+	align-items: center;
+}
+.instance-hero-main {
+	min-width: 0;
+	gap: 17px;
+	position: relative;
+	z-index: 1;
+}
+.instance-identity {
+	min-width: 0;
+}
+.instance-eyebrow {
+	color: #c47cff;
+	font-size: 10px;
+	font-weight: 850;
+	letter-spacing: 0.13em;
+}
+.instance-identity h1 {
+	max-width: 620px;
+	margin: 5px 0 11px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: clamp(28px, 3vw, 42px);
+	line-height: 1;
+}
+.instance-meta {
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.instance-meta span {
+	min-height: 27px;
+	padding: 0 10px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: #c4c7d0;
+	background: rgba(255, 255, 255, 0.045);
+	border: 1px solid rgba(255, 255, 255, 0.075);
+	border-radius: 9px;
+	font-size: 12px;
+}
+.instance-meta svg {
+	width: 14px;
+	height: 14px;
+	color: #be72ff;
+}
+.instance-primary-actions {
+	position: relative;
+	z-index: 1;
+	gap: 9px;
+}
 .instance-play,
 .instance-icon-action {
 	width: auto !important;
@@ -709,81 +834,309 @@ Button {
 	justify-content: center;
 	gap: 9px;
 	color: white;
-	border: 1px solid rgba(255,255,255,.1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 12px;
 	cursor: pointer;
-	transition: transform 170ms ease, filter 170ms ease, border-color 170ms ease;
+	transition:
+		transform 170ms ease,
+		filter 170ms ease,
+		border-color 170ms ease;
 }
-.instance-play { min-width: 154px; padding: 0 21px; background: linear-gradient(135deg, #8d35ef, #6520c8); font-size: 15px; font-weight: 800; box-shadow: 0 13px 28px rgba(108, 34, 209, .26); }
-.instance-play.stop { background: linear-gradient(135deg, #d83c67, #9d2448); }
-.instance-play.repair { background: linear-gradient(135deg, #a347ec, #6b27c4); }
-.instance-icon-action { width: 46px !important; padding: 0; background: rgba(255,255,255,.055); }
-.instance-play:hover:not(:disabled), .instance-icon-action:hover { transform: translateY(-1px); filter: brightness(1.12); border-color: rgba(196,119,255,.5); }
-.instance-play:disabled { opacity: .58; cursor: wait; }
-.instance-play svg, .instance-icon-action svg { width: 19px; height: 19px; }
+.instance-play {
+	min-width: 154px;
+	padding: 0 21px;
+	background: linear-gradient(135deg, #8d35ef, #6520c8);
+	font-size: 15px;
+	font-weight: 800;
+	box-shadow: 0 13px 28px rgba(108, 34, 209, 0.26);
+}
+.instance-play.stop {
+	background: linear-gradient(135deg, #d83c67, #9d2448);
+}
+.instance-play.repair {
+	background: linear-gradient(135deg, #a347ec, #6b27c4);
+}
+.instance-icon-action {
+	width: 46px !important;
+	padding: 0;
+	background: rgba(255, 255, 255, 0.055);
+}
+.instance-play:hover:not(:disabled),
+.instance-icon-action:hover {
+	transform: translateY(-1px);
+	filter: brightness(1.12);
+	border-color: rgba(196, 119, 255, 0.5);
+}
+.instance-play:disabled {
+	opacity: 0.58;
+	cursor: wait;
+}
+.instance-play svg,
+.instance-icon-action svg {
+	width: 19px;
+	height: 19px;
+}
 
 .instance-health-strip {
 	margin: 13px 0;
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
-	background: rgba(16, 22, 33, .84);
-	border: 1px solid rgba(255,255,255,.07);
+	background: rgba(16, 22, 33, 0.84);
+	border: 1px solid rgba(255, 255, 255, 0.07);
 	border-radius: 16px;
 	overflow: hidden;
 }
-.instance-health-strip > div { min-width: 0; gap: 10px; padding: 14px 16px; border-right: 1px solid rgba(255,255,255,.065); }
-.instance-health-strip > div:last-child { border-right: 0; }
-.instance-health-strip svg { width: 19px; color: #af63f6; }
-.instance-health-strip span:not(.health-dot) { min-width: 0; display: flex; flex-direction: column; }
-.instance-health-strip small { color: #777e8e; font-size: 9px; font-weight: 800; letter-spacing: .11em; }
-.instance-health-strip strong { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.health-dot { width: 10px; height: 10px; border-radius: 999px; box-shadow: 0 0 12px currentColor; }
-.health-dot.success { color: #55d489; background: currentColor; }
-.health-dot.warning { color: #f0b45d; background: currentColor; }
-.health-dot.danger { color: #ff6688; background: currentColor; }
+.instance-health-strip > div {
+	min-width: 0;
+	gap: 10px;
+	padding: 14px 16px;
+	border-right: 1px solid rgba(255, 255, 255, 0.065);
+}
+.instance-health-strip > div:last-child {
+	border-right: 0;
+}
+.instance-health-strip svg {
+	width: 19px;
+	color: #af63f6;
+}
+.instance-health-strip span:not(.health-dot) {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+.instance-health-strip small {
+	color: #777e8e;
+	font-size: 9px;
+	font-weight: 800;
+	letter-spacing: 0.11em;
+}
+.instance-health-strip strong {
+	margin-top: 2px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12px;
+}
+.health-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 999px;
+	box-shadow: 0 0 12px currentColor;
+}
+.health-dot.success {
+	color: #55d489;
+	background: currentColor;
+}
+.health-dot.warning {
+	color: #f0b45d;
+	background: currentColor;
+}
+.health-dot.danger {
+	color: #ff6688;
+	background: currentColor;
+}
 
-.instance-layout { display: grid; grid-template-columns: minmax(0, 1fr) 268px; gap: 13px; align-items: start; }
+.instance-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 268px;
+	gap: 13px;
+	align-items: start;
+}
 .instance-content-card,
-.instance-quick-panel { background: rgba(14, 20, 30, .88); border: 1px solid rgba(255,255,255,.075); border-radius: 18px; }
-.instance-content-card { min-width: 0; padding: 0 18px 18px; overflow: hidden; }
-.instance-tabs { margin: 0 -18px 18px; padding: 0 18px; display: flex; gap: 6px; border-bottom: 1px solid rgba(255,255,255,.07); }
-.instance-tabs a { position: relative; padding: 16px 14px 14px; color: #8f96a5; text-decoration: none; font-size: 13px; font-weight: 750; }
-.instance-tabs a.router-link-exact-active { color: #f7eeff; }
-.instance-tabs a.router-link-exact-active::after { content: ''; position: absolute; height: 2px; left: 12px; right: 12px; bottom: -1px; background: #a94fff; box-shadow: 0 0 12px #9a3eef; }
-.instance-quick-panel { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
-.quick-panel-heading { padding: 5px 5px 10px; display: flex; flex-direction: column; }
-.quick-panel-heading span { color: #aa65ed; font-size: 9px; font-weight: 850; letter-spacing: .13em; }
-.quick-panel-heading strong { margin-top: 2px; font-size: 16px; }
-.instance-quick-panel button { width: 100%; padding: 10px; gap: 10px; color: #eef0f5; text-align: left; background: rgba(255,255,255,.032); border: 1px solid transparent; border-radius: 11px; cursor: pointer; transition: background 160ms ease, border-color 160ms ease; }
-.instance-quick-panel button:hover { background: rgba(149,72,231,.12); border-color: rgba(175,96,255,.25); }
-.instance-quick-panel button > svg { width: 18px; color: #a95af2; }
-.instance-quick-panel button span { min-width: 0; display: flex; flex-direction: column; }
-.instance-quick-panel button strong { font-size: 12px; }
-.instance-quick-panel button small { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #868d9c; font-size: 10px; }
-.instance-quick-panel .quick-repair { margin-top: 5px; color: #e8d2ff; background: rgba(139,59,218,.1); border-color: rgba(176,89,255,.18); }
-.instance-quick-panel .backup-toggle { margin-top: 5px; }
-.toggle-indicator { width: 30px; height: 17px; flex: 0 0 auto; position: relative; background: #313746; border-radius: 999px; transition: background 160ms ease; }
-.toggle-indicator::after { content: ''; position: absolute; width: 11px; height: 11px; left: 3px; top: 3px; background: #a4a9b5; border-radius: 50%; transition: transform 160ms ease, background 160ms ease; }
-.toggle-indicator.enabled { background: rgba(151,65,238,.58); }
-.toggle-indicator.enabled::after { transform: translateX(13px); background: #e8cfff; }
+.instance-quick-panel {
+	background: rgba(14, 20, 30, 0.88);
+	border: 1px solid rgba(255, 255, 255, 0.075);
+	border-radius: 18px;
+}
+.instance-content-card {
+	min-width: 0;
+	padding: 0 18px 18px;
+	overflow: hidden;
+}
+.instance-tabs {
+	margin: 0 -18px 18px;
+	padding: 0 18px;
+	display: flex;
+	gap: 6px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.instance-tabs a,
+.instance-tabs button {
+	position: relative;
+	width: auto;
+	min-width: 0;
+	padding: 16px 14px 14px;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: #8f96a5;
+	text-decoration: none;
+	font-size: 13px;
+	font-weight: 750;
+	box-shadow: none;
+	cursor: pointer;
+}
+.instance-tabs a:hover,
+.instance-tabs button:hover,
+.instance-tabs button:focus-visible {
+	background: rgba(255, 255, 255, 0.035);
+	color: #f7eeff;
+}
+.instance-tabs a.router-link-exact-active {
+	color: #f7eeff;
+}
+.instance-tabs a.router-link-exact-active::after {
+	content: '';
+	position: absolute;
+	height: 2px;
+	left: 12px;
+	right: 12px;
+	bottom: -1px;
+	background: #a94fff;
+	box-shadow: 0 0 12px #9a3eef;
+}
+.instance-quick-panel {
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.quick-panel-heading {
+	padding: 5px 5px 10px;
+	display: flex;
+	flex-direction: column;
+}
+.quick-panel-heading span {
+	color: #aa65ed;
+	font-size: 9px;
+	font-weight: 850;
+	letter-spacing: 0.13em;
+}
+.quick-panel-heading strong {
+	margin-top: 2px;
+	font-size: 16px;
+}
+.instance-quick-panel button {
+	width: 100%;
+	padding: 10px;
+	gap: 10px;
+	color: #eef0f5;
+	text-align: left;
+	background: rgba(255, 255, 255, 0.032);
+	border: 1px solid transparent;
+	border-radius: 11px;
+	cursor: pointer;
+	transition:
+		background 160ms ease,
+		border-color 160ms ease;
+}
+.instance-quick-panel button:hover {
+	background: rgba(149, 72, 231, 0.12);
+	border-color: rgba(175, 96, 255, 0.25);
+}
+.instance-quick-panel button > svg {
+	width: 18px;
+	color: #a95af2;
+}
+.instance-quick-panel button span {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+.instance-quick-panel button strong {
+	font-size: 12px;
+}
+.instance-quick-panel button small {
+	margin-top: 2px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: #868d9c;
+	font-size: 10px;
+}
+.instance-quick-panel .quick-repair {
+	margin-top: 5px;
+	color: #e8d2ff;
+	background: rgba(139, 59, 218, 0.1);
+	border-color: rgba(176, 89, 255, 0.18);
+}
+.instance-quick-panel .backup-toggle {
+	margin-top: 5px;
+}
+.toggle-indicator {
+	width: 30px;
+	height: 17px;
+	flex: 0 0 auto;
+	position: relative;
+	background: #313746;
+	border-radius: 999px;
+	transition: background 160ms ease;
+}
+.toggle-indicator::after {
+	content: '';
+	position: absolute;
+	width: 11px;
+	height: 11px;
+	left: 3px;
+	top: 3px;
+	background: #a4a9b5;
+	border-radius: 50%;
+	transition:
+		transform 160ms ease,
+		background 160ms ease;
+}
+.toggle-indicator.enabled {
+	background: rgba(151, 65, 238, 0.58);
+}
+.toggle-indicator.enabled::after {
+	transform: translateX(13px);
+	background: #e8cfff;
+}
 
 @media (max-width: 1120px) {
-	.instance-hero { align-items: flex-start; flex-direction: column; }
-	.instance-health-strip { grid-template-columns: repeat(2, 1fr); }
-	.instance-layout { grid-template-columns: 1fr; }
-	.instance-quick-panel { display: grid; grid-template-columns: repeat(2, 1fr); }
-	.quick-panel-heading { grid-column: 1 / -1; }
+	.instance-hero {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+	.instance-health-strip {
+		grid-template-columns: repeat(2, 1fr);
+	}
+	.instance-layout {
+		grid-template-columns: 1fr;
+	}
+	.instance-quick-panel {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+	}
+	.quick-panel-heading {
+		grid-column: 1 / -1;
+	}
 }
 
 @media (max-width: 720px) {
-	.blockera-instance { padding: 14px; }
-	.instance-hero-main { align-items: flex-start; }
-	.instance-health-strip { grid-template-columns: 1fr; }
-	.instance-health-strip > div { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.065); }
-	.instance-quick-panel { grid-template-columns: 1fr; }
+	.blockera-instance {
+		padding: 14px;
+	}
+	.instance-hero-main {
+		align-items: flex-start;
+	}
+	.instance-health-strip {
+		grid-template-columns: 1fr;
+	}
+	.instance-health-strip > div {
+		border-right: 0;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+	}
+	.instance-quick-panel {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.instance-play, .instance-icon-action, .instance-quick-panel button { transition-duration: 1ms !important; }
+	.instance-play,
+	.instance-icon-action,
+	.instance-quick-panel button {
+		transition-duration: 1ms !important;
+	}
 }
 </style>

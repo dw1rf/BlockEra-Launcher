@@ -23,20 +23,20 @@ export const useInstall = defineStore('installStore', {
 		setInstallConfirmModal(ref) {
 			this.installConfirmModal = ref
 		},
-		showInstallConfirmModal(project, version_id, onInstall, createInstanceCallback) {
-			this.installConfirmModal.show(project, version_id, onInstall, createInstanceCallback)
+		showInstallConfirmModal(project, version_id, createInstanceCallback, onPhase) {
+			return this.installConfirmModal.show(project, version_id, createInstanceCallback, onPhase)
 		},
 		setIncompatibilityWarningModal(ref) {
 			this.incompatibilityWarningModal = ref
 		},
-		showIncompatibilityWarningModal(instance, project, versions, selected, onInstall) {
-			this.incompatibilityWarningModal.show(instance, project, versions, selected, onInstall)
+		showIncompatibilityWarningModal(instance, project, versions, selected, onPhase) {
+			return this.incompatibilityWarningModal.show(instance, project, versions, selected, onPhase)
 		},
 		setModInstallModal(ref) {
 			this.modInstallModal = ref
 		},
-		showModInstallModal(project, versions, onInstall) {
-			this.modInstallModal.show(project, versions, onInstall)
+		showModInstallModal(project, versions, onPhase) {
+			return this.modInstallModal.show(project, versions, onPhase)
 		},
 	},
 })
@@ -86,6 +86,7 @@ export const install = async (
 	source,
 	callback = () => {},
 	createInstanceCallback = () => {},
+	onPhase = () => {},
 ) => {
 	const project = await get_project(projectId, 'must_revalidate')
 
@@ -94,6 +95,7 @@ export const install = async (
 		const packs = await list()
 
 		if (packs.length === 0 || !packs.find((pack) => pack.linked_data?.project_id === project.id)) {
+			onPhase('installing')
 			await packInstall(
 				project.id,
 				version,
@@ -110,9 +112,17 @@ export const install = async (
 			})
 
 			callback(version)
+			return { status: 'success', versionId: version }
 		} else {
 			const install = useInstall()
-			install.showInstallConfirmModal(project, version, callback, createInstanceCallback)
+			const result = await install.showInstallConfirmModal(
+				project,
+				version,
+				createInstanceCallback,
+				onPhase,
+			)
+			if (result.status === 'success') callback(result.versionId)
+			return result
 		}
 	} else {
 		if (instancePath) {
@@ -138,6 +148,7 @@ export const install = async (
 			}
 
 			if (isVersionCompatible(version, project, instance, true)) {
+				onPhase('installing')
 				for (const [path, file] of Object.entries(instanceProjects)) {
 					if (file.metadata && file.metadata.project_id === project.id) {
 						await remove_project(instance.path, path)
@@ -158,15 +169,18 @@ export const install = async (
 				})
 
 				callback(version.id)
+				return { status: 'success', versionId: version.id }
 			} else {
 				const install = useInstall()
-				install.showIncompatibilityWarningModal(
+				const result = await install.showIncompatibilityWarningModal(
 					instance,
 					project,
 					projectVersions,
 					version,
-					callback,
+					onPhase,
 				)
+				if (result.status === 'success') callback(result.versionId)
+				return result
 			}
 		} else {
 			let versions = (await get_version_many(project.versions)).sort(
@@ -178,7 +192,9 @@ export const install = async (
 			}
 
 			const install = useInstall()
-			install.showModInstallModal(project, versions, callback)
+			const result = await install.showModInstallModal(project, versions, onPhase)
+			if (result.status === 'success') callback(result.versionId)
+			return result
 		}
 	}
 

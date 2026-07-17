@@ -8,6 +8,7 @@ export const installState = ref(false)
 export const updateState = ref(false)
 export const checkingState = ref(false)
 export const updateError = ref('')
+/** @type {import('vue').ShallowRef<import('@tauri-apps/plugin-updater').Update | null>} */
 export const availableUpdate = shallowRef(null)
 
 let activeCheck = null

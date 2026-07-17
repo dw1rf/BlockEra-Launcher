@@ -14,54 +14,76 @@ const project = ref()
 const confirmModal = ref(null)
 const installing = ref(false)
 
-const onInstall = ref(() => {})
 const onCreateInstance = ref(() => {})
+const onPhase = ref(() => {})
+let resolveResult = null
+let settled = false
 
 defineExpose({
-	show: (projectVal, versionIdVal, callback, createInstanceCallback) => {
+	show: (projectVal, versionIdVal, createInstanceCallback, phaseCallback) => {
 		project.value = projectVal
 		versionId.value = versionIdVal
 		installing.value = false
 		confirmModal.value.show()
 
-		onInstall.value = callback
 		onCreateInstance.value = createInstanceCallback
+		onPhase.value = phaseCallback ?? (() => {})
+		settled = false
 
 		trackEvent('PackInstallStart')
+		return new Promise((resolve) => {
+			resolveResult = resolve
+		})
 	},
 })
 
+function finish(result) {
+	if (settled) return
+	settled = true
+	resolveResult?.(result)
+	resolveResult = null
+}
+
+function handleHide() {
+	finish({ status: 'cancelled' })
+}
+
 async function install() {
 	installing.value = true
-	confirmModal.value.hide()
-
-	await pack_install(
-		project.value.id,
-		versionId.value,
-		project.value.title,
-		project.value.icon_url,
-		onCreateInstance.value,
-	).catch(handleError)
-	trackEvent('PackInstall', {
-		id: project.value.id,
-		version_id: versionId.value,
-		title: project.value.title,
-		source: 'ConfirmModal',
-	})
-
-	onInstall.value(versionId.value)
-	installing.value = false
+	onPhase.value('installing')
+	try {
+		await pack_install(
+			project.value.id,
+			versionId.value,
+			project.value.title,
+			project.value.icon_url,
+			onCreateInstance.value,
+		)
+		trackEvent('PackInstall', {
+			id: project.value.id,
+			version_id: versionId.value,
+			title: project.value.title,
+			source: 'ConfirmModal',
+		})
+		finish({ status: 'success', versionId: versionId.value })
+		confirmModal.value.hide()
+	} catch (error) {
+		onPhase.value('error')
+		handleError(error)
+	} finally {
+		installing.value = false
+	}
 }
 </script>
 
 <template>
-	<ModalWrapper ref="confirmModal" header="Are you sure?" :on-hide="onInstall">
+	<ModalWrapper ref="confirmModal" header="Повторная установка" :on-hide="handleHide">
 		<div class="modal-body">
-			<p>You already have this modpack installed. Are you sure you want to install it again?</p>
+			<p>Эта сборка уже установлена. Установить её ещё раз?</p>
 			<div class="input-group push-right">
-				<Button @click="() => $refs.confirmModal.hide()"><XIcon />Cancel</Button>
+				<Button @click="() => $refs.confirmModal.hide()"><XIcon />Отмена</Button>
 				<Button color="primary" :disabled="installing" @click="install()"
-					><DownloadIcon /> {{ installing ? 'Installing' : 'Install' }}</Button
+					><DownloadIcon /> {{ installing ? 'Устанавливаем…' : 'Установить' }}</Button
 				>
 			</div>
 		</div>

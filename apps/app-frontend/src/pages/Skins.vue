@@ -20,7 +20,7 @@ import {
 import { arrayBufferToBase64 } from '@modrinth/utils'
 import { computedAsync } from '@vueuse/core'
 import type { Ref } from 'vue'
-import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, inject, ref, useTemplateRef, watch } from 'vue'
 
 import steveSkin from '@/assets/skins/steve.png'
 import type AccountsCard from '@/components/ui/AccountsCard.vue'
@@ -57,6 +57,7 @@ const skins = ref<Skin[]>([])
 const capes = ref<Cape[]>([])
 
 const accountsCard = inject('accountsCard') as Ref<typeof AccountsCard>
+const accountRevision = inject<Ref<number>>('accountRevision')
 const currentUser = ref(undefined)
 const currentUserId = ref<string | undefined>(undefined)
 
@@ -100,8 +101,6 @@ const skinVariant = computed(() => selectedSkin.value?.variant)
 const skinNametag = computed(() =>
 	settings.value.hide_nametag_skins_page ? undefined : username.value,
 )
-
-let userCheckInterval: number | null = null
 
 const deleteSkinModal = ref()
 const skinToDelete = ref<Skin | null>(null)
@@ -270,15 +269,9 @@ watch(
 	() => {},
 )
 
-onMounted(() => {
-	userCheckInterval = window.setInterval(checkUserChanges, 250)
-})
-
-onUnmounted(() => {
-	if (userCheckInterval !== null) {
-		window.clearInterval(userCheckInterval)
-	}
-})
+if (accountRevision) {
+	watch(accountRevision, () => void checkUserChanges())
+}
 
 async function checkUserChanges() {
 	try {
@@ -340,8 +333,8 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 			<div>
 				<strong>Локальный скин офлайн-профиля</strong>
 				<span
-					>PNG хранится только на этом компьютере и подключается без Ely.by. Вы всегда увидите
-					его в своей игре; другим игрокам нужна совместимая серверная или клиентская поддержка.</span
+					>PNG хранится только на этом компьютере и подключается без Ely.by. Вы всегда увидите его в
+					своей игре; другим игрокам нужна совместимая серверная или клиентская поддержка.</span
 				>
 			</div>
 		</div>

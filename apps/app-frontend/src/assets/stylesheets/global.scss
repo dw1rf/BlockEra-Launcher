@@ -45,6 +45,27 @@
 	color-scheme: dark;
 	--view-width: calc(100% - 5rem);
 	--expanded-view-width: calc(100% - 13rem);
+	--blockera-bg: #090b13;
+	--blockera-surface: #111522;
+	--blockera-surface-raised: #191d2d;
+	--blockera-text: #f7f2ff;
+	--blockera-text-secondary: #a8adba;
+	--blockera-border: rgba(255, 255, 255, 0.09);
+	--blockera-focus: #f0abfc;
+	--blockera-accent: #c084fc;
+	--blockera-accent-strong: #8b36e0;
+	--blockera-success: #62d49b;
+	--blockera-warning: #e9b949;
+	--blockera-danger: #ff8da8;
+	--blockera-space-1: 0.25rem;
+	--blockera-space-2: 0.5rem;
+	--blockera-space-3: 0.75rem;
+	--blockera-space-4: 1rem;
+	--blockera-radius-sm: 0.5rem;
+	--blockera-radius-md: 0.7rem;
+	--blockera-radius-lg: 0.9rem;
+	--blockera-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+	--blockera-control-height: 2.25rem;
 }
 
 body {
@@ -91,6 +112,22 @@ summary,
 	-webkit-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex='0']:focus-visible {
+	outline: 0.1875rem solid var(--blockera-focus);
+	outline-offset: 0.1875rem;
+}
+
+button:not(.checkbox),
+a {
+	min-width: 1.5rem;
+	min-height: 1.5rem;
 }
 
 input {

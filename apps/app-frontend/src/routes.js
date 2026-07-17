@@ -21,14 +21,6 @@ export default new createRouter({
 			},
 		},
 		{
-			path: '/worlds',
-			name: 'Worlds',
-			component: Pages.Worlds,
-			meta: {
-				breadcrumb: [{ name: 'Worlds' }],
-			},
-		},
-		{
 			path: '/hosting/manage/',
 			name: 'Servers',
 			component: ServersManagePageIndex,
@@ -142,15 +134,15 @@ export default new createRouter({
 			component: Instance.Index,
 			props: true,
 			children: [
-				// {
-				//   path: '',
-				//   name: 'Overview',
-				//   component: Instance.Overview,
-				//   meta: {
-				//     useRootContext: true,
-				//     breadcrumb: [{ name: '?Instance' }],
-				//   },
-				// },
+				{
+					path: '',
+					name: 'InstanceOverview',
+					component: Instance.Overview,
+					meta: {
+						useRootContext: true,
+						breadcrumb: [{ name: '?Instance' }],
+					},
+				},
 				{
 					path: 'worlds',
 					name: 'InstanceWorlds',
@@ -161,7 +153,7 @@ export default new createRouter({
 					},
 				},
 				{
-					path: '',
+					path: 'content',
 					name: 'Mods',
 					component: Instance.Mods,
 					meta: {

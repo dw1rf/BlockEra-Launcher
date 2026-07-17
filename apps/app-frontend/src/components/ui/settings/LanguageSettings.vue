@@ -8,24 +8,16 @@ import {
 	LOCALES,
 	useVIntl,
 } from '@modrinth/ui'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
-import { get, set } from '@/helpers/settings.ts'
+import { useAppSettings } from '@/composables/use-app-settings'
 import i18n from '@/i18n.config'
 
 const { formatMessage } = useVIntl()
 
 const platform = formatMessage(languageSelectorMessages.platformApp)
 
-const settings = ref(await get())
-
-watch(
-	settings,
-	async () => {
-		await set(settings.value)
-	},
-	{ deep: true },
-)
+const { settings, saveKey } = await useAppSettings()
 
 const $isChanging = ref(false)
 
@@ -35,7 +27,7 @@ async function onLocaleChange(newLocale: string) {
 	$isChanging.value = true
 	try {
 		i18n.global.locale.value = newLocale
-		settings.value.locale = newLocale
+		await saveKey('locale', newLocale)
 	} finally {
 		$isChanging.value = false
 	}
@@ -44,32 +36,35 @@ async function onLocaleChange(newLocale: string) {
 
 <template>
 	<div class="launcher-settings-page">
-	<header class="settings-page-header"><p>ЛОКАЛИЗАЦИЯ</p><h2>Язык интерфейса</h2><span>Выберите язык меню, уведомлений и служебных сообщений.</span></header>
-	<section class="settings-section">
+		<header class="settings-page-header">
+			<p>ЛОКАЛИЗАЦИЯ</p>
+			<h2>Язык интерфейса</h2>
+			<span>Выберите язык меню, уведомлений и служебных сообщений.</span>
+		</header>
+		<section class="settings-section">
+			<Admonition type="warning" class="mt-2 mb-4">
+				{{ formatMessage(languageSelectorMessages.languageWarning, { platform }) }}
+			</Admonition>
 
-	<Admonition type="warning" class="mt-2 mb-4">
-		{{ formatMessage(languageSelectorMessages.languageWarning, { platform }) }}
-	</Admonition>
+			<p class="m-0 mb-4">
+				<IntlFormatted
+					:message-id="languageSelectorMessages.languagesDescription"
+					:values="{ platform }"
+				>
+					<template #~crowdin-link="{ children }">
+						<AutoLink to="https://translate.modrinth.com">
+							<component :is="() => children" />
+						</AutoLink>
+					</template>
+				</IntlFormatted>
+			</p>
 
-	<p class="m-0 mb-4">
-		<IntlFormatted
-			:message-id="languageSelectorMessages.languagesDescription"
-			:values="{ platform }"
-		>
-			<template #~crowdin-link="{ children }">
-				<AutoLink to="https://translate.modrinth.com">
-					<component :is="() => children" />
-				</AutoLink>
-			</template>
-		</IntlFormatted>
-	</p>
-
-	<LanguageSelector
-		:current-locale="settings.locale"
-		:locales="LOCALES"
-		:on-locale-change="onLocaleChange"
-		:is-changing="$isChanging"
-	/>
-	</section>
+			<LanguageSelector
+				:current-locale="settings.locale"
+				:locales="LOCALES"
+				:on-locale-change="onLocaleChange"
+				:is-changing="$isChanging"
+			/>
+		</section>
 	</div>
 </template>

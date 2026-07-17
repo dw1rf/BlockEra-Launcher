@@ -15,9 +15,13 @@
 					<CheckIcon v-else />
 					{{ copied ? 'Скопировано' : 'Копировать' }}
 				</Button>
-				<Button color="primary" :disabled="offline || !logs[selectedLogIndex]" @click="share">
+				<Button
+					color="primary"
+					:disabled="offline || !logs[selectedLogIndex] || sharing"
+					@click="share"
+				>
 					<ShareIcon aria-hidden="true" />
-					Поделиться
+					{{ sharing ? 'Отправляем…' : 'Поделиться' }}
 				</Button>
 				<Button
 					v-if="logs[selectedLogIndex] && logs[selectedLogIndex].live === true"
@@ -38,6 +42,9 @@
 				</Button>
 			</div>
 		</div>
+		<p v-if="shareError" class="log-action-error" role="alert">
+			{{ shareError }} <button type="button" @click="share">Повторить</button>
+		</p>
 		<div class="button-row">
 			<input
 				id="text-filter"
@@ -165,6 +172,8 @@ const logsColored = true
 
 const selectedLogIndex = ref(0)
 const copied = ref(false)
+const sharing = ref(false)
+const shareError = ref('')
 const logContainer = ref(null)
 const interval = ref(null)
 const userScrolled = ref(false)
@@ -235,7 +244,10 @@ const processedLogs = computed(() => {
 
 async function getLiveStdLog() {
 	if (route.params.id) {
-		const processes = await get_by_profile_path(route.params.id).catch(handleError)
+		const processes = await get_by_profile_path(route.params.id).catch((error) => {
+			handleError(error)
+			return []
+		})
 		let returnValue
 		if (processes.length === 0) {
 			returnValue = emptyText.join('\n')
@@ -243,7 +255,11 @@ async function getLiveStdLog() {
 			const logCursor = await get_latest_log_cursor(
 				props.instance.path,
 				currentLiveLogCursor.value,
-			).catch(handleError)
+			).catch((error) => {
+				handleError(error)
+				return null
+			})
+			if (!logCursor) return { name: 'Текущий лог', stdout: emptyText.join('\n'), live: true }
 			if (logCursor.new_file) {
 				currentLiveLog.value = ''
 			}
@@ -251,13 +267,18 @@ async function getLiveStdLog() {
 			currentLiveLogCursor.value = logCursor.cursor
 			returnValue = currentLiveLog.value
 		}
-		return { name: 'Live Log', stdout: returnValue, live: true }
+		return { name: 'Текущий лог', stdout: returnValue, live: true }
 	}
 	return null
 }
 
 async function getLogs() {
-	return (await get_logs(props.instance.path, true).catch(handleError))
+	return (
+		await get_logs(props.instance.path, true).catch((error) => {
+			handleError(error)
+			return []
+		})
+	)
 		.filter(
 			// filter out latest_stdout.log or anything without .log in it
 			(log) =>
@@ -275,27 +296,58 @@ async function getLogs() {
 
 async function setLogs() {
 	const [liveStd, allLogs] = await Promise.all([getLiveStdLog(), getLogs()])
-	logs.value = [liveStd, ...allLogs]
+	logs.value = [liveStd, ...allLogs].filter(Boolean)
 }
 
-const copyLog = () => {
+const copyLog = async () => {
 	if (logs.value.length > 0 && logs.value[selectedLogIndex.value]) {
-		navigator.clipboard.writeText(logs.value[selectedLogIndex.value].stdout)
-		copied.value = true
+		try {
+			await navigator.clipboard.writeText(logs.value[selectedLogIndex.value].stdout)
+			copied.value = true
+		} catch (error) {
+			copied.value = false
+			handleError(error)
+		}
 	}
 }
 
+function redactLog(value) {
+	return value
+		.replace(/\b(?:Bearer\s+)?[A-Za-z0-9_-]{24,}\.[A-Za-z0-9._-]{10,}\b/gi, '[СКРЫТ ТОКЕН]')
+		.replace(/\b(?:access[_-]?token|token|password)\s*[:=]\s*[^\s,;]+/gi, '$1=[СКРЫТО]')
+		.replace(/\b(?:[A-Z]:\\Users\\|\/home\/|\/Users\/)[^\\/\s]+/gi, '[ПОЛЬЗОВАТЕЛЬСКИЙ ПУТЬ]')
+		.replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[IP-АДРЕС]')
+}
+
 const share = async () => {
-	if (logs.value.length > 0 && logs.value[selectedLogIndex.value]) {
+	const selected = logs.value[selectedLogIndex.value]
+	if (!selected || sharing.value) return
+	const sanitized = redactLog(selected.stdout)
+	const redacted = sanitized !== selected.stdout
+	if (
+		!window.confirm(
+			`Лог (${sanitized.length.toLocaleString('ru-RU')} символов) будет отправлен во внешний сервис mclo.gs.${redacted ? ' Найденные токены, пользовательские пути и IP-адреса скрыты.' : ''} Продолжить?`,
+		)
+	)
+		return
+
+	sharing.value = true
+	shareError.value = ''
+	try {
 		const url = await ofetch('https://api.mclo.gs/1/log', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',
 			},
-			body: `content=${encodeURIComponent(logs.value[selectedLogIndex.value].stdout)}`,
-		}).catch(handleError)
-
+			body: `content=${encodeURIComponent(sanitized)}`,
+		})
+		if (!url?.url) throw new Error('mclo.gs не вернул ссылку на лог.')
 		shareModal.value.show(url.url)
+	} catch (error) {
+		shareError.value = error instanceof Error ? error.message : String(error)
+		handleError(error)
+	} finally {
+		sharing.value = false
 	}
 }
 
@@ -305,11 +357,17 @@ watch(selectedLogIndex, async (newIndex) => {
 
 	if (logs.value.length > 1 && newIndex !== 0) {
 		logs.value[newIndex].stdout = 'Loading...'
-		logs.value[newIndex].stdout = await get_output_by_filename(
-			props.instance.path,
-			logs.value[newIndex].log_type,
-			logs.value[newIndex].filename,
-		).catch(handleError)
+		try {
+			logs.value[newIndex].stdout = await get_output_by_filename(
+				props.instance.path,
+				logs.value[newIndex].log_type,
+				logs.value[newIndex].filename,
+			)
+		} catch (error) {
+			logs.value[newIndex].stdout =
+				'Не удалось загрузить лог. Выберите его ещё раз, чтобы повторить.'
+			handleError(error)
+		}
 	}
 })
 
@@ -321,14 +379,20 @@ if (logs.value.length > 1 && !props.playing) {
 
 const deleteLog = async () => {
 	if (logs.value[selectedLogIndex.value] && selectedLogIndex.value !== 0) {
+		if (!window.confirm(`Удалить исторический лог «${logs.value[selectedLogIndex.value].name}»?`))
+			return
 		const deleteIndex = selectedLogIndex.value
-		selectedLogIndex.value = deleteIndex - 1
-		await delete_logs_by_filename(
-			props.instance.path,
-			logs.value[deleteIndex].log_type,
-			logs.value[deleteIndex].filename,
-		).catch(handleError)
-		await setLogs()
+		try {
+			await delete_logs_by_filename(
+				props.instance.path,
+				logs.value[deleteIndex].log_type,
+				logs.value[deleteIndex].filename,
+			)
+			selectedLogIndex.value = Math.max(0, deleteIndex - 1)
+			await setLogs()
+		} catch (error) {
+			handleError(error)
+		}
 	}
 }
 
@@ -482,6 +546,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.log-action-error {
+	color: var(--blockera-danger);
+}
+.log-action-error button {
+	margin-left: 0.5rem;
+	color: inherit;
+	border: 0;
+	background: transparent;
+	text-decoration: underline;
+	cursor: pointer;
+}
 .log-card {
 	display: flex;
 	flex-direction: column;
@@ -496,9 +571,22 @@ onUnmounted(() => {
 	border: 0;
 	box-shadow: none;
 
-	:deep(button), :deep(.dropdown-select) { border-radius: 10px; }
-	.text-filter { min-height: 40px; padding: 0 13px; color: #f3f0f7; background: rgba(8,12,20,.74); border: 1px solid rgba(255,255,255,.085); border-radius: 11px; outline: none; }
-	.text-filter:focus { border-color: rgba(176,89,255,.5); }
+	:deep(button),
+	:deep(.dropdown-select) {
+		border-radius: 10px;
+	}
+	.text-filter {
+		min-height: 40px;
+		padding: 0 13px;
+		color: #f3f0f7;
+		background: rgba(8, 12, 20, 0.74);
+		border: 1px solid rgba(255, 255, 255, 0.085);
+		border-radius: 11px;
+		outline: none;
+	}
+	.text-filter:focus {
+		border-color: rgba(176, 89, 255, 0.5);
+	}
 }
 
 .button-row {
@@ -520,7 +608,7 @@ onUnmounted(() => {
 	font-family: var(--mono-font);
 	background: #070a10;
 	color: var(--color-contrast);
-	border: 1px solid rgba(155,85,224,.18);
+	border: 1px solid rgba(155, 85, 224, 0.18);
 	border-radius: 13px;
 	padding-top: 1.5rem;
 	overflow-x: auto; /* Enables horizontal scrolling */

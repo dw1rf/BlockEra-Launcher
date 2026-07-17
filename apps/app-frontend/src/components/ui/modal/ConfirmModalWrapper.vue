@@ -7,7 +7,7 @@ import { useTheming } from '@/store/theme.ts'
 
 const themeStore = useTheming()
 
-const props = defineProps({
+defineProps({
 	confirmationText: {
 		type: String,
 		default: '',
@@ -18,12 +18,12 @@ const props = defineProps({
 	},
 	title: {
 		type: String,
-		default: 'No title defined',
+		default: 'Подтверждение',
 		required: true,
 	},
 	description: {
 		type: String,
-		default: 'No description defined',
+		default: 'Подтвердите действие.',
 		required: true,
 	},
 	proceedIcon: {
@@ -32,7 +32,7 @@ const props = defineProps({
 	},
 	proceedLabel: {
 		type: String,
-		default: 'Proceed',
+		default: 'Продолжить',
 	},
 	danger: {
 		type: Boolean,
@@ -49,16 +49,15 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['proceed'])
-const modal = ref(null)
+const modal = ref<{ show: () => void; hide: () => void } | null>(null)
 
 defineExpose({
 	show: () => {
 		// hide_ads_window()
-		modal.value.show()
+		modal.value?.show()
 	},
 	hide: () => {
-		onModalHide()
-		modal.value.hide()
+		modal.value?.hide()
 	},
 })
 
@@ -82,7 +81,6 @@ function proceed() {
 		:description="description"
 		:proceed-icon="proceedIcon"
 		:proceed-label="proceedLabel"
-		:on-hide="onModalHide"
 		:noblur="!themeStore.advancedRendering"
 		:danger="danger"
 		:markdown="markdown"

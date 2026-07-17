@@ -27,106 +27,132 @@
 		@proceed="proceedDeleteWorld"
 	/>
 	<div class="blockera-worlds">
-	<div v-if="worlds.length > 0" class="flex flex-col gap-4">
-		<div class="flex flex-wrap gap-2 items-center">
-			<div class="iconified-input flex-grow">
-				<SearchIcon />
-				<input
-					v-model="searchFilter"
-					type="text"
-					placeholder="Поиск миров и серверов…"
-					class="text-input search-input"
-					autocomplete="off"
-				/>
-				<Button v-if="searchFilter" class="r-btn" @click="() => (searchFilter = '')">
-					<XIcon />
-				</Button>
+		<div v-if="joinError" class="world-launch-error" role="alert">
+			<div>
+				<strong>Не удалось запустить мир</strong><span>{{ joinError }}</span>
 			</div>
-			<ButtonStyled>
-				<button :disabled="refreshingAll" @click="refreshAllWorlds">
-					<template v-if="refreshingAll">
-						<SpinnerIcon class="animate-spin" />
-						Обновляем…
-					</template>
-					<template v-else>
-						<UpdatedIcon />
-						Обновить
-					</template>
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button @click="addServerModal?.show()">
-					<PlusIcon />
-					Добавить сервер
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button :disabled="backingUp" @click="backupAllWorlds">
-					<PackageIcon /> {{ backingUp ? 'Создаём копии…' : backupLabel }}
-				</button>
-			</ButtonStyled>
+			<button
+				v-if="failedWorld"
+				type="button"
+				:disabled="startingInstance"
+				@click="joinWorld(failedWorld)"
+			>
+				Повторить
+			</button>
 		</div>
-		<FilterBar v-model="filters" :options="filterOptions" show-all-options />
-		<div class="flex flex-col w-full gap-2">
-			<WorldItem
-				v-for="world in filteredWorlds"
-				:key="`world-${world.type}-${world.type == 'singleplayer' ? world.path : `${world.address}-${world.index}`}`"
-				:world="world"
-				:highlighted="highlightedWorld === getWorldIdentifier(world)"
-				:supports-server-quick-play="supportsServerQuickPlay"
-				:supports-world-quick-play="supportsWorldQuickPlay"
-				:current-protocol="protocolVersion"
-				:playing-instance="playing"
-				:playing-world="worldsMatch(world, worldPlaying)"
-				:starting-instance="startingInstance"
-				:refreshing="world.type === 'server' ? serverData[world.address]?.refreshing : undefined"
-				:server-status="world.type === 'server' ? serverData[world.address]?.status : undefined"
-				:rendered-motd="
-					world.type === 'server' ? serverData[world.address]?.renderedMotd : undefined
-				"
-				:game-mode="world.type === 'singleplayer' ? GAME_MODES[world.game_mode] : undefined"
-				@play="() => joinWorld(world)"
-				@stop="() => emit('stop')"
-				@refresh="() => refreshServer((world as ServerWorld).address)"
-				@edit="
-					() =>
-						world.type === 'server' ? editServerModal?.show(world) : editWorldModal?.show(world)
-				"
-				@delete="() => promptToRemoveWorld(world)"
-				@open-folder="(world: SingleplayerWorld) => showWorldInFolder(instance.path, world.path)"
-			/>
+		<div v-if="worlds.length > 0" class="flex flex-col gap-4">
+			<div class="flex flex-wrap gap-2 items-center">
+				<div class="iconified-input flex-grow">
+					<SearchIcon />
+					<input
+						v-model="searchFilter"
+						type="text"
+						placeholder="Поиск миров и серверов…"
+						class="text-input search-input"
+						autocomplete="off"
+					/>
+					<Button
+						v-if="searchFilter"
+						v-tooltip="'Очистить поиск'"
+						class="r-btn"
+						aria-label="Очистить поиск"
+						@click="() => (searchFilter = '')"
+					>
+						<XIcon />
+					</Button>
+				</div>
+				<ButtonStyled>
+					<button :disabled="refreshingAll" @click="refreshAllWorlds">
+						<template v-if="refreshingAll">
+							<SpinnerIcon class="animate-spin" />
+							Обновляем…
+						</template>
+						<template v-else>
+							<UpdatedIcon />
+							Обновить
+						</template>
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button @click="addServerModal?.show()">
+						<PlusIcon />
+						Добавить сервер
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button :disabled="backingUp" @click="backupAllWorlds">
+						<PackageIcon /> {{ backingUp ? 'Создаём копии…' : backupLabel }}
+					</button>
+				</ButtonStyled>
+			</div>
+			<FilterBar v-model="filters" :options="filterOptions" show-all-options />
+			<div class="flex flex-col w-full gap-2">
+				<WorldItem
+					v-for="world in filteredWorlds"
+					:key="`world-${world.type}-${world.type == 'singleplayer' ? world.path : `${world.address}-${world.index}`}`"
+					:world="world"
+					:highlighted="highlightedWorld === getWorldIdentifier(world)"
+					:supports-server-quick-play="supportsServerQuickPlay"
+					:supports-world-quick-play="supportsWorldQuickPlay"
+					:current-protocol="protocolVersion"
+					:playing-instance="playing"
+					:playing-world="worldsMatch(world, worldPlaying)"
+					:starting-instance="startingInstance"
+					:refreshing="world.type === 'server' ? serverData[world.address]?.refreshing : undefined"
+					:server-status="world.type === 'server' ? serverData[world.address]?.status : undefined"
+					:rendered-motd="
+						world.type === 'server' ? serverData[world.address]?.renderedMotd : undefined
+					"
+					:game-mode="world.type === 'singleplayer' ? GAME_MODES[world.game_mode] : undefined"
+					@play="() => joinWorld(world)"
+					@stop="() => emit('stop')"
+					@refresh="() => refreshServer((world as ServerWorld).address)"
+					@edit="
+						() =>
+							world.type === 'server' ? editServerModal?.show(world) : editWorldModal?.show(world)
+					"
+					@delete="() => promptToRemoveWorld(world)"
+					@open-folder="(world: SingleplayerWorld) => showWorldInFolder(instance.path, world.path)"
+				/>
+			</div>
 		</div>
-	</div>
-	<div v-else class="blockera-worlds-empty">
-		<div class="worlds-empty-icon"><PackageIcon /></div>
-		<span>МИРЫ И СЕРВЕРЫ</span>
-		<h2>Миров пока нет</h2>
-		<p>Создайте мир в Minecraft или добавьте сервер для быстрого подключения.</p>
-		<div class="flex gap-2 mt-4 mx-auto">
-			<ButtonStyled>
-				<button @click="addServerModal?.show()">
-					<PlusIcon aria-hidden="true" />
-					Добавить сервер
-				</button>
-			</ButtonStyled>
-			<ButtonStyled>
-				<button :disabled="refreshingAll" @click="refreshAllWorlds">
-					<template v-if="refreshingAll">
-						<SpinnerIcon aria-hidden="true" class="animate-spin" />
-						Обновляем…
-					</template>
-					<template v-else>
-						<UpdatedIcon aria-hidden="true" />
-						Обновить
-					</template>
-				</button>
-			</ButtonStyled>
+		<div v-else class="blockera-worlds-empty">
+			<div class="worlds-empty-icon"><PackageIcon /></div>
+			<span>МИРЫ И СЕРВЕРЫ</span>
+			<h2>Миров пока нет</h2>
+			<p>Создайте мир в Minecraft или добавьте сервер для быстрого подключения.</p>
+			<div class="flex gap-2 mt-4 mx-auto">
+				<ButtonStyled>
+					<button @click="addServerModal?.show()">
+						<PlusIcon aria-hidden="true" />
+						Добавить сервер
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button :disabled="refreshingAll" @click="refreshAllWorlds">
+						<template v-if="refreshingAll">
+							<SpinnerIcon aria-hidden="true" class="animate-spin" />
+							Обновляем…
+						</template>
+						<template v-else>
+							<UpdatedIcon aria-hidden="true" />
+							Обновить
+						</template>
+					</button>
+				</ButtonStyled>
+			</div>
 		</div>
-	</div>
 	</div>
 </template>
 <script setup lang="ts">
-import { PackageIcon, PlusIcon, SearchIcon, SpinnerIcon, UpdatedIcon, XIcon } from '@modrinth/assets'
+import {
+	PackageIcon,
+	PlusIcon,
+	SearchIcon,
+	SpinnerIcon,
+	UpdatedIcon,
+	XIcon,
+} from '@modrinth/assets'
 import {
 	Button,
 	ButtonStyled,
@@ -218,12 +244,16 @@ const backupLabel = ref('Создать бэкап')
 const hadNoWorlds = ref(true)
 const startingInstance = ref(false)
 const worldPlaying = ref<World>()
+const failedWorld = ref<World>()
+const joinError = ref('')
 
 const worlds = ref<World[]>([])
 
 async function backupAllWorlds() {
 	if (backingUp.value) return
-	const localWorlds = worlds.value.filter((world): world is SingleplayerWorld => world.type === 'singleplayer')
+	const localWorlds = worlds.value.filter(
+		(world): world is SingleplayerWorld => world.type === 'singleplayer',
+	)
 	if (localWorlds.length === 0) {
 		backupLabel.value = 'Нет миров для копии'
 		return
@@ -236,10 +266,13 @@ async function backupAllWorlds() {
 			await backup_world(instance.value.path, world.path)
 			completed += 1
 		} catch (error) {
-			handleError(error)
+			handleError(error instanceof Error ? error : new Error(String(error)))
 		}
 	}
-	backupLabel.value = completed === localWorlds.length ? `Скопировано: ${completed}` : `Готово: ${completed}/${localWorlds.length}`
+	backupLabel.value =
+		completed === localWorlds.length
+			? `Скопировано: ${completed}`
+			: `Готово: ${completed}/${localWorlds.length}`
 	backingUp.value = false
 }
 const serverData = ref<Record<string, ServerData>>({})
@@ -350,23 +383,27 @@ async function deleteWorld(world: SingleplayerWorld) {
 	worlds.value = worlds.value.filter((w) => w.type !== 'singleplayer' || w.path !== world.path)
 }
 
-function handleJoinError(err: Error) {
-	handleError(err)
-	startingInstance.value = false
-	worldPlaying.value = undefined
-}
-
 async function joinWorld(world: World) {
-	console.log(`Joining world ${getWorldIdentifier(world)}`)
+	if (startingInstance.value) return
 	startingInstance.value = true
 	worldPlaying.value = world
-	if (world.type === 'server') {
-		await start_join_server(instance.value.path, world.address).catch(handleJoinError)
-	} else if (world.type === 'singleplayer') {
-		await start_join_singleplayer_world(instance.value.path, world.path).catch(handleJoinError)
+	failedWorld.value = undefined
+	joinError.value = ''
+	try {
+		if (world.type === 'server') {
+			await start_join_server(instance.value.path, world.address)
+		} else if (world.type === 'singleplayer') {
+			await start_join_singleplayer_world(instance.value.path, world.path)
+		}
+		play(world)
+	} catch (error) {
+		failedWorld.value = world
+		worldPlaying.value = undefined
+		joinError.value = error instanceof Error ? error.message : String(error)
+		handleError(error instanceof Error ? error : new Error(String(error)))
+	} finally {
+		startingInstance.value = false
 	}
-	play(world)
-	startingInstance.value = false
 }
 
 watch(
@@ -512,11 +549,44 @@ const messages = defineMessages({
 </script>
 
 <style scoped lang="scss">
+.world-launch-error {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1rem;
+	padding: 0.85rem;
+	border: 1px solid var(--blockera-danger);
+	border-radius: var(--blockera-radius-lg);
+	background: color-mix(in srgb, var(--blockera-danger) 9%, transparent);
+}
+.world-launch-error > div {
+	display: grid;
+	gap: 0.25rem;
+}
+.world-launch-error span {
+	color: var(--color-secondary);
+}
 .blockera-worlds {
-	:deep(.iconified-input) { height: 42px; background: rgba(8,12,20,.72); border: 1px solid rgba(255,255,255,.085); border-radius: 12px; }
-	:deep(.iconified-input:focus-within) { border-color: rgba(177,91,255,.48); }
-	:deep(.world-item), :deep(.card) { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.07); border-radius: 13px; box-shadow: none; }
-	:deep(button) { border-radius: 10px; }
+	:deep(.iconified-input) {
+		height: 42px;
+		background: rgba(8, 12, 20, 0.72);
+		border: 1px solid rgba(255, 255, 255, 0.085);
+		border-radius: 12px;
+	}
+	:deep(.iconified-input:focus-within) {
+		border-color: rgba(177, 91, 255, 0.48);
+	}
+	:deep(.world-item),
+	:deep(.card) {
+		background: rgba(255, 255, 255, 0.03);
+		border-color: rgba(255, 255, 255, 0.07);
+		border-radius: 13px;
+		box-shadow: none;
+	}
+	:deep(button) {
+		border-radius: 10px;
+	}
 }
 
 .blockera-worlds-empty {
@@ -526,12 +596,38 @@ const messages = defineMessages({
 	align-items: center;
 	justify-content: center;
 	text-align: center;
-	background: radial-gradient(circle at 50% 45%, rgba(133,54,214,.12), transparent 18rem);
+	background: radial-gradient(circle at 50% 45%, rgba(133, 54, 214, 0.12), transparent 18rem);
 
-	.worlds-empty-icon { width: 64px; height: 64px; display: grid; place-items: center; color: #c587ff; background: rgba(150,70,235,.14); border: 1px solid rgba(184,105,255,.3); border-radius: 19px; }
-	.worlds-empty-icon svg { width: 28px; }
-	> span { margin-top: 18px; color: #b469f5; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
-	h2 { margin: 6px 0; color: #f7f4fa; font-size: 25px; }
-	p { max-width: 430px; margin: 0; color: #8e95a4; line-height: 1.55; }
+	.worlds-empty-icon {
+		width: 64px;
+		height: 64px;
+		display: grid;
+		place-items: center;
+		color: #c587ff;
+		background: rgba(150, 70, 235, 0.14);
+		border: 1px solid rgba(184, 105, 255, 0.3);
+		border-radius: 19px;
+	}
+	.worlds-empty-icon svg {
+		width: 28px;
+	}
+	> span {
+		margin-top: 18px;
+		color: #b469f5;
+		font-size: 10px;
+		font-weight: 850;
+		letter-spacing: 0.14em;
+	}
+	h2 {
+		margin: 6px 0;
+		color: #f7f4fa;
+		font-size: 25px;
+	}
+	p {
+		max-width: 430px;
+		margin: 0;
+		color: #8e95a4;
+		line-height: 1.55;
+	}
 }
 </style>

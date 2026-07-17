@@ -61,10 +61,12 @@ const shownProfiles = computed(() =>
 		}),
 )
 
-const onInstall = ref(() => {})
+const onPhase = ref(() => {})
+let resolveResult = null
+let settled = false
 
 defineExpose({
-	show: async (projectVal, versionsVal, callback) => {
+	show: async (projectVal, versionsVal, phaseCallback) => {
 		project.value = projectVal
 		versions.value = versionsVal
 		searchFilter.value = ''
@@ -76,9 +78,14 @@ defineExpose({
 		gameVersion.value = null
 		loader.value = null
 
-		onInstall.value = callback
+		onPhase.value = phaseCallback ?? (() => {})
+		settled = false
 
-		const profilesVal = await list().catch(handleError)
+		const profilesVal =
+			(await list().catch((error) => {
+				handleError(error)
+				return []
+			})) ?? []
 		for (const profile of profilesVal) {
 			profile.installing = false
 			profile.installedMod = await check_installed(profile.path, project.value.id).catch(
@@ -90,11 +97,26 @@ defineExpose({
 		installModal.value.show()
 
 		trackEvent('ProjectInstallStart', { source: 'ProjectInstallModal' })
+		return new Promise((resolve) => {
+			resolveResult = resolve
+		})
 	},
 })
 
+function finish(result) {
+	if (settled) return
+	settled = true
+	resolveResult?.(result)
+	resolveResult = null
+}
+
+function handleHide() {
+	finish({ status: 'cancelled' })
+}
+
 async function install(instance) {
 	instance.installing = true
+	onPhase.value('installing')
 	const version = findPreferredVersion(versions.value, project.value, instance)
 
 	if (!version) {
@@ -103,23 +125,27 @@ async function install(instance) {
 		return
 	}
 
-	await installMod(instance.path, version.id).catch(handleError)
-	await installVersionDependencies(instance, version).catch(handleError)
-
-	instance.installedMod = true
-	instance.installing = false
-
-	trackEvent('ProjectInstall', {
-		loader: instance.loader,
-		game_version: instance.game_version,
-		id: project.value.id,
-		version_id: version.id,
-		project_type: project.value.project_type,
-		title: project.value.title,
-		source: 'ProjectInstallModal',
-	})
-
-	onInstall.value(version.id)
+	try {
+		await installMod(instance.path, version.id)
+		await installVersionDependencies(instance, version)
+		instance.installedMod = true
+		trackEvent('ProjectInstall', {
+			loader: instance.loader,
+			game_version: instance.game_version,
+			id: project.value.id,
+			version_id: version.id,
+			project_type: project.value.project_type,
+			title: project.value.title,
+			source: 'ProjectInstallModal',
+		})
+		finish({ status: 'success', versionId: version.id })
+		installModal.value?.hide()
+	} catch (error) {
+		onPhase.value('error')
+		handleError(error)
+	} finally {
+		instance.installing = false
+	}
 }
 
 const toggleCreation = () => {
@@ -158,65 +184,67 @@ const reset_icon = () => {
 
 const createInstance = async () => {
 	creatingInstance.value = true
+	onPhase.value('installing')
 
 	const gameVersions = versions.value[0].game_versions
 	const gameVersion = gameVersions[0]
 
 	const loaders = versions.value[0].loaders
-	const loader = loaders.contains('fabric')
+	const loader = loaders.includes('fabric')
 		? 'fabric'
-		: loaders.contains('neoforge')
+		: loaders.includes('neoforge')
 			? 'neoforge'
-			: loaders.contains('forge')
+			: loaders.includes('forge')
 				? 'forge'
-				: loaders.contains('quilt')
+				: loaders.includes('quilt')
 					? 'quilt'
 					: 'vanilla'
 
-	const id = await create(name.value, gameVersion, loader, 'latest', icon.value).catch(handleError)
+	try {
+		const id = await create(name.value, gameVersion, loader, 'latest', icon.value)
+		await installMod(id, versions.value[0].id)
+		const instance = await get(id, true)
+		await installVersionDependencies(instance, versions.value[0])
+		await router.push(`/instance/${encodeURIComponent(id)}/`)
 
-	await installMod(id, versions.value[0].id).catch(handleError)
+		trackEvent('InstanceCreate', {
+			profile_name: name.value,
+			game_version: versions.value[0].game_versions[0],
+			loader: loader,
+			loader_version: 'latest',
+			has_icon: !!icon.value,
+			source: 'ProjectInstallModal',
+		})
 
-	await router.push(`/instance/${encodeURIComponent(id)}/`)
-
-	const instance = await get(id, true)
-	await installVersionDependencies(instance, versions.value[0]).catch(handleError)
-
-	trackEvent('InstanceCreate', {
-		profile_name: name.value,
-		game_version: versions.value[0].game_versions[0],
-		loader: loader,
-		loader_version: 'latest',
-		has_icon: !!icon.value,
-		source: 'ProjectInstallModal',
-	})
-
-	trackEvent('ProjectInstall', {
-		loader: loader,
-		game_version: versions.value[0].game_versions[0],
-		id: project.value,
-		version_id: versions.value[0].id,
-		project_type: project.value.project_type,
-		title: project.value.title,
-		source: 'ProjectInstallModal',
-	})
-
-	onInstall.value(versions.value[0].id)
-
-	if (installModal.value) installModal.value.hide()
-	creatingInstance.value = false
+		trackEvent('ProjectInstall', {
+			loader: loader,
+			game_version: versions.value[0].game_versions[0],
+			id: project.value,
+			version_id: versions.value[0].id,
+			project_type: project.value.project_type,
+			title: project.value.title,
+			source: 'ProjectInstallModal',
+		})
+		finish({ status: 'success', versionId: versions.value[0].id })
+		installModal.value?.hide()
+	} catch (error) {
+		onPhase.value('error')
+		handleError(error)
+	} finally {
+		creatingInstance.value = false
+	}
 }
 </script>
 
 <template>
-	<ModalWrapper ref="installModal" header="Install project to instance" :on-hide="onInstall">
+	<ModalWrapper ref="installModal" header="Установить проект в сборку" :on-hide="handleHide">
 		<div class="modal-body">
 			<input
 				v-model="searchFilter"
 				autocomplete="off"
 				type="text"
 				class="search"
-				placeholder="Search for an instance"
+				placeholder="Найти сборку"
 			/>
 			<div class="profiles" :class="{ 'hide-creation': !showCreation }">
 				<div v-for="profile in shownProfiles" :key="profile.name" class="option">
@@ -246,10 +274,10 @@ const createInstance = async () => {
 							<CheckIcon v-else-if="profile.installedMod" />
 							{{
 								profile.installing
-									? 'Installing...'
+									? 'Устанавливаем…'
 									: profile.installedMod
-										? 'Installed'
-										: 'Install'
+										? 'Установлено'
+										: 'Установить'
 							}}
 						</Button>
 					</div>
@@ -275,12 +303,12 @@ const createInstance = async () => {
 							v-model="name"
 							autocomplete="off"
 							type="text"
-							placeholder="Name"
+							placeholder="Название"
 							class="creation-input"
 						/>
 						<Button :disabled="creatingInstance === true || !name" @click="createInstance()">
 							<RightArrowIcon />
-							{{ creatingInstance ? 'Creating...' : 'Create' }}
+							{{ creatingInstance ? 'Создаём…' : 'Создать' }}
 						</Button>
 					</div>
 				</div>
@@ -288,9 +316,9 @@ const createInstance = async () => {
 			<div class="input-group push-right">
 				<Button :color="showCreation ? '' : 'primary'" @click="toggleCreation()">
 					<PlusIcon />
-					{{ showCreation ? 'Hide New Instance' : 'Create new instance' }}
+					{{ showCreation ? 'Скрыть создание' : 'Создать новую сборку' }}
 				</Button>
-				<Button @click="installModal.hide()">Cancel</Button>
+				<Button @click="installModal.hide()">Отмена</Button>
 			</div>
 		</div>
 	</ModalWrapper>

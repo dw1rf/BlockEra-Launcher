@@ -23,7 +23,7 @@ import {
 } from '@modrinth/ui'
 import { getVersion } from '@tauri-apps/api/app'
 import { platform as getOsPlatform, version as getOsVersion } from '@tauri-apps/plugin-os'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import AboutBlockEraSettings from '@/components/ui/settings/AboutBlockEraSettings.vue'
@@ -34,7 +34,7 @@ import JavaSettings from '@/components/ui/settings/JavaSettings.vue'
 import LanguageSettings from '@/components/ui/settings/LanguageSettings.vue'
 import PrivacySettings from '@/components/ui/settings/PrivacySettings.vue'
 import ResourceManagementSettings from '@/components/ui/settings/ResourceManagementSettings.vue'
-import { get, set } from '@/helpers/settings.ts'
+import { useAppSettings } from '@/composables/use-app-settings'
 import {
 	availableUpdate,
 	checkingState,
@@ -48,10 +48,11 @@ import {
 import { injectAppUpdateDownloadProgress } from '@/providers/download-progress.ts'
 import { useTheming } from '@/store/state'
 
-const updateModalView = ref(null)
+const updateModalView = ref<InstanceType<typeof ModalWrapper>>()
+const emit = defineEmits<{ openOnboarding: [] }>()
 
 const initUpdateModal = async () => {
-	updateModalView.value.show()
+	updateModalView.value?.show()
 	await checkLauncherUpdate()
 }
 
@@ -62,6 +63,8 @@ const initDownload = async () => {
 		if (!updateError.value) updateError.value = formatUpdaterError(error)
 	}
 }
+
+const closeUpdateModal = () => updateModalView.value?.hide()
 
 const themeStore = useTheming()
 
@@ -140,6 +143,7 @@ const tabs = [
 		}),
 		icon: BlockEraLogo,
 		content: AboutBlockEraSettings,
+		props: { onOpenOnboarding: () => emit('openOnboarding') },
 	},
 ]
 
@@ -158,21 +162,14 @@ const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgres
 const version = await getVersion()
 const osPlatform = getOsPlatform()
 const osVersion = getOsVersion()
-const settings = ref(await get())
-
-watch(
-	settings,
-	async () => {
-		await set(settings.value)
-	},
-	{ deep: true },
-)
+const { settings, saveState, saveError, saveLabel, saveKey, retrySave } = await useAppSettings()
 
 function devModeCount() {
 	devModeCounter.value++
 	if (devModeCounter.value > 5) {
 		themeStore.devMode = !themeStore.devMode
 		settings.value.developer_mode = !!themeStore.devMode
+		void saveKey('developer_mode', settings.value.developer_mode)
 		devModeCounter.value = 0
 
 		if (!themeStore.devMode && tabs[modal.value.selectedTab].developerOnly) {
@@ -184,7 +181,7 @@ function devModeCount() {
 const messages = defineMessages({
 	downloading: {
 		id: 'app.settings.downloading',
-		defaultMessage: 'Downloading v{version}',
+		defaultMessage: 'Загрузка v{version}',
 	},
 })
 </script>
@@ -198,13 +195,26 @@ const messages = defineMessages({
 		<template #title>
 			<div class="settings-title">
 				<span class="settings-title-icon"><SettingsIcon /></span>
-				<span><strong>Настройки BlockEra Launcher</strong><small>Персонализируйте запуск, Java и ресурсы игры</small></span>
+				<span
+					><strong>Настройки BlockEra Launcher</strong
+					><small>Персонализируйте запуск, Java и ресурсы игры</small></span
+				>
 			</div>
 		</template>
 
 		<TabbedModal :tabs="tabs.filter((t) => !t.developerOnly || themeStore.devMode)">
 			<template #footer>
 				<div class="mt-auto text-secondary text-sm">
+					<div
+						v-if="saveLabel"
+						class="settings-save-status"
+						:class="`is-${saveState}`"
+						aria-live="polite"
+					>
+						<span>{{ saveLabel }}</span>
+						<button v-if="saveState === 'error'" type="button" @click="retrySave">Повторить</button>
+						<small v-if="saveError">{{ saveError }}</small>
+					</div>
 					<div class="mb-3">
 						<template v-if="progress > 0 && progress < 1">
 							<p class="m-0 mb-2">
@@ -218,7 +228,9 @@ const messages = defineMessages({
 					</p>
 					<div class="flex items-center gap-3">
 						<button
+							v-tooltip="'Режим разработчика'"
 							class="p-0 m-0 bg-transparent border-none cursor-pointer button-animation"
+							aria-label="Переключить режим разработчика"
 							:class="{
 								'text-brand': themeStore.devMode,
 								'text-secondary': !themeStore.devMode,
@@ -235,14 +247,23 @@ const messages = defineMessages({
 								{{ osVersion }}
 							</p>
 						</div>
-						<div v-if="updateState" class="w-8 h-8 cursor-pointer hover:brightness-75 neon-icon pulse">
+						<button
+							v-if="updateState"
+							type="button"
+							class="w-8 h-8 cursor-pointer hover:brightness-75 neon-icon pulse border-none bg-transparent"
+							aria-label="Открыть обновление"
+							@click="!installState && initUpdateModal()"
+						>
 							<template v-if="installState">
-								<SpinnerIcon v-tooltip.bottom="'Устанавливаем обновление…'" class="size-6 animate-spin" />
+								<SpinnerIcon
+									v-tooltip.bottom="'Устанавливаем обновление…'"
+									class="size-6 animate-spin"
+								/>
 							</template>
 							<template v-else>
-								<DownloadIcon v-tooltip.bottom="'Открыть обновление'" class="size-6" @click="!installState && initUpdateModal()" />
+								<DownloadIcon v-tooltip.bottom="'Открыть обновление'" class="size-6" />
 							</template>
-						</div>
+						</button>
 					</div>
 				</div>
 			</template>
@@ -259,8 +280,13 @@ const messages = defineMessages({
 					<p v-if="updateError" class="update-request-error">{{ updateError }}</p>
 				</div>
 				<div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
-					<Button class="bordered" @click="updateModalView.hide()">Закрыть</Button>
-					<Button v-if="availableUpdate" class="bordered" :disabled="installState" @click="initDownload()">
+					<Button class="bordered" @click="closeUpdateModal">Закрыть</Button>
+					<Button
+						v-if="availableUpdate"
+						class="bordered"
+						:disabled="installState"
+						@click="initDownload()"
+					>
 						{{ installState ? 'Устанавливаем…' : 'Скачать и перезапустить' }}
 					</Button>
 				</div>
@@ -275,10 +301,10 @@ const messages = defineMessages({
 @import '../../../../../../packages/assets/styles/neon-text.scss';
 
 code {
-  background: linear-gradient(90deg, #005eff, #00cfff);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+	background: linear-gradient(90deg, #005eff, #00cfff);
+	background-clip: text;
+	-webkit-background-clip: text;
+	color: transparent;
 }
 
 .update-request-error {
@@ -309,10 +335,49 @@ code {
 	background: rgba(126, 34, 206, 0.16);
 }
 
-.settings-title-icon :deep(svg) { width: 1.25rem; height: 1.25rem; }
-.settings-title > span:last-child { display: flex; flex-direction: column; gap: 0.2rem; }
-.settings-title strong { font-size: 1.05rem; }
-.settings-title small { color: rgba(226, 232, 240, 0.58); font-size: 0.76rem; font-weight: 500; }
+.settings-title-icon :deep(svg) {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+.settings-title > span:last-child {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+.settings-title strong {
+	font-size: 1.05rem;
+}
+.settings-title small {
+	color: rgba(226, 232, 240, 0.58);
+	font-size: 0.76rem;
+	font-weight: 500;
+}
+
+.settings-save-status {
+	display: grid;
+	grid-template-columns: max-content max-content;
+	gap: 0.2rem 0.65rem;
+	align-items: center;
+	margin-bottom: 0.75rem;
+	color: var(--blockera-text-secondary);
+}
+
+.settings-save-status.is-success {
+	color: var(--blockera-success);
+}
+.settings-save-status.is-error {
+	color: var(--blockera-danger);
+}
+.settings-save-status small {
+	grid-column: 1 / -1;
+}
+.settings-save-status button {
+	border: 1px solid currentColor;
+	border-radius: var(--blockera-radius-sm);
+	color: inherit;
+	background: transparent;
+	cursor: pointer;
+}
 
 :deep(.settings-cinematic .modal-overlay.standard) {
 	background: rgba(2, 5, 11, 0.76);
@@ -322,8 +387,7 @@ code {
 :deep(.settings-cinematic .modal-body) {
 	border: 1px solid rgba(168, 85, 247, 0.24);
 	background:
-		radial-gradient(circle at 14% 0%, rgba(126, 34, 206, 0.16), transparent 23rem),
-		#0b101a !important;
+		radial-gradient(circle at 14% 0%, rgba(126, 34, 206, 0.16), transparent 23rem), #0b101a !important;
 	box-shadow: 0 32px 100px rgba(0, 0, 0, 0.55) !important;
 }
 
@@ -332,7 +396,9 @@ code {
 	background: rgba(5, 8, 15, 0.45);
 }
 
-:deep(.settings-cinematic .modal-body > div:nth-child(2)) { padding: 1rem 1.25rem 1.25rem; }
+:deep(.settings-cinematic .modal-body > div:nth-child(2)) {
+	padding: 1rem 1.25rem 1.25rem;
+}
 :deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:first-child) {
 	min-width: 14.5rem;
 	padding: 0.35rem 0.9rem 0.35rem 0;
@@ -353,13 +419,22 @@ code {
 	transform: translateX(2px);
 }
 
-:deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:first-child button.bg-button-bgSelected) {
+:deep(
+	.settings-cinematic
+		.modal-body
+		> div:nth-child(2)
+		> div
+		> div:first-child
+		button.bg-button-bgSelected
+) {
 	border-color: rgba(168, 85, 247, 0.34);
 	background: rgba(126, 34, 206, 0.18) !important;
 	color: #e9d5ff !important;
 }
 
-:deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:last-child > div.overflow-y-auto) {
+:deep(
+	.settings-cinematic .modal-body > div:nth-child(2) > div > div:last-child > div.overflow-y-auto
+) {
 	width: min(46rem, calc(100vw - 24rem));
 	height: min(36rem, calc(100vh - 12rem));
 	padding: 0.2rem 0.5rem 1.5rem 1.25rem;
@@ -439,7 +514,9 @@ code {
 	text-align: center;
 }
 
-:deep(.settings-list) { padding-block: 0.3rem; }
+:deep(.settings-list) {
+	padding-block: 0.3rem;
+}
 :deep(.settings-row) {
 	display: flex;
 	align-items: center;
@@ -450,8 +527,12 @@ code {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-:deep(.settings-row:last-child) { border-bottom: 0; }
-:deep(.settings-row > div:first-child) { min-width: 0; }
+:deep(.settings-row:last-child) {
+	border-bottom: 0;
+}
+:deep(.settings-row > div:first-child) {
+	min-width: 0;
+}
 
 :deep(.settings-resolution) {
 	display: grid;
@@ -460,13 +541,29 @@ code {
 	padding: 0.4rem 0.7rem 0.7rem;
 }
 
-:deep(.settings-fields) { display: grid; gap: 0.75rem; }
+:deep(.settings-fields) {
+	display: grid;
+	gap: 0.75rem;
+}
 :deep(.settings-fields label),
-:deep(.settings-resolution label) { display: grid; gap: 0.38rem; color: rgba(226, 232, 240, 0.72); font-size: 0.75rem; font-weight: 650; }
+:deep(.settings-resolution label) {
+	display: grid;
+	gap: 0.38rem;
+	color: rgba(226, 232, 240, 0.72);
+	font-size: 0.75rem;
+	font-weight: 650;
+}
 :deep(.settings-fields input),
-:deep(.settings-resolution input) { width: 100%; box-sizing: border-box; background: rgba(5, 8, 15, 0.68); border-color: rgba(255, 255, 255, 0.09); }
+:deep(.settings-resolution input) {
+	width: 100%;
+	box-sizing: border-box;
+	background: rgba(5, 8, 15, 0.68);
+	border-color: rgba(255, 255, 255, 0.09);
+}
 
-:deep(.java-stack) { padding: 0.35rem; }
+:deep(.java-stack) {
+	padding: 0.35rem;
+}
 :deep(.java-version-row) {
 	display: grid;
 	grid-template-columns: 11rem minmax(0, 1fr);
@@ -476,21 +573,43 @@ code {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-:deep(.java-version-row:last-child) { border-bottom: 0; }
-:deep(.java-version-row > div:first-child) { display: flex; flex-direction: column; gap: 0.25rem; }
-:deep(.java-version-row strong) { color: #fff; font-size: 0.9rem; }
-:deep(.java-version-row span) { color: rgba(203, 213, 225, 0.52); font-size: 0.72rem; }
+:deep(.java-version-row:last-child) {
+	border-bottom: 0;
+}
+:deep(.java-version-row > div:first-child) {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+:deep(.java-version-row strong) {
+	color: #fff;
+	font-size: 0.9rem;
+}
+:deep(.java-version-row span) {
+	color: rgba(203, 213, 225, 0.52);
+	font-size: 0.72rem;
+}
 
 @media (prefers-reduced-motion: no-preference) {
-	:deep(.launcher-settings-page) { animation: settings-page-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+	:deep(.launcher-settings-page) {
+		animation: settings-page-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
 }
 
 @keyframes settings-page-enter {
-	from { opacity: 0; transform: translateY(6px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	:deep(.settings-cinematic *) { transition: none !important; }
+	:deep(.settings-cinematic *) {
+		transition: none !important;
+	}
 }
 </style>

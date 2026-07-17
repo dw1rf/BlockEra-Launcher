@@ -39,7 +39,6 @@ defineExpose({
 		modal.value?.show(e)
 	},
 	hide: () => {
-		onModalHide()
 		modal.value?.hide()
 	},
 })

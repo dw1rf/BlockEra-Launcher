@@ -30,16 +30,15 @@ defineProps({
 	},
 })
 
-const modal = ref(null)
+const modal = ref<{ show: (content: string) => void; hide: () => void } | null>(null)
 
 defineExpose({
-	show: (passedContent) => {
+	show: (passedContent: string) => {
 		// hide_ads_window()
-		modal.value.show(passedContent)
+		modal.value?.show(passedContent)
 	},
 	hide: () => {
-		onModalHide()
-		modal.value.hide()
+		modal.value?.hide()
 	},
 })
 
@@ -56,7 +55,6 @@ defineExpose({
 		:share-text="shareText"
 		:link="link"
 		:open-in-new-tab="openInNewTab"
-		:on-hide="onModalHide"
 		:noblur="!themeStore.advancedRendering"
 	/>
 </template>

@@ -21,8 +21,13 @@
 			@click="() => (closeOnClickOutside && closable ? hide() : {})"
 		/>
 		<div
+			ref="modalContainer"
 			class="modal-container experimental-styles-within"
 			:class="{ shown: visible }"
+			role="dialog"
+			aria-modal="true"
+			:aria-label="header ?? 'Диалоговое окно'"
+			tabindex="-1"
 			:style="{
 				'--_max-width': maxWidth,
 				'--_width': width,
@@ -42,7 +47,12 @@
 						</slot>
 					</div>
 					<ButtonStyled v-if="closable" circular>
-						<button v-tooltip="'Close'" aria-label="Close" :disabled="disableClose" @click="hide">
+						<button
+							v-tooltip="'Закрыть'"
+							aria-label="Закрыть"
+							:disabled="disableClose"
+							@click="hide"
+						>
 							<XIcon aria-hidden="true" />
 						</button>
 					</ButtonStyled>
@@ -53,7 +63,7 @@
 					class="absolute top-4 right-4 z-10"
 					circular
 				>
-					<button v-tooltip="'Close'" aria-label="Close" :disabled="disableClose" @click="hide">
+					<button v-tooltip="'Закрыть'" aria-label="Закрыть" :disabled="disableClose" @click="hide">
 						<XIcon aria-hidden="true" />
 					</button>
 				</ButtonStyled>
@@ -113,12 +123,16 @@
 	<div v-else></div>
 </template>
 
+<script lang="ts">
+</script>
+
 <script setup lang="ts">
 import { XIcon } from '@modrinth/assets'
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import { useScrollIndicator } from '../../composables/scroll-indicator'
 import ButtonStyled from '../base/ButtonStyled.vue'
+const openModalStack: symbol[] = []
 
 const props = withDefaults(
 	defineProps<{
@@ -174,37 +188,55 @@ const computedFade = computed(() => {
 
 const open = ref(false)
 const visible = ref(false)
+const modalContainer = ref<HTMLElement | null>(null)
+const modalId = Symbol('modal')
+let previouslyFocused: HTMLElement | null = null
+let showTimer: ReturnType<typeof setTimeout> | undefined
+let hideTimer: ReturnType<typeof setTimeout> | undefined
 
 const scrollContainer = ref<HTMLElement | null>(null)
 const { showTopFade, showBottomFade, checkScrollState } = useScrollIndicator(scrollContainer)
 
 function show(event?: MouseEvent) {
+	if (open.value) return
 	props.onShow?.()
+	previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
 	open.value = true
+	openModalStack.push(modalId)
 
 	document.body.style.overflow = 'hidden'
 	window.addEventListener('mousedown', updateMousePosition)
-	window.addEventListener('keydown', handleKeyDown)
+	document.addEventListener('keydown', handleKeyDown, true)
 	if (event) {
 		updateMousePosition(event)
 	} else {
 		mouseX.value = window.innerWidth / 2
 		mouseY.value = window.innerHeight / 2
 	}
-	setTimeout(() => {
+	void nextTick(() => {
+		modalContainer.value?.focus({ preventScroll: true })
+		focusInitialElement()
+		requestAnimationFrame(focusInitialElement)
+	})
+	clearTimeout(hideTimer)
+	showTimer = setTimeout(() => {
 		visible.value = true
+		void nextTick(focusInitialElement)
 	}, 50)
 }
 
 function hide() {
-	if (props.disableClose) return
+	if (props.disableClose || !open.value) return
 	props.onHide?.()
 	visible.value = false
-	document.body.style.overflow = ''
+	removeFromModalStack()
+	clearTimeout(showTimer)
+	document.body.style.overflow = hasOtherOpenDialog() ? 'hidden' : ''
 	window.removeEventListener('mousedown', updateMousePosition)
-	window.removeEventListener('keydown', handleKeyDown)
-	setTimeout(() => {
+	document.removeEventListener('keydown', handleKeyDown, true)
+	hideTimer = setTimeout(() => {
 		open.value = false
+		void nextTick(() => previouslyFocused?.focus({ preventScroll: true }))
 	}, 300)
 }
 
@@ -223,12 +255,81 @@ function updateMousePosition(event: { clientX: number; clientY: number }) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+	if (!isTopmostDialog()) return
+	if (event.key === 'Tab') trapFocus(event)
 	if (props.closeOnEsc && event.key === 'Escape' && props.closable) {
 		hide()
 		mouseX.value = window.innerWidth / 2
 		mouseY.value = window.innerHeight / 2
 	}
 }
+
+function isTopmostDialog() {
+	return openModalStack[openModalStack.length - 1] === modalId
+}
+
+function removeFromModalStack() {
+	const index = openModalStack.lastIndexOf(modalId)
+	if (index >= 0) openModalStack.splice(index, 1)
+}
+
+function hasOtherOpenDialog() {
+	return Array.from(
+		document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
+	).some((dialog) => dialog !== modalContainer.value)
+}
+
+function getFocusableElements() {
+	return Array.from(
+		modalContainer.value?.querySelectorAll<HTMLElement>(
+			'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+		) ?? [],
+	).filter(
+		(element) => !element.hasAttribute('hidden') && element.getAttribute('aria-hidden') !== 'true',
+	)
+}
+
+function focusInitialElement() {
+	const preferred = modalContainer.value?.querySelector<HTMLElement>(
+		'[autofocus], [role="tab"][aria-selected="true"], input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+	)
+	const [first] = getFocusableElements()
+	;(preferred ?? first ?? modalContainer.value)?.focus({ preventScroll: true })
+}
+
+function trapFocus(event: KeyboardEvent) {
+	const focusable = getFocusableElements()
+	if (focusable.length === 0) {
+		event.preventDefault()
+		modalContainer.value?.focus()
+		return
+	}
+	const first = focusable[0]
+	const last = focusable[focusable.length - 1]
+	if (!modalContainer.value?.contains(document.activeElement)) {
+		event.preventDefault()
+		;(event.shiftKey ? last : first).focus()
+	} else if (event.shiftKey && document.activeElement === first) {
+		event.preventDefault()
+		last.focus()
+	} else if (!event.shiftKey && document.activeElement === last) {
+		event.preventDefault()
+		first.focus()
+	}
+}
+
+onBeforeUnmount(() => {
+	clearTimeout(showTimer)
+	clearTimeout(hideTimer)
+	window.removeEventListener('mousedown', updateMousePosition)
+	document.removeEventListener('keydown', handleKeyDown, true)
+	removeFromModalStack()
+	if (open.value) document.body.style.overflow = hasOtherOpenDialog() ? 'hidden' : ''
+})
+
+watch(visible, (isVisible) => {
+	if (isVisible) void nextTick(focusInitialElement)
+})
 </script>
 
 <style lang="scss" scoped>

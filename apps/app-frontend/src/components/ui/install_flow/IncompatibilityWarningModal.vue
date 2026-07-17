@@ -1,10 +1,13 @@
 <template>
-	<ModalWrapper ref="incompatibleModal" header="Incompatibility warning" :on-hide="onInstall">
+	<ModalWrapper
+		ref="incompatibleModal"
+		header="Предупреждение о совместимости"
+		:on-hide="handleHide"
+	>
 		<div class="modal-body">
 			<p>
-				This {{ versions?.length > 0 ? 'project' : 'version' }} is not compatible with the instance
-				you're trying to install it on. Are you sure you want to continue? Dependencies will not be
-				installed.
+				Проект не заявляет совместимость с выбранной сборкой. Продолжить без автоматической
+				установки зависимостей?
 			</p>
 			<table>
 				<thead>
@@ -46,9 +49,9 @@
 				</tbody>
 			</table>
 			<div class="button-group">
-				<Button @click="() => incompatibleModal.hide()"><XIcon />Cancel</Button>
+				<Button @click="() => incompatibleModal.hide()"><XIcon />Отмена</Button>
 				<Button color="primary" :disabled="installing" @click="install()">
-					<DownloadIcon /> {{ installing ? 'Installing' : 'Install' }}
+					<DownloadIcon /> {{ installing ? 'Устанавливаем…' : 'Установить' }}
 				</Button>
 			</div>
 		</div>
@@ -75,41 +78,64 @@ const selectedVersion = ref(null)
 const incompatibleModal = ref(null)
 const installing = ref(false)
 
-const onInstall = ref(() => {})
+const onPhase = ref(() => {})
+let resolveResult = null
+let settled = false
 
 defineExpose({
-	show: (instanceVal, projectVal, projectVersions, selected, callback) => {
+	show: (instanceVal, projectVal, projectVersions, selected, phaseCallback) => {
 		instance.value = instanceVal
 		versions.value = projectVersions
 		selectedVersion.value = selected ?? projectVersions[0]
 
 		project.value = projectVal
 
-		onInstall.value = callback
+		onPhase.value = phaseCallback ?? (() => {})
 		installing.value = false
+		settled = false
 
 		incompatibleModal.value.show()
 
 		trackEvent('ProjectInstallStart', { source: 'ProjectIncompatibilityWarningModal' })
+		return new Promise((resolve) => {
+			resolveResult = resolve
+		})
 	},
 })
 
+function finish(result) {
+	if (settled) return
+	settled = true
+	resolveResult?.(result)
+	resolveResult = null
+}
+
+function handleHide() {
+	finish({ status: 'cancelled' })
+}
+
 const install = async () => {
 	installing.value = true
-	await installMod(instance.value.path, selectedVersion.value.id).catch(handleError)
-	installing.value = false
-	onInstall.value(selectedVersion.value.id)
-	incompatibleModal.value.hide()
-
-	trackEvent('ProjectInstall', {
-		loader: instance.value.loader,
-		game_version: instance.value.game_version,
-		id: project.value,
-		version_id: selectedVersion.value.id,
-		project_type: project.value.project_type,
-		title: project.value.title,
-		source: 'ProjectIncompatibilityWarningModal',
-	})
+	onPhase.value('installing')
+	try {
+		await installMod(instance.value.path, selectedVersion.value.id)
+		trackEvent('ProjectInstall', {
+			loader: instance.value.loader,
+			game_version: instance.value.game_version,
+			id: project.value,
+			version_id: selectedVersion.value.id,
+			project_type: project.value.project_type,
+			title: project.value.title,
+			source: 'ProjectIncompatibilityWarningModal',
+		})
+		finish({ status: 'success', versionId: selectedVersion.value.id })
+		incompatibleModal.value.hide()
+	} catch (error) {
+		onPhase.value('error')
+		handleError(error)
+	} finally {
+		installing.value = false
+	}
 }
 </script>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type Component, nextTick, ref } from 'vue'
+import { type Component, computed, nextTick, ref, useTemplateRef } from 'vue'
 
 import { type MessageDescriptor, useVIntl } from '../../composables/i18n'
 import { useScrollIndicator } from '../../composables/scroll-indicator'
@@ -14,34 +14,62 @@ export type Tab<Props> = {
 	badge?: MessageDescriptor
 }
 
-defineProps<{
+const props = defineProps<{
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	tabs: Tab<any>[]
 }>()
 
 const selectedTab = ref(0)
+const tabButtons = useTemplateRef<HTMLButtonElement[]>('tabButtons')
+const tabsLength = computed(() => props.tabs.length)
 
 const scrollContainer = ref<HTMLElement | null>(null)
 const { showTopFade, showBottomFade, checkScrollState, forceCheck } =
 	useScrollIndicator(scrollContainer)
 
 function setTab(index: number) {
+	if (index < 0 || index >= tabsLength.value) return
 	selectedTab.value = index
 	nextTick(() => forceCheck())
+}
+
+function handleTabKeydown(event: KeyboardEvent, index: number) {
+	if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key))
+		return
+	event.preventDefault()
+	let nextIndex = index
+	if (event.key === 'Home') nextIndex = 0
+	else if (event.key === 'End') nextIndex = tabsLength.value - 1
+	else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
+		nextIndex = (index - 1 + tabsLength.value) % tabsLength.value
+	else nextIndex = (index + 1) % tabsLength.value
+	setTab(nextIndex)
+	nextTick(() => tabButtons.value?.[nextIndex]?.focus())
 }
 
 defineExpose({ selectedTab, setTab })
 </script>
 <template>
-	<div class="grid grid-cols-[auto_1fr]">
+	<div class="tabbed-modal-layout">
 		<div
-			class="flex flex-col gap-1 border-solid pr-4 border-0 border-r-[1px] border-divider min-w-[200px]"
+			class="tabbed-modal-tabs"
+			role="tablist"
+			aria-orientation="vertical"
+			aria-label="Разделы настроек"
 		>
 			<button
 				v-for="(tab, index) in tabs"
+				:id="`settings-tab-${index}`"
 				:key="index"
+				ref="tabButtons"
+				type="button"
+				role="tab"
+				:aria-controls="`settings-panel-${index}`"
+				:aria-selected="selectedTab === index"
+				:tabindex="selectedTab === index ? 0 : -1"
 				:class="`flex gap-2 items-center text-left rounded-xl px-4 py-2 border-none text-nowrap font-semibold cursor-pointer active:scale-[0.97] transition-all ${selectedTab === index ? 'bg-button-bgSelected text-button-textSelected' : 'bg-transparent text-button-text hover:bg-button-bg hover:text-contrast'}`"
 				@click="() => setTab(index)"
+				@keydown="handleTabKeydown($event, index)"
 			>
 				<component :is="tab.icon" class="w-4 h-4" />
 				<span>{{ formatMessage(tab.name) }}</span>
@@ -71,8 +99,12 @@ defineExpose({ selectedTab, setTab })
 			</Transition>
 
 			<div
+				:id="`settings-panel-${selectedTab}`"
 				ref="scrollContainer"
-				class="w-[600px] h-[500px] overflow-y-auto px-4"
+				class="tabbed-modal-content"
+				role="tabpanel"
+				:aria-labelledby="`settings-tab-${selectedTab}`"
+				tabindex="0"
 				@scroll="checkScrollState"
 			>
 				<component :is="tabs[selectedTab].content" v-bind="tabs[selectedTab].props ?? {}" />
@@ -94,3 +126,52 @@ defineExpose({ selectedTab, setTab })
 		</div>
 	</div>
 </template>
+
+<style scoped>
+.tabbed-modal-layout {
+	display: grid;
+	grid-template-columns: minmax(12.5rem, auto) minmax(0, 1fr);
+	width: clamp(42.5rem, 75vw, 62.5rem);
+	max-width: calc(100vw - 3rem);
+	max-height: min(80vh, 47.5rem);
+}
+
+.tabbed-modal-tabs {
+	display: flex;
+	min-width: 12.5rem;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding-right: 1rem;
+	border: 0;
+	border-right: 1px solid var(--color-divider);
+}
+
+.tabbed-modal-content {
+	width: 100%;
+	height: min(80vh, 47.5rem);
+	max-height: calc(100vh - 10rem);
+	overflow-y: auto;
+	padding-inline: 1rem;
+}
+
+@media (max-width: 760px) {
+	.tabbed-modal-layout {
+		grid-template-columns: minmax(0, 1fr);
+		width: calc(100vw - 2rem);
+	}
+
+	.tabbed-modal-tabs {
+		min-width: 0;
+		flex-direction: row;
+		overflow-x: auto;
+		padding: 0 0 0.75rem;
+		border-right: 0;
+		border-bottom: 1px solid var(--color-divider);
+	}
+
+	.tabbed-modal-content {
+		height: min(70vh, 42rem);
+		padding: 0.75rem 0.25rem 0;
+	}
+}
+</style>

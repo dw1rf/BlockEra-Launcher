@@ -1,6 +1,13 @@
 <template>
 	<div ref="root" class="update-center-root">
-		<button class="update-center-trigger" type="button" :aria-expanded="open" @click="open = !open">
+		<button
+			v-tooltip="'Центр обновлений'"
+			class="update-center-trigger"
+			type="button"
+			aria-label="Открыть центр обновлений"
+			:aria-expanded="open"
+			@click="open = !open"
+		>
 			<DownloadIcon />
 			<span v-if="totalUpdates > 0">{{ totalUpdates }}</span>
 		</button>
@@ -14,11 +21,21 @@
 					<button type="button" aria-label="Закрыть" @click="open = false"><XIcon /></button>
 				</header>
 
-				<nav class="update-tabs" aria-label="Разделы центра обновлений">
-					<button :class="{ active: activeTab === 'updates' }" @click="activeTab = 'updates'">
+				<nav class="update-tabs" role="tablist" aria-label="Разделы центра обновлений">
+					<button
+						role="tab"
+						:aria-selected="activeTab === 'updates'"
+						:class="{ active: activeTab === 'updates' }"
+						@click="activeTab = 'updates'"
+					>
 						Обновления
 					</button>
-					<button :class="{ active: activeTab === 'notes' }" @click="activeTab = 'notes'">
+					<button
+						role="tab"
+						:aria-selected="activeTab === 'notes'"
+						:class="{ active: activeTab === 'notes' }"
+						@click="activeTab = 'notes'"
+					>
 						Что нового
 					</button>
 				</nav>
@@ -64,6 +81,24 @@
 							<span class="update-count">{{ item.updates }}</span>
 							<button type="button" :disabled="item.updating" @click="updateInstance(item)">
 								{{ item.updating ? 'Обновляем…' : 'Обновить' }}
+							</button>
+							<ul v-if="item.lastReport" class="instance-update-results">
+								<li
+									v-for="result in item.lastReport.items"
+									:key="result.path"
+									:class="`is-${result.status}`"
+								>
+									{{ result.name }} —
+									{{ result.status === 'success' ? 'готово' : (result.error ?? 'пропущено') }}
+								</li>
+							</ul>
+							<button
+								v-if="item.lastReport?.items.some((result) => result.status === 'error')"
+								type="button"
+								:disabled="item.updating"
+								@click="retryFailed(item)"
+							>
+								Повторить неудачные
 							</button>
 						</div>
 						<div v-if="!loading && pendingItems.length === 0" class="update-empty">
@@ -138,8 +173,8 @@ import { getVersion } from '@tauri-apps/api/app'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { releaseNotes } from '@/data/release-notes'
-import { automaticWorldBackupsEnabled, backupProfileWorlds } from '@/helpers/backups'
-import { get_projects, list, update_all } from '@/helpers/profile'
+import { type InstanceUpdateReport,runInstanceUpdate } from '@/helpers/instance-update'
+import { get_projects, list } from '@/helpers/profile'
 import {
 	availableUpdate,
 	checkingState,
@@ -158,7 +193,9 @@ type UpdateItem = {
 	loader: string
 	updates: number
 	updating: boolean
+	lastReport?: InstanceUpdateReport
 }
+type Profile = Awaited<ReturnType<typeof list>>[number]
 
 const root = ref<HTMLElement>()
 const open = ref(false)
@@ -180,7 +217,7 @@ async function scan() {
 		const profiles = await list()
 		const failures: string[] = []
 		items.value = await Promise.all(
-			profiles.map(async (profile) => {
+			profiles.map(async (profile: Profile) => {
 				let updates = 0
 				try {
 					const projects = await get_projects(profile.path, 'stale_while_revalidate_skip_offline')
@@ -197,6 +234,7 @@ async function scan() {
 					loader: profile.loader,
 					updates,
 					updating: false,
+					lastReport: undefined,
 				}
 			}),
 		)
@@ -221,15 +259,33 @@ async function updateInstance(item: UpdateItem) {
 	item.updating = true
 	lastError.value = ''
 	try {
-		if (automaticWorldBackupsEnabled()) {
-			const backup = await backupProfileWorlds(item.path)
-			if (backup.failures.length > 0)
-				throw new Error(`не скопировано миров: ${backup.failures.length}`)
+		item.lastReport = await runInstanceUpdate(item.path)
+		if (item.lastReport.remainingUpdates !== null) item.updates = item.lastReport.remainingUpdates
+		if (!item.lastReport.success) {
+			const failed = item.lastReport.items.filter((result) => result.status === 'error')
+			throw new Error(
+				failed.map((result) => `${result.name}: ${result.error}`).join('; ') ||
+					'Проверка после обновления не пройдена',
+			)
 		}
-		await update_all(item.path)
-		item.updates = 0
 	} catch (error) {
 		lastError.value = `${item.name}: ${error instanceof Error ? error.message : String(error)}`
+	} finally {
+		item.updating = false
+	}
+}
+
+async function retryFailed(item: UpdateItem) {
+	const onlyPaths = item.lastReport?.items
+		.filter((result) => result.status === 'error')
+		.map((result) => result.path)
+	if (!onlyPaths?.length) return
+	item.updating = true
+	try {
+		item.lastReport = await runInstanceUpdate(item.path, { onlyPaths })
+		if (item.lastReport.remainingUpdates !== null) item.updates = item.lastReport.remainingUpdates
+	} catch (error) {
+		lastError.value = `${item.name}: ${formatUpdaterError(error)}`
 	} finally {
 		item.updating = false
 	}

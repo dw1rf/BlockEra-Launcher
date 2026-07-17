@@ -24,28 +24,28 @@
 				@click="reinstallJava"
 			>
 				<DownloadIcon />
-				{{ installingJava ? 'Installing...' : 'Install recommended' }}
+				{{ installingJava ? 'Устанавливаем…' : 'Установить рекомендуемую' }}
 			</Button>
 			<Button :disabled="props.disabled" @click="autoDetect">
 				<SearchIcon />
-				Detect
+				Найти
 			</Button>
 			<Button :disabled="props.disabled" @click="handleJavaFileInput()">
 				<FolderSearchIcon />
-				Browse
+				Выбрать
 			</Button>
-			<Button v-if="testingJava" disabled> Testing... </Button>
+			<Button v-if="testingJava" disabled> Проверяем… </Button>
 			<Button v-else-if="testingJavaSuccess === true">
 				<CheckIcon class="test-success" />
-				Success
+				Работает
 			</Button>
 			<Button v-else-if="testingJavaSuccess === false">
 				<XIcon class="test-fail" />
-				Failed
+				Ошибка
 			</Button>
 			<Button v-else :disabled="props.disabled" @click="testJava">
 				<PlayIcon />
-				Test
+				Проверить
 			</Button>
 		</span>
 	</div>
@@ -62,7 +62,7 @@ import {
 } from '@modrinth/assets'
 import { Button, injectNotificationManager } from '@modrinth/ui'
 import { open } from '@tauri-apps/plugin-dialog'
-import { ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 
 import JavaDetectionModal from '@/components/ui/JavaDetectionModal.vue'
 import { trackEvent } from '@/helpers/analytics'
@@ -103,36 +103,42 @@ const emit = defineEmits(['update:modelValue'])
 
 const testingJava = ref(false)
 const testingJavaSuccess = ref(null)
+let testResetTimer
 
 const installingJava = ref(false)
 
 async function testJava() {
 	testingJava.value = true
-	testingJavaSuccess.value = await test_jre(
-		props.modelValue ? props.modelValue.path : '',
-		props.version,
-	)
-	testingJava.value = false
-
-	trackEvent('JavaTest', {
-		path: props.modelValue ? props.modelValue.path : '',
-		success: testingJavaSuccess.value,
-	})
-
-	setTimeout(() => {
-		testingJavaSuccess.value = null
-	}, 2000)
+	try {
+		testingJavaSuccess.value = await test_jre(
+			props.modelValue ? props.modelValue.path : '',
+			props.version,
+		)
+		trackEvent('JavaTest', {
+			path: props.modelValue ? props.modelValue.path : '',
+			success: testingJavaSuccess.value,
+		})
+	} catch (error) {
+		testingJavaSuccess.value = false
+		handleError(error)
+	} finally {
+		testingJava.value = false
+		clearTimeout(testResetTimer)
+		testResetTimer = setTimeout(() => {
+			testingJavaSuccess.value = null
+		}, 2000)
+	}
 }
 
 async function handleJavaFileInput() {
-	const filePath = await open()
-
-	if (filePath) {
-		let result = await get_jre(filePath.path ?? filePath).catch(handleError)
+	try {
+		const filePath = await open()
+		if (!filePath) return
+		let result = await get_jre(filePath.path ?? filePath)
 		if (!result) {
 			result = {
 				path: filePath.path ?? filePath,
-				version: props.version.toString(),
+				version: String(props.version ?? ''),
 				architecture: 'x86',
 			}
 		}
@@ -142,6 +148,8 @@ async function handleJavaFileInput() {
 		})
 
 		emit('update:modelValue', result)
+	} catch (error) {
+		handleError(error)
 	}
 }
 
@@ -150,7 +158,11 @@ async function autoDetect() {
 	if (!props.compact) {
 		detectJavaModal.value.show(props.version, props.modelValue)
 	} else {
-		const versions = await find_filtered_jres(props.version).catch(handleError)
+		const versions =
+			(await find_filtered_jres(props.version).catch((error) => {
+				handleError(error)
+				return []
+			})) ?? []
 		if (versions.length > 0) {
 			emit('update:modelValue', versions[0])
 		}
@@ -159,25 +171,28 @@ async function autoDetect() {
 
 async function reinstallJava() {
 	installingJava.value = true
-	const path = await auto_install_java(props.version).catch(handleError)
-	let result = await get_jre(path)
+	try {
+		const path = await auto_install_java(props.version)
+		let result = await get_jre(path)
 
-	if (!result) {
-		result = {
-			path: path,
-			version: props.version.toString(),
-			architecture: 'x86',
+		if (!result) {
+			result = {
+				path,
+				version: props.version.toString(),
+				architecture: 'x86',
+			}
 		}
+
+		trackEvent('JavaReInstall', { path, version: props.version })
+		emit('update:modelValue', result)
+	} catch (error) {
+		handleError(error)
+	} finally {
+		installingJava.value = false
 	}
-
-	trackEvent('JavaReInstall', {
-		path: path,
-		version: props.version,
-	})
-
-	emit('update:modelValue', result)
-	installingJava.value = false
 }
+
+onBeforeUnmount(() => clearTimeout(testResetTimer))
 </script>
 
 <style lang="scss" scoped>

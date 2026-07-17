@@ -176,24 +176,31 @@ function refreshServer(address: string, instancePath: string) {
 }
 
 async function joinWorld(world: WorldWithProfile) {
-	console.log(`Joining world ${getWorldIdentifier(world)}`)
-	if (world.type === 'server') {
-		await start_join_server(world.profile, world.address).catch(handleError)
-	} else if (world.type === 'singleplayer') {
-		await start_join_singleplayer_world(world.profile, world.path).catch(handleError)
+	try {
+		if (world.type === 'server') {
+			await start_join_server(world.profile, world.address)
+		} else if (world.type === 'singleplayer') {
+			await start_join_singleplayer_world(world.profile, world.path)
+		}
+	} catch (error) {
+		currentProfile.value = undefined
+		currentWorld.value = undefined
+		handleError(error instanceof Error ? error : new Error(String(error)))
 	}
 }
 
 async function playInstance(instance: GameInstance) {
-	await run(instance.path)
-		.catch((err) => handleSevereError(err, { profilePath: instance.path }))
-		.finally(() => {
-			trackEvent('InstancePlay', {
-				loader: instance.loader,
-				game_version: instance.game_version,
-				source: 'WorldItem',
-			})
+	try {
+		await run(instance.path)
+		trackEvent('InstancePlay', {
+			loader: instance.loader,
+			game_version: instance.game_version,
+			source: 'WorldItem',
 		})
+	} catch (error) {
+		currentProfile.value = undefined
+		handleSevereError(error, { profilePath: instance.path })
+	}
 }
 
 async function stopInstance(path: string) {

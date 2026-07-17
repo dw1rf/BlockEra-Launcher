@@ -23,7 +23,6 @@ import {
 	ServerIcon,
 	SettingsIcon,
 	UserIcon,
-	WorldIcon,
 	XIcon,
 } from '@modrinth/assets'
 import {
@@ -67,6 +66,7 @@ import InstanceCreationModal from '@/components/ui/InstanceCreationModal.vue'
 import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
+import OnboardingModal from '@/components/ui/OnboardingModal.vue'
 import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import RunningAppBar from '@/components/ui/RunningAppBar.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
@@ -98,7 +98,7 @@ const themeStore = useTheming()
 const selectedInstanceStore = useSelectedInstance()
 const modsRoute = computed(() =>
 	selectedInstanceStore.selectedInstanceId
-		? `/instance/${encodeURIComponent(selectedInstanceStore.selectedInstanceId)}`
+		? `/instance/${encodeURIComponent(selectedInstanceStore.selectedInstanceId)}/content`
 		: '/library',
 )
 
@@ -134,6 +134,10 @@ window.addEventListener('online', () => {
 })
 
 const showOnboarding = ref(false)
+const onboardingModal = ref(null)
+const settingsModal = ref(null)
+const installationModal = ref(null)
+const cinematicAccounts = ref(null)
 const nativeDecorations = ref(false)
 
 const os = ref('')
@@ -243,7 +247,7 @@ async function setupApp() {
 		i18n.global.locale.value = locale
 	}
 
-	if (default_page === 'Library') {
+	if (default_page === 'library') {
 		await router.push('/library')
 	}
 
@@ -506,6 +510,18 @@ provide('accountsCard', accounts)
 const accountRevision = ref(0)
 provide('accountRevision', accountRevision)
 
+function openOnboardingAccounts() {
+	;(cinematicAccounts.value ?? accounts.value)?.showAccountManager?.()
+}
+
+function openOnboardingCreation() {
+	installationModal.value?.show()
+}
+
+function openOnboardingJava() {
+	settingsModal.value?.show()
+}
+
 function handleAccountChange() {
 	accountRevision.value += 1
 }
@@ -690,7 +706,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 		:class="{ 'disable-advanced-rendering': !themeStore.advancedRendering }"
 	>
 		<Suspense>
-			<AppSettingsModal ref="settingsModal" />
+			<AppSettingsModal ref="settingsModal" @open-onboarding="showOnboarding = true" />
+		</Suspense>
+		<Suspense>
+			<OnboardingModal
+				v-if="showOnboarding"
+				ref="onboardingModal"
+				@accounts="openOnboardingAccounts"
+				@create="openOnboardingCreation"
+				@java="openOnboardingJava"
+				@close="showOnboarding = false"
+			/>
 		</Suspense>
 		<Suspense>
 			<AuthGrantFlowWaitModal ref="modrinthLoginFlowWaitModal" @flow-cancel="cancelLogin" />
@@ -702,11 +728,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			v-if="!cinematicShell"
 			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.5rem] w-[--left-bar-width]"
 		>
-			<NavButton v-tooltip.right="'Home'" to="/">
+			<NavButton v-tooltip.right="'Главная'" to="/">
 				<HomeIcon />
-			</NavButton>
-			<NavButton v-if="themeStore.featureFlags.worlds_tab" v-tooltip.right="'Worlds'" to="/worlds">
-				<WorldIcon />
 			</NavButton>
 			<NavButton
 				v-if="themeStore.featureFlags.servers_in_app"
@@ -716,18 +739,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<ServerIcon />
 			</NavButton>
 			<NavButton
-				v-tooltip.right="'Discover content'"
+				v-tooltip.right="'Каталог'"
 				to="/browse/modpack"
 				:is-primary="() => route.path.startsWith('/browse') && !route.query.i"
 				:is-subpage="(route) => route.path.startsWith('/project') && !route.query.i"
 			>
 				<CompassIcon />
 			</NavButton>
-			<NavButton v-tooltip.right="'Skins (Beta)'" to="/skins">
+			<NavButton v-tooltip.right="'Скины (бета)'" to="/skins">
 				<ChangeSkinIcon />
 			</NavButton>
 			<NavButton
-				v-tooltip.right="'Library'"
+				v-tooltip.right="'Библиотека'"
 				to="/library"
 				:is-subpage="
 					() =>
@@ -743,7 +766,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<QuickInstanceSwitcher />
 			</suspense>
 			<NavButton
-				v-tooltip.right="'Create new instance'"
+				v-tooltip.right="'Создать сборку'"
 				:to="() => $refs.installationModal.show()"
 				:disabled="offline"
 			>
@@ -820,13 +843,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			<div data-tauri-drag-region class="flex p-3">
 				<div data-tauri-drag-region class="flex items-center gap-1 ml-3">
 					<button
+						v-tooltip="'Назад'"
 						class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
+						aria-label="Назад"
 						@click="router.back()"
 					>
 						<LeftArrowIcon />
 					</button>
 					<button
+						v-tooltip="'Вперёд'"
 						class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
+						aria-label="Вперёд"
 						@click="router.forward()"
 					>
 						<RightArrowIcon />
@@ -854,18 +881,32 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					</Suspense>
 				</div>
 				<section v-if="!nativeDecorations" class="window-controls" data-tauri-drag-region-exclude>
-					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
+					<Button
+						v-tooltip="'Свернуть'"
+						class="titlebar-button"
+						icon-only
+						aria-label="Свернуть окно"
+						@click="() => getCurrentWindow().minimize()"
+					>
 						<MinimizeIcon />
 					</Button>
 					<Button
+						v-tooltip="'Развернуть или восстановить'"
 						class="titlebar-button"
 						icon-only
+						aria-label="Развернуть или восстановить окно"
 						@click="() => getCurrentWindow().toggleMaximize()"
 					>
 						<RestoreIcon v-if="isMaximized" />
 						<MaximizeIcon v-else />
 					</Button>
-					<Button class="titlebar-button close" icon-only @click="handleClose">
+					<Button
+						v-tooltip="'Закрыть'"
+						class="titlebar-button close"
+						icon-only
+						aria-label="Закрыть окно"
+						@click="handleClose"
+					>
 						<XIcon />
 					</Button>
 				</section>
@@ -876,7 +917,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<BlockEraLogo aria-hidden="true" />
 				<span class="cinematic-brand-copy">
 					<strong>BLOCKERA</strong>
-					<small>GAME LAUNCHER</small>
+					<small>ИГРОВОЙ ЛАУНЧЕР</small>
 				</span>
 			</router-link>
 			<nav class="cinematic-nav" aria-label="Основная навигация">
@@ -884,13 +925,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					<HomeIcon />
 					<span>Главная</span>
 				</router-link>
+				<router-link to="/browse/modpack" class="cinematic-nav-link">
+					<CompassIcon />
+					<span>Каталог</span>
+				</router-link>
 				<router-link to="/library" class="cinematic-nav-link">
 					<CollectionIcon />
-					<span>Сборки</span>
+					<span>Библиотека</span>
 				</router-link>
 				<router-link :to="modsRoute" class="cinematic-nav-link">
 					<BlocksIcon />
-					<span>Моды</span>
+					<span>Моя сборка</span>
 				</router-link>
 				<router-link to="/skins" class="cinematic-nav-link">
 					<ChangeSkinIcon />
@@ -906,24 +951,43 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					<RunningAppBar compact />
 				</Suspense>
 				<Suspense>
-					<BlockEraUpdateCenter />
+					<BlockEraUpdateCenter v-if="!showOnboarding" />
 				</Suspense>
 				<Suspense>
-					<AccountsCard mode="small" class="cinematic-account" @change="handleAccountChange" />
+					<AccountsCard
+						ref="cinematicAccounts"
+						mode="small"
+						class="cinematic-account"
+						@change="handleAccountChange"
+					/>
 				</Suspense>
 				<section v-if="!nativeDecorations" class="window-controls cinematic-window-controls">
-					<Button class="titlebar-button" icon-only @click="() => getCurrentWindow().minimize()">
+					<Button
+						v-tooltip="'Свернуть'"
+						class="titlebar-button"
+						icon-only
+						aria-label="Свернуть окно"
+						@click="() => getCurrentWindow().minimize()"
+					>
 						<MinimizeIcon />
 					</Button>
 					<Button
+						v-tooltip="'Развернуть или восстановить'"
 						class="titlebar-button"
 						icon-only
+						aria-label="Развернуть или восстановить окно"
 						@click="() => getCurrentWindow().toggleMaximize()"
 					>
 						<RestoreIcon v-if="isMaximized" />
 						<MaximizeIcon v-else />
 					</Button>
-					<Button class="titlebar-button close" icon-only @click="handleClose">
+					<Button
+						v-tooltip="'Закрыть'"
+						class="titlebar-button close"
+						icon-only
+						aria-label="Закрыть окно"
+						@click="handleClose"
+					>
 						<XIcon />
 					</Button>
 				</section>
@@ -947,17 +1011,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				>
 					<h2 class="text-lg font-extrabold mt-0 mb-2">Hey there Modrinth user!</h2>
 					<p class="m-0 leading-tight">
-						Would you mind answering a few questions about your experience with BlockEra Launcher?
+						Ответите на несколько вопросов о работе с BlockEra Launcher?
 					</p>
 					<p class="mt-3 mb-4 leading-tight">
-						This feedback will go directly to the Modrinth team and help guide future updates!
+						Ответы помогут команде улучшить следующие версии лаунчера.
 					</p>
 					<div class="flex gap-2">
 						<ButtonStyled color="brand">
-							<button @click="openSurvey"><NotepadTextIcon /> Take survey</button>
+							<button @click="openSurvey"><NotepadTextIcon /> Пройти опрос</button>
 						</ButtonStyled>
 						<ButtonStyled>
-							<button @click="dismissSurvey"><XIcon /> No thanks</button>
+							<button @click="dismissSurvey"><XIcon /> Не сейчас</button>
 						</ButtonStyled>
 					</div>
 				</div>

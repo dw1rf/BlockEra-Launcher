@@ -18,6 +18,34 @@
 			</div>
 		</div>
 		<template v-else-if="projects?.length > 0">
+			<section v-if="updateReport" class="update-report" aria-live="polite">
+				<div>
+					<strong>Итоги обновления</strong>
+					<span
+						>Успешно: {{ updateReport.items.filter((item) => item.status === 'success').length }} ·
+						Ошибок: {{ updateReport.items.filter((item) => item.status === 'error').length }} ·
+						Пропущено: {{ updateReport.items.filter((item) => item.status === 'skipped').length }} ·
+						Осталось: {{ updateReport.remainingUpdates ?? 'не проверено' }}</span
+					>
+				</div>
+				<ul>
+					<li v-for="item in updateReport.items" :key="item.path" :class="`is-${item.status}`">
+						{{ item.name }} —
+						{{
+							item.status === 'success'
+								? `установлена ${item.installedVersion ?? 'новая версия'}`
+								: (item.error ?? 'пропущено')
+						}}
+					</li>
+				</ul>
+				<button
+					v-if="updateReport.items.some((item) => item.status === 'error')"
+					type="button"
+					@click="retryFailedUpdates"
+				>
+					Повторить неудачные
+				</button>
+			</section>
 			<div class="flex items-center gap-2 mb-4">
 				<div class="iconified-input flex-grow">
 					<SearchIcon />
@@ -28,7 +56,12 @@
 						class="text-input search-input"
 						autocomplete="off"
 					/>
-					<Button class="r-btn" @click="() => (searchFilter = '')">
+					<Button
+						v-tooltip="'Очистить поиск'"
+						class="r-btn"
+						aria-label="Очистить поиск"
+						@click="() => (searchFilter = '')"
+					>
 						<XIcon />
 					</Button>
 				</div>
@@ -165,7 +198,7 @@
 						color="brand"
 						color-fill="text"
 						hover-color-fill="text"
-						@click="updateAll"
+						@click="() => updateAll()"
 					>
 						<button class="w-max"><DownloadIcon /> Обновить всё</button>
 					</ButtonStyled>
@@ -189,7 +222,8 @@
 						circular
 					>
 						<button
-							v-tooltip="`Update`"
+							v-tooltip="`Обновить`"
+							aria-label="Обновить проект"
 							:disabled="(item.data as ProjectListEntry).updating"
 							@click="updateProject(item.data)"
 						>
@@ -200,10 +234,11 @@
 					<Toggle
 						class="!mx-2"
 						:model-value="!item.data.disabled"
+						:disabled="togglingFiles.has(item.data.file_name)"
 						@update:model-value="toggleDisableMod(item.data)"
 					/>
 					<ButtonStyled type="transparent" circular>
-						<button v-tooltip="'Remove'" @click="removeMod(item)">
+						<button v-tooltip="'Удалить'" aria-label="Удалить проект" @click="removeMod(item)">
 							<TrashIcon />
 						</button>
 					</ButtonStyled>
@@ -224,8 +259,8 @@
 							direction="left"
 						>
 							<MoreVerticalIcon />
-							<template #show-file> <ExternalIcon /> Show file </template>
-							<template #copy-link> <ClipboardCopyIcon /> Copy link </template>
+							<template #show-file> <ExternalIcon /> Показать файл </template>
+							<template #copy-link> <ClipboardCopyIcon /> Копировать ссылку </template>
 						</OverflowMenu>
 					</ButtonStyled>
 				</template>
@@ -310,27 +345,22 @@ import ExportModal from '@/components/ui/ExportModal.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
 import ModpackVersionModal from '@/components/ui/ModpackVersionModal.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { automaticWorldBackupsEnabled, backupProfileWorlds } from '@/helpers/backups'
 import {
 	get_organization_many,
 	get_project_many,
 	get_team_many,
-	get_version,
 	get_version_many,
 } from '@/helpers/cache.js'
 import { profile_listener } from '@/helpers/events.js'
+import { type InstanceUpdateReport,runInstanceUpdate } from '@/helpers/instance-update'
 import {
 	add_project_from_path,
-	get,
 	get_projects,
 	remove_project,
 	toggle_disable_project,
-	update_all,
-	update_project,
 } from '@/helpers/profile.js'
 import type { CacheBehaviour, ContentFile, GameInstance } from '@/helpers/types'
 import { highlightModInProfile } from '@/helpers/utils.js'
-import { installVersionDependencies } from '@/store/install'
 
 const { handleError } = injectNotificationManager()
 
@@ -377,6 +407,7 @@ const canUpdatePack = computed(() => {
 const exportModal = ref(null)
 
 const projects = ref<ProjectListEntry[]>([])
+const updateReport = ref<InstanceUpdateReport | null>(null)
 const loadingProjects = ref(true)
 const projectsError = ref('')
 const PROJECTS_TIMEOUT_MS = 15_000
@@ -652,16 +683,6 @@ const ascending = ref(true)
 const sortColumn = ref('Name')
 const currentPage = ref(1)
 
-const selected = computed(() =>
-	Array.from(selectionMap.value)
-		.filter((args) => {
-			return args[1]
-		})
-		.map((args) => {
-			return projects.value.find((x) => x.path === args[0])
-		}),
-)
-
 const functionValues = computed(() =>
 	selectedProjects.value.length > 0 ? selectedProjects.value : Array.from(projects.value.values()),
 )
@@ -697,153 +718,96 @@ const sortProjects = (filter: string) => {
 	}
 }
 
-const updateAll = async () => {
-	if (automaticWorldBackupsEnabled()) {
-		try {
-			const backup = await backupProfileWorlds(props.instance.path)
-			if (
-				backup.failures.length > 0 &&
-				!window.confirm(
-					`Не удалось создать ${backup.failures.length} резервных копий. Продолжить обновление?`,
-				)
-			)
-				return
-		} catch {
-			if (
-				!window.confirm('Не удалось создать резервные копии миров. Продолжить обновление без них?')
-			)
-				return
-		}
+const updateAll = async (targets = projects.value.filter((project) => project.outdated)) => {
+	const outdated = targets.filter((project) => project.outdated && !project.updating)
+	if (outdated.length === 0) return
+	for (const project of outdated) project.updating = true
+	try {
+		updateReport.value = await runInstanceUpdate(props.instance.path, {
+			onlyPaths: outdated.map((project) => project.path),
+		})
+		await loadProjects('must_revalidate')
+		trackEvent('InstanceUpdateAll', {
+			loader: props.instance.loader,
+			game_version: props.instance.game_version,
+			count: updateReport.value.items.filter((item) => item.status === 'success').length,
+			selected: targets.length !== projects.value.length,
+		})
+	} catch (error) {
+		handleError(error instanceof Error ? error : new Error(String(error)))
+	} finally {
+		for (const project of outdated) project.updating = false
 	}
-
-	const setProjects = []
-	const outdatedProjects = []
-
-	for (const [i, project] of projects.value.entries()) {
-		if (project.outdated) {
-			project.updating = true
-			setProjects.push(i)
-			if (project.updateVersion) {
-				outdatedProjects.push(project.updateVersion)
-			}
-		}
-	}
-
-	const paths = (await update_all(props.instance.path).catch(handleError)) as Record<string, string>
-
-	for (const [oldVal, newVal] of Object.entries(paths)) {
-		const index = projects.value.findIndex((x) => x.path === oldVal)
-		projects.value[index].path = newVal
-		projects.value[index].outdated = false
-
-		if (projects.value[index].updateVersion) {
-			projects.value[index].version = projects.value[index].updateVersion.version_number
-			projects.value[index].updateVersion = undefined
-		}
-	}
-
-	if (outdatedProjects.length > 0) {
-		const profile = await get(props.instance.path).catch(handleError)
-
-		if (profile) {
-			for (const versionId of outdatedProjects) {
-				const versionData = await get_version(versionId, 'must_revalidate').catch(handleError)
-
-				if (versionData) {
-					await installVersionDependencies(profile, versionData).catch(handleError)
-				}
-			}
-		}
-	}
-
-	for (const project of setProjects) {
-		projects.value[project].updating = false
-	}
-
-	trackEvent('InstanceUpdateAll', {
-		loader: props.instance.loader,
-		game_version: props.instance.game_version,
-		count: setProjects.length,
-		selected: selected.value.length > 1,
-	})
 }
 
 const updateProject = async (mod: ProjectListEntry) => {
-	mod.updating = true
-	await new Promise((resolve) => setTimeout(resolve, 0))
-	mod.path = await update_project(props.instance.path, mod.path).catch(handleError)
-
-	if (mod.updateVersion) {
-		const versionData = await get_version(mod.updateVersion, 'must_revalidate').catch(handleError)
-
-		if (versionData) {
-			const profile = await get(props.instance.path).catch(handleError)
-
-			if (profile) {
-				await installVersionDependencies(profile, versionData).catch(handleError)
-			}
-		}
-	}
-
-	mod.updating = false
-
-	mod.outdated = false
-	mod.version = mod.updateVersion?.version_number
-	mod.updateVersion = undefined
-
-	trackEvent('InstanceProjectUpdate', {
-		loader: props.instance.loader,
-		game_version: props.instance.game_version,
-		id: mod.id,
-		name: mod.name,
-		project_type: mod.project_type,
-	})
-}
-
-const locks: Record<string, string | null> = {}
-
-const toggleDisableMod = async (mod: ProjectListEntry) => {
-	// Use mod's id as the key for the lock. If mod doesn't have a unique id, replace `mod.id` with some unique property.
-	const lock = locks[mod.file_name]
-
-	while (lock) {
-		await new Promise((resolve) => {
-			setTimeout((value: unknown) => resolve(value), 100)
-		})
-	}
-
-	locks[mod.file_name] = 'lock'
-
-	try {
-		mod.path = await toggle_disable_project(props.instance.path, mod.path)
-		mod.disabled = !mod.disabled
-
-		trackEvent('InstanceProjectDisable', {
+	await updateAll([mod])
+	if (
+		updateReport.value?.items.some((item) => item.path === mod.path && item.status === 'success')
+	) {
+		trackEvent('InstanceProjectUpdate', {
 			loader: props.instance.loader,
 			game_version: props.instance.game_version,
 			id: mod.id,
 			name: mod.name,
 			project_type: mod.project_type,
-			disabled: mod.disabled,
 		})
-	} catch (err) {
-		handleError(err)
 	}
+}
 
-	locks[mod.file_name] = null
+const locks: Record<string, Promise<void> | undefined> = {}
+const togglingFiles = ref(new Set<string>())
+
+const toggleDisableMod = async (mod: ProjectListEntry) => {
+	const key = mod.file_name
+	const previousOperation = locks[key] ?? Promise.resolve()
+	const operation = previousOperation
+		.catch(() => undefined)
+		.then(async () => {
+			const previousPath = mod.path
+			const previousDisabled = mod.disabled
+			togglingFiles.value.add(key)
+			togglingFiles.value = new Set(togglingFiles.value)
+			mod.disabled = !previousDisabled
+			try {
+				mod.path = await toggle_disable_project(props.instance.path, previousPath)
+				trackEvent('InstanceProjectDisable', {
+					loader: props.instance.loader,
+					game_version: props.instance.game_version,
+					id: mod.id,
+					name: mod.name,
+					project_type: mod.project_type,
+					disabled: mod.disabled,
+				})
+			} catch (error) {
+				mod.path = previousPath
+				mod.disabled = previousDisabled
+				handleError(error instanceof Error ? error : new Error(String(error)))
+			} finally {
+				togglingFiles.value.delete(key)
+				togglingFiles.value = new Set(togglingFiles.value)
+			}
+		})
+	locks[key] = operation
+	await operation.finally(() => {
+		if (locks[key] === operation) Reflect.deleteProperty(locks, key)
+	})
 }
 
 const removeMod = async (mod: ContentItem<ProjectListEntry>) => {
-	await remove_project(props.instance.path, mod.path).catch(handleError)
-	projects.value = projects.value.filter((x) => mod.path !== x.path)
-
-	trackEvent('InstanceProjectRemove', {
-		loader: props.instance.loader,
-		game_version: props.instance.game_version,
-		id: mod.data.id,
-		name: mod.data.name,
-		project_type: mod.data.project_type,
-	})
+	try {
+		await remove_project(props.instance.path, mod.path)
+		projects.value = projects.value.filter((x) => mod.path !== x.path)
+		trackEvent('InstanceProjectRemove', {
+			loader: props.instance.loader,
+			game_version: props.instance.game_version,
+			id: mod.data.id,
+			name: mod.data.name,
+			project_type: mod.data.project_type,
+		})
+	} catch (error) {
+		handleError(error instanceof Error ? error : new Error(String(error)))
+	}
 }
 
 const copyModLink = async (mod: ContentItem<ProjectListEntry>) => {
@@ -853,11 +817,24 @@ const copyModLink = async (mod: ContentItem<ProjectListEntry>) => {
 }
 
 const deleteSelected = async () => {
-	for (const project of functionValues.value) {
-		await remove_project(props.instance.path, project.path).catch(handleError)
-	}
+	const selectedForDeletion = [...functionValues.value]
+	if (selectedForDeletion.length === 0) return
+	const selectedPaths = new Set(selectedForDeletion.map((project) => project.path))
+	const previousProjects = projects.value
+	projects.value = projects.value.filter((project) => !selectedPaths.has(project.path))
 
-	projects.value = projects.value.filter((x) => !x.selected)
+	const results = await Promise.allSettled(
+		selectedForDeletion.map((project) => remove_project(props.instance.path, project.path)),
+	)
+	const failed = selectedForDeletion.filter((_, index) => results[index].status === 'rejected')
+	if (failed.length > 0) {
+		const failedPaths = new Set(failed.map((project) => project.path))
+		projects.value = previousProjects.filter(
+			(project) => !selectedPaths.has(project.path) || failedPaths.has(project.path),
+		)
+		for (const result of results) if (result.status === 'rejected') handleError(result.reason)
+	}
+	selectedFiles.value = failed.map((project) => project.file_name)
 }
 
 const shareNames = async () => {
@@ -891,11 +868,16 @@ const shareMarkdown = async () => {
 }
 
 const updateSelected = async () => {
-	const promises = []
-	for (const project of functionValues.value) {
-		if (project.outdated) promises.push(updateProject(project))
-	}
-	await Promise.all(promises).catch(handleError)
+	await updateAll(functionValues.value)
+}
+
+async function retryFailedUpdates() {
+	const failedPaths = updateReport.value?.items
+		.filter((item) => item.status === 'error')
+		.map((item) => item.path)
+	if (!failedPaths?.length) return
+	const failedProjects = projects.value.filter((project) => failedPaths.includes(project.path))
+	await updateAll(failedProjects)
 }
 
 const enableAll = async () => {
@@ -974,6 +956,32 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.update-report {
+	margin-bottom: 1rem;
+	padding: 0.9rem;
+	border: 1px solid var(--blockera-border);
+	border-radius: var(--blockera-radius-lg);
+	background: var(--blockera-surface);
+}
+.update-report > div {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+}
+.update-report span {
+	color: var(--color-secondary);
+}
+.update-report ul {
+	max-height: 10rem;
+	margin: 0.75rem 0;
+	overflow: auto;
+}
+.update-report li.is-success {
+	color: var(--blockera-success);
+}
+.update-report li.is-error {
+	color: var(--blockera-danger);
+}
 .blockera-content-manager {
 	:deep(.iconified-input) {
 		height: 42px;

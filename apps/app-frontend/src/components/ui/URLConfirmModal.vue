@@ -15,43 +15,57 @@ const project = ref(null)
 const version = ref(null)
 const categories = ref(null)
 const installing = ref(false)
+const installError = ref('')
 
 defineExpose({
 	async show(event) {
-		if (event.event === 'InstallVersion') {
-			version.value = await get_version(event.id, 'must_revalidate').catch(handleError)
-			project.value = await get_project(version.value.project_id, 'must_revalidate').catch(
-				handleError,
+		installError.value = ''
+		try {
+			if (event.event === 'InstallVersion') {
+				version.value = await get_version(event.id, 'must_revalidate')
+				project.value = await get_project(version.value.project_id, 'must_revalidate')
+			} else {
+				project.value = await get_project(event.id, 'must_revalidate')
+				version.value = await get_version(
+					project.value.versions[project.value.versions.length - 1],
+					'must_revalidate',
+				)
+			}
+			categories.value = (await get_categories()).filter(
+				(cat) => project.value.categories.includes(cat.name) && cat.project_type === 'mod',
 			)
-		} else {
-			project.value = await get_project(event.id, 'must_revalidate').catch(handleError)
-			version.value = await get_version(
-				project.value.versions[project.value.versions.length - 1],
-				'must_revalidate',
-			).catch(handleError)
+			confirmModal.value.show()
+		} catch (error) {
+			handleError(error)
 		}
-		categories.value = (await get_categories().catch(handleError)).filter(
-			(cat) => project.value.categories.includes(cat.name) && cat.project_type === 'mod',
-		)
-		confirmModal.value.show()
 	},
 })
 
 async function install() {
-	confirmModal.value.hide()
-	await installVersion(
-		project.value.id,
-		version.value.id,
-		null,
-		'URLConfirmModal',
-		() => {},
-		() => {},
-	).catch(handleError)
+	installing.value = true
+	installError.value = ''
+	try {
+		const result = await installVersion(
+			project.value.id,
+			version.value.id,
+			null,
+			'URLConfirmModal',
+			() => {},
+			() => {},
+		)
+		if (result?.status === 'success') confirmModal.value.hide()
+		else if (result?.status !== 'cancelled') throw new Error('Backend не подтвердил установку.')
+	} catch (error) {
+		installError.value = error instanceof Error ? error.message : String(error)
+		handleError(error)
+	} finally {
+		installing.value = false
+	}
 }
 </script>
 
 <template>
-	<ModalWrapper ref="confirmModal" :header="`Install ${project?.title}`">
+	<ModalWrapper ref="confirmModal" :header="`Установить ${project?.title ?? 'проект'}`">
 		<div class="modal-body">
 			<SearchCard
 				:project="project"
@@ -62,13 +76,16 @@ async function install() {
 			<div class="button-row">
 				<div class="markdown-body">
 					<p>
-						Installing <code>{{ version.id }}</code> from Modrinth
+						Установка версии <code>{{ version?.id }}</code> из Modrinth
 					</p>
 				</div>
 				<div class="button-group">
-					<Button :loading="installing" color="primary" @click="install">Install</Button>
+					<Button :loading="installing" color="primary" @click="install">{{
+						installing ? 'Устанавливаем…' : 'Установить'
+					}}</Button>
 				</div>
 			</div>
+			<p v-if="installError" class="text-danger" role="alert">{{ installError }}</p>
 		</div>
 	</ModalWrapper>
 </template>

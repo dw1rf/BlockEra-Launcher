@@ -5,6 +5,8 @@
 		type="button"
 		class="account-trigger"
 		:class="{ expanded: mode === 'expanded' }"
+		:aria-expanded="showCard"
+		aria-label="Выбрать аккаунт Minecraft"
 		@click="toggleMenu"
 	>
 		<Avatar
@@ -44,12 +46,18 @@
 					:key="account.profile.id"
 					type="button"
 					class="account-choice"
+					role="menuitem"
 					:class="{ active: account.profile.id === selectedAccount?.profile.id }"
 					@click="selectAndClose(account)"
 				>
 					<Avatar :src="getAccountAvatarUrl(account)" size="36px" />
-					<span><strong>{{ account.profile.name }}</strong><small>Аккаунт Minecraft</small></span>
-					<span class="account-check">{{ account.profile.id === selectedAccount?.profile.id ? '✓' : '' }}</span>
+					<span
+						><strong>{{ account.profile.name }}</strong
+						><small>Аккаунт Minecraft</small></span
+					>
+					<span class="account-check">{{
+						account.profile.id === selectedAccount?.profile.id ? '✓' : ''
+					}}</span>
 				</button>
 				<div v-if="accounts.length === 0" class="account-empty">
 					<strong>Аккаунты не добавлены</strong>
@@ -63,178 +71,216 @@
 		</transition>
 	</Teleport>
 	<Teleport to="body">
-	<ModalWrapper ref="accountManagerModal" class="account-manager-modal" header="Аккаунты BlockEra">
-		<div class="account-manager-body">
-			<div class="account-manager-intro">
-				<span>ПРОФИЛИ MINECRAFT</span>
-				<h2>Выберите способ входа</h2>
-				<p>Активный аккаунт будет использоваться при следующем запуске игры.</p>
-			</div>
-			<div class="account-provider-grid">
-				<button type="button" :disabled="microsoftLoginDisabled" @click="login()">
-					<MicrosoftIcon v-if="!microsoftLoginDisabled" /><SpinnerIcon v-else class="animate-spin" />
-					<span><strong>Microsoft</strong><small>Лицензионный аккаунт</small></span>
-				</button>
-				<button type="button" @click="showOfflineLoginModal()">
-					<OfflineIcon /><span><strong>Офлайн</strong><small>Локальное имя игрока</small></span>
-				</button>
-				<button type="button" :disabled="elyByLoginDisabled" @click="showElyByLoginModal()">
-					<ElyByIcon v-if="!elyByLoginDisabled" /><SpinnerIcon v-else class="animate-spin" />
-					<span><strong>Ely.by</strong><small>Аккаунт Ely.by</small></span>
-				</button>
-			</div>
-			<div v-if="accounts.length" class="managed-account-list">
-				<div v-for="account in accounts" :key="account.profile.id" class="managed-account-row">
-					<button type="button" class="managed-account-select" @click="setAccount(account)">
-						<Avatar :src="getAccountAvatarUrl(account)" size="40px" />
-						<span><strong>{{ account.profile.name }}</strong><small>{{ account.profile.id === selectedAccount?.profile.id ? 'Используется сейчас' : 'Выбрать аккаунт' }}</small></span>
+		<ModalWrapper
+			ref="accountManagerModal"
+			class="account-manager-modal"
+			header="Аккаунты BlockEra"
+		>
+			<div class="account-manager-body">
+				<div class="account-manager-intro">
+					<span>ПРОФИЛИ MINECRAFT</span>
+					<h2>Выберите способ входа</h2>
+					<p>Активный аккаунт будет использоваться при следующем запуске игры.</p>
+				</div>
+				<div class="account-provider-grid">
+					<button type="button" :disabled="microsoftLoginDisabled" @click="login()">
+						<MicrosoftIcon v-if="!microsoftLoginDisabled" /><SpinnerIcon
+							v-else
+							class="animate-spin"
+						/>
+						<span><strong>Microsoft</strong><small>Лицензионный аккаунт</small></span>
 					</button>
-					<button type="button" class="managed-account-delete" aria-label="Удалить аккаунт" @click="logout(account.profile.id)"><TrashIcon /></button>
+					<button type="button" @click="showOfflineLoginModal()">
+						<OfflineIcon /><span><strong>Офлайн</strong><small>Локальное имя игрока</small></span>
+					</button>
+					<button type="button" :disabled="elyByLoginDisabled" @click="showElyByLoginModal()">
+						<ElyByIcon v-if="!elyByLoginDisabled" /><SpinnerIcon v-else class="animate-spin" />
+						<span><strong>Ely.by</strong><small>Аккаунт Ely.by</small></span>
+					</button>
+				</div>
+				<div v-if="accounts.length" class="managed-account-list">
+					<div v-for="account in accounts" :key="account.profile.id" class="managed-account-row">
+						<button type="button" class="managed-account-select" @click="setAccount(account)">
+							<Avatar :src="getAccountAvatarUrl(account)" size="40px" />
+							<span
+								><strong>{{ account.profile.name }}</strong
+								><small>{{
+									account.profile.id === selectedAccount?.profile.id
+										? 'Используется сейчас'
+										: 'Выбрать аккаунт'
+								}}</small></span
+							>
+						</button>
+						<button
+							type="button"
+							class="managed-account-delete"
+							aria-label="Удалить аккаунт"
+							@click="logout(account.profile.id)"
+						>
+							<TrashIcon />
+						</button>
+					</div>
 				</div>
 			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper ref="addElyByModal" class="modal" header="Вход через Ely.by">
-		<ModalWrapper
-			ref="requestElyByTwoFactorCodeModal"
-			class="modal"
-			header="Двухфакторная аутентификация Ely.by"
-		>
+		</ModalWrapper>
+		<ModalWrapper ref="addElyByModal" class="modal" header="Вход через Ely.by">
+			<ModalWrapper
+				ref="requestElyByTwoFactorCodeModal"
+				class="modal"
+				header="Двухфакторная аутентификация Ely.by"
+			>
+				<div class="flex flex-col gap-4 px-6 py-5">
+					<label class="label" for="elyby-two-factor">Введите код подтверждения</label>
+					<input
+						id="elyby-two-factor"
+						v-model="elyByTwoFactorCode"
+						type="text"
+						placeholder="Код 2FA"
+						class="input"
+						:aria-invalid="!!elyByErrors.twoFactorCode"
+						aria-describedby="elyby-two-factor-error"
+					/>
+					<p v-if="elyByErrors.twoFactorCode" id="elyby-two-factor-error" class="field-error">
+						{{ elyByErrors.twoFactorCode }}
+					</p>
+					<div class="mt-6 ml-auto">
+						<Button
+							:disabled="elyByLoginDisabled"
+							color="primary"
+							class="continue-button"
+							@click="addElyByProfile()"
+						>
+							Продолжить
+						</Button>
+					</div>
+				</div>
+			</ModalWrapper>
 			<div class="flex flex-col gap-4 px-6 py-5">
-				<label class="label">Введите код подтверждения</label>
+				<label class="label" for="elyby-login">Имя игрока или email</label>
 				<input
-					v-model="elyByTwoFactorCode"
+					id="elyby-login"
+					v-model="elyByLogin"
 					type="text"
-					placeholder="Код 2FA"
+					placeholder="Имя или email"
 					class="input"
+					:aria-invalid="!!elyByErrors.login"
+					aria-describedby="elyby-login-error"
 				/>
+				<p v-if="elyByErrors.login" id="elyby-login-error" class="field-error">
+					{{ elyByErrors.login }}
+				</p>
+				<label class="label" for="elyby-password">Пароль</label>
+				<input
+					id="elyby-password"
+					v-model="elyByPassword"
+					type="password"
+					placeholder="Пароль Ely.by"
+					class="input"
+					:aria-invalid="!!elyByErrors.password"
+					aria-describedby="elyby-password-error"
+				/>
+				<p v-if="elyByErrors.password" id="elyby-password-error" class="field-error">
+					{{ elyByErrors.password }}
+				</p>
+				<p v-if="elyByErrors.form" class="field-error" role="alert">{{ elyByErrors.form }}</p>
 				<div class="mt-6 ml-auto">
 					<Button
 						:disabled="elyByLoginDisabled"
-						icon-only
 						color="primary"
 						class="continue-button"
 						@click="addElyByProfile()"
 					>
-						Продолжить
+						Войти
 					</Button>
 				</div>
 			</div>
 		</ModalWrapper>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label">Имя игрока или email</label>
-			<input
-				v-model="elyByLogin"
-				type="text"
-				placeholder="Имя или email"
-				class="input"
-			/>
-			<label class="label">Пароль</label>
-			<input
-				v-model="elyByPassword"
-				type="password"
-				placeholder="Пароль Ely.by"
-				class="input"
-			/>
-			<div class="mt-6 ml-auto">
-				<Button
-					:disabled="elyByLoginDisabled"
-					icon-only
-					color="primary"
-					class="continue-button"
-					@click="addElyByProfile()"
-				>
-					Войти
-				</Button>
+		<ModalWrapper ref="addOfflineModal" class="modal" header="Добавить офлайн-аккаунт">
+			<div class="flex flex-col gap-4 px-6 py-5">
+				<label class="label">Имя игрока</label>
+				<input
+					v-model="offlinePlayerName"
+					type="text"
+					placeholder="Например, Steve"
+					class="input"
+				/>
+				<div class="mt-6 ml-auto">
+					<Button icon-only color="primary" class="continue-button" @click="addOfflineProfile()">
+						Добавить
+					</Button>
+				</div>
 			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper ref="addOfflineModal" class="modal" header="Добавить офлайн-аккаунт">
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="label">Имя игрока</label>
-			<input
-				v-model="offlinePlayerName"
-				type="text"
-				placeholder="Например, Steve"
-				class="input"
-			/>
-			<div class="mt-6 ml-auto">
-				<Button icon-only color="primary" class="continue-button" @click="addOfflineProfile()">
-					Добавить
-				</Button>
+		</ModalWrapper>
+		<ModalWrapper
+			ref="authenticationElyByErrorModal"
+			class="modal"
+			header="Error while proceeding authentication event with Ely.by"
+		>
+			<div class="flex flex-col gap-4 px-6 py-5">
+				<label class="text-base font-medium text-red-700">
+					An error occurred while logging in.
+				</label>
+
+				<div class="mt-6 ml-auto">
+					<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
+						Try again
+					</Button>
+				</div>
 			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper
-		ref="authenticationElyByErrorModal"
-		class="modal"
-		header="Error while proceeding authentication event with Ely.by"
-	>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="text-base font-medium text-red-700">
-				An error occurred while logging in.
-			</label>
+		</ModalWrapper>
+		<ModalWrapper
+			ref="inputElyByErrorModal"
+			class="modal"
+			header="Error while proceeding input event with Ely.by"
+		>
+			<div class="flex flex-col gap-4 px-6 py-5">
+				<label class="text-base font-medium text-red-700">
+					An error occurred while adding the Ely.by account. Please follow the instructions below.
+				</label>
 
-			<div class="mt-6 ml-auto">
-				<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
-					Try again
-				</Button>
+				<ul class="list-disc list-inside text-sm space-y-1">
+					<li>Check that you have entered the correct player name or email.</li>
+					<li>Check that you have entered the correct password.</li>
+				</ul>
+
+				<div class="mt-6 ml-auto">
+					<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
+						Try again
+					</Button>
+				</div>
 			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper
-		ref="inputElyByErrorModal"
-		class="modal"
-		header="Error while proceeding input event with Ely.by"
-	>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="text-base font-medium text-red-700">
-				An error occurred while adding the Ely.by account. Please follow the instructions below.
-			</label>
+		</ModalWrapper>
+		<ModalWrapper
+			ref="inputOfflineErrorModal"
+			class="modal"
+			header="Error while proceeding input event with offline account"
+		>
+			<div class="flex flex-col gap-4 px-6 py-5">
+				<label class="text-base font-medium text-red-700">
+					An error occurred while adding the offline account. Please follow the instructions below.
+				</label>
 
-			<ul class="list-disc list-inside text-sm space-y-1">
-				<li>Check that you have entered the correct player name or email.</li>
-				<li>Check that you have entered the correct password.</li>
-			</ul>
+				<ul class="list-disc list-inside text-sm space-y-1">
+					<li>Check that you have entered the correct player name.</li>
+					<li>
+						Player name must be at least {{ minOfflinePlayerNameLength }} characters long and no
+						more than {{ maxOfflinePlayerNameLength }} characters.
+					</li>
+					<li>Make sure your name meets the format requirement `{{ nameExp }}`</li>
+				</ul>
 
-			<div class="mt-6 ml-auto">
-				<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
-					Try again
-				</Button>
+				<div class="mt-6 ml-auto">
+					<Button color="primary" class="retry-button" @click="retryAddOfflineProfile">
+						Try again
+					</Button>
+				</div>
 			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper
-		ref="inputOfflineErrorModal"
-		class="modal"
-		header="Error while proceeding input event with offline account"
-	>
-		<div class="flex flex-col gap-4 px-6 py-5">
-			<label class="text-base font-medium text-red-700">
-				An error occurred while adding the offline account. Please follow the instructions below.
-			</label>
-
-			<ul class="list-disc list-inside text-sm space-y-1">
-				<li>Check that you have entered the correct player name.</li>
-				<li>
-					Player name must be at least {{ minOfflinePlayerNameLength }} characters long and no more
-					than {{ maxOfflinePlayerNameLength }} characters.
-				</li>
-				<li>Make sure your name meets the format requirement `{{ nameExp }}`</li>
-			</ul>
-
-			<div class="mt-6 ml-auto">
-				<Button color="primary" class="retry-button" @click="retryAddOfflineProfile">
-					Try again
-				</Button>
+		</ModalWrapper>
+		<ModalWrapper ref="unexpectedErrorModal" class="modal" header="Unexpected error occurred">
+			<div class="modal-body">
+				<label class="label">An unexpected error has occurred. Please try again later.</label>
 			</div>
-		</div>
-	</ModalWrapper>
-	<ModalWrapper ref="unexpectedErrorModal" class="modal" header="Unexpected error occurred">
-		<div class="modal-body">
-			<label class="label">An unexpected error has occurred. Please try again later.</label>
-		</div>
-	</ModalWrapper>
+		</ModalWrapper>
 	</Teleport>
 </template>
 
@@ -297,6 +343,7 @@ const offlinePlayerName = ref('')
 const elyByLogin = ref('')
 const elyByPassword = ref('')
 const elyByTwoFactorCode = ref('')
+const elyByErrors = ref({ login: '', password: '', twoFactorCode: '', form: '' })
 const minOfflinePlayerNameLength = 3
 const maxOfflinePlayerNameLength = 20
 const nameExp = 'a-zA-Z0-9_'
@@ -336,7 +383,6 @@ function retryAddElyByProfile() {
 	authenticationElyByErrorModal.value?.hide()
 	inputElyByErrorModal.value?.hide()
 	elyByLoginDisabled.value = false
-	clearElyByFields()
 	showElyByLoginModal()
 }
 
@@ -388,18 +434,19 @@ async function addOfflineProfile() {
 
 // This code is modified by AstralRinth
 async function addElyByProfile() {
-	elyByLoginDisabled.value = true
-	if (!elyByLogin.value || !elyByPassword.value) {
-		addElyByModal.value?.hide()
-		inputElyByErrorModal.value?.show()
-		clearElyByFields()
-		return
-	}
-
-	// Parse ely.by credential fields
 	const login = elyByLogin.value.trim()
 	let password = elyByPassword.value.trim()
 	const twoFactorCode = elyByTwoFactorCode.value.trim()
+	elyByErrors.value = { login: '', password: '', twoFactorCode: '', form: '' }
+	if (!login) elyByErrors.value.login = 'Введите имя игрока или email.'
+	else if (login.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login))
+		elyByErrors.value.login = 'Проверьте формат email.'
+	if (!password) elyByErrors.value.password = 'Введите пароль Ely.by.'
+	if (twoFactorCode && !/^\d{6}$/.test(twoFactorCode))
+		elyByErrors.value.twoFactorCode = 'Код должен состоять из 6 цифр.'
+	if (Object.values(elyByErrors.value).some(Boolean)) return
+
+	elyByLoginDisabled.value = true
 	if (password && twoFactorCode) {
 		password = `${password}:${twoFactorCode}`
 	}
@@ -408,9 +455,6 @@ async function addElyByProfile() {
 		const raw_result = await elyby_auth_authenticate(login, password, clientToken)
 
 		const json_data = JSON.parse(raw_result)
-
-		console.log(json_data?.error)
-		console.log(json_data?.errorMessage)
 
 		if (!json_data.accessToken) {
 			if (
@@ -421,9 +465,9 @@ async function addElyByProfile() {
 				return
 			}
 
-			addElyByModal.value?.hide()
 			requestElyByTwoFactorCodeModal.value?.hide()
-			authenticationElyByErrorModal.value?.show()
+			elyByErrors.value.form =
+				json_data.errorMessage || 'Ely.by отклонил имя пользователя или пароль.'
 			return
 		}
 
@@ -442,7 +486,7 @@ async function addElyByProfile() {
 		await refreshValues()
 	} catch (err) {
 		handleError(err)
-		unexpectedErrorModal.value?.show()
+		elyByErrors.value.form = err instanceof Error ? err.message : 'Не удалось войти через Ely.by.'
 	} finally {
 		elyByLoginDisabled.value = false
 	}
@@ -507,6 +551,7 @@ defineExpose({
 	refreshValues,
 	setLoginDisabled,
 	microsoftLoginDisabled,
+	showAccountManager,
 })
 await refreshValues()
 
@@ -528,10 +573,7 @@ const avatarUrl = computed(() => {
 })
 
 function getAccountAvatarUrl(account) {
-	if (
-		account.profile.id === equippedSkinUserId.value &&
-		equippedSkin.value?.texture_key
-	) {
+	if (account.profile.id === equippedSkinUserId.value && equippedSkin.value?.texture_key) {
 		const cachedUrl = headUrlCache.value.get(equippedSkin.value.texture_key)
 		if (cachedUrl) {
 			return cachedUrl
@@ -570,7 +612,8 @@ async function login() {
 
 const logout = async (id) => {
 	const account = accounts.value.find((entry) => entry.profile.id === id)
-	if (!window.confirm(`Удалить аккаунт ${account?.profile.name ?? ''} из BlockEra Launcher?`)) return
+	if (!window.confirm(`Удалить аккаунт ${account?.profile.name ?? ''} из BlockEra Launcher?`))
+		return
 	await remove_user(id).catch(handleError)
 	await refreshValues()
 	if (!selectedAccount.value && accounts.value.length > 0) {
@@ -662,6 +705,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.field-error {
+	margin: -0.5rem 0 0;
+	color: var(--blockera-danger, #ff8da8);
+	font-size: 0.78rem;
+}
+
+input[aria-invalid='true'] {
+	outline: 2px solid var(--blockera-danger, #ff8da8);
+}
 .account-trigger {
 	min-width: 220px;
 	max-width: 270px;
@@ -676,14 +728,19 @@ onUnmounted(() => {
 	border-radius: 15px;
 	cursor: pointer;
 	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
-	transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+	transition:
+		border-color 180ms ease,
+		background 180ms ease,
+		transform 180ms ease;
 
 	&:hover {
 		background: rgba(28, 23, 43, 0.96);
 		border-color: rgba(174, 87, 255, 0.52);
 	}
 
-	&:active { transform: scale(0.985); }
+	&:active {
+		transform: scale(0.985);
+	}
 }
 
 .account-trigger-copy {
@@ -693,22 +750,31 @@ onUnmounted(() => {
 	flex-direction: column;
 	align-items: flex-start;
 
-	strong, span {
+	strong,
+	span {
 		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	strong { font-size: 14px; }
-	span { color: #a8adba; font-size: 11px; margin-top: 2px; }
+	strong {
+		font-size: 14px;
+	}
+	span {
+		color: #a8adba;
+		font-size: 11px;
+		margin-top: 2px;
+	}
 }
 
 .account-trigger-chevron {
 	width: 18px;
 	height: 18px;
 	transition: transform 180ms ease;
-	&.open { transform: rotate(180deg); }
+	&.open {
+		transform: rotate(180deg);
+	}
 }
 
 .account-popover {
@@ -725,7 +791,9 @@ onUnmounted(() => {
 	background: rgba(12, 14, 23, 0.98);
 	border: 1px solid rgba(176, 97, 255, 0.3);
 	border-radius: 18px;
-	box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), 0 0 36px rgba(122, 46, 230, 0.12);
+	box-shadow:
+		0 24px 70px rgba(0, 0, 0, 0.55),
+		0 0 36px rgba(122, 46, 230, 0.12);
 	backdrop-filter: blur(24px);
 }
 
@@ -735,10 +803,27 @@ onUnmounted(() => {
 	justify-content: space-between;
 	padding: 5px 5px 9px;
 
-	div { display: flex; flex-direction: column; }
-	span { color: #bb78ff; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
-	strong { margin-top: 2px; font-size: 15px; }
-	.account-count { min-width: 25px; padding: 5px 7px; text-align: center; background: rgba(139, 65, 229, .2); border-radius: 9px; }
+	div {
+		display: flex;
+		flex-direction: column;
+	}
+	span {
+		color: #bb78ff;
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 0.12em;
+	}
+	strong {
+		margin-top: 2px;
+		font-size: 15px;
+	}
+	.account-count {
+		min-width: 25px;
+		padding: 5px 7px;
+		text-align: center;
+		background: rgba(139, 65, 229, 0.2);
+		border-radius: 9px;
+	}
 }
 
 .account-choice,
@@ -759,21 +844,56 @@ onUnmounted(() => {
 	align-items: center;
 	gap: 10px;
 	text-align: left;
-	background: rgba(255, 255, 255, .035);
+	background: rgba(255, 255, 255, 0.035);
 	border: 1px solid transparent;
 	border-radius: 12px;
-	transition: background 160ms ease, border-color 160ms ease;
+	transition:
+		background 160ms ease,
+		border-color 160ms ease;
 
-	&:hover { background: rgba(157, 82, 237, .12); }
-	&.active { background: rgba(143, 64, 232, .16); border-color: rgba(184, 108, 255, .36); }
-	> span:nth-child(2) { min-width: 0; flex: 1; display: flex; flex-direction: column; }
-	strong, small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	small { margin-top: 2px; color: #9da2b0; font-size: 11px; }
+	&:hover {
+		background: rgba(157, 82, 237, 0.12);
+	}
+	&.active {
+		background: rgba(143, 64, 232, 0.16);
+		border-color: rgba(184, 108, 255, 0.36);
+	}
+	> span:nth-child(2) {
+		min-width: 0;
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+	}
+	strong,
+	small {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	small {
+		margin-top: 2px;
+		color: #9da2b0;
+		font-size: 11px;
+	}
 }
 
-.account-check { color: #c77dff; font-size: 17px; font-weight: 900; }
-.account-empty { padding: 15px 10px; display: flex; flex-direction: column; gap: 4px; color: #aeb2bf; font-size: 12px; }
-.account-empty strong { color: #f8f6ff; font-size: 14px; }
+.account-check {
+	color: #c77dff;
+	font-size: 17px;
+	font-weight: 900;
+}
+.account-empty {
+	padding: 15px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	color: #aeb2bf;
+	font-size: 12px;
+}
+.account-empty strong {
+	color: #f8f6ff;
+	font-size: 14px;
+}
 
 .manage-accounts {
 	margin-top: 4px;
@@ -782,53 +902,144 @@ onUnmounted(() => {
 	align-items: center;
 	justify-content: space-between;
 	color: #d7afff;
-	background: linear-gradient(135deg, rgba(114, 45, 211, .22), rgba(161, 72, 244, .12));
-	border: 1px solid rgba(174, 94, 255, .28);
+	background: linear-gradient(135deg, rgba(114, 45, 211, 0.22), rgba(161, 72, 244, 0.12));
+	border: 1px solid rgba(174, 94, 255, 0.28);
 	border-radius: 12px;
 	font-weight: 750;
-	&:hover { background: linear-gradient(135deg, rgba(132, 52, 235, .34), rgba(178, 84, 255, .18)); }
-	svg { width: 16px; transform: rotate(-90deg); }
+	&:hover {
+		background: linear-gradient(135deg, rgba(132, 52, 235, 0.34), rgba(178, 84, 255, 0.18));
+	}
+	svg {
+		width: 16px;
+		transform: rotate(-90deg);
+	}
 }
 
-.account-manager-body { min-width: min(680px, calc(100vw - 64px)); padding: 24px; color: #f8f6ff; }
-.account-manager-intro span { color: #bd76ff; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
-.account-manager-intro h2 { margin: 5px 0; font-size: 26px; }
-.account-manager-intro p { margin: 0; color: #aeb2bf; }
-.account-provider-grid { margin: 20px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.account-manager-body {
+	min-width: min(680px, calc(100vw - 64px));
+	padding: 24px;
+	color: #f8f6ff;
+}
+.account-manager-intro span {
+	color: #bd76ff;
+	font-size: 11px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+}
+.account-manager-intro h2 {
+	margin: 5px 0;
+	font-size: 26px;
+}
+.account-manager-intro p {
+	margin: 0;
+	color: #aeb2bf;
+}
+.account-provider-grid {
+	margin: 20px 0;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
 .account-provider-grid button {
 	padding: 15px;
 	display: flex;
 	align-items: center;
 	gap: 11px;
 	text-align: left;
-	background: rgba(255, 255, 255, .035);
-	border: 1px solid rgba(255, 255, 255, .08);
+	background: rgba(255, 255, 255, 0.035);
+	border: 1px solid rgba(255, 255, 255, 0.08);
 	border-radius: 14px;
-	transition: border-color 160ms ease, transform 160ms ease;
-	&:hover { border-color: rgba(185, 104, 255, .45); transform: translateY(-1px); }
-	&:disabled { opacity: .55; cursor: wait; }
-	svg { width: 28px; height: 28px; }
-	span { min-width: 0; display: flex; flex-direction: column; }
-	small { margin-top: 3px; color: #969cab; font-size: 11px; }
+	transition:
+		border-color 160ms ease,
+		transform 160ms ease;
+	&:hover {
+		border-color: rgba(185, 104, 255, 0.45);
+		transform: translateY(-1px);
+	}
+	&:disabled {
+		opacity: 0.55;
+		cursor: wait;
+	}
+	svg {
+		width: 28px;
+		height: 28px;
+	}
+	span {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	small {
+		margin-top: 3px;
+		color: #969cab;
+		font-size: 11px;
+	}
 }
 
-.managed-account-list { display: flex; flex-direction: column; gap: 8px; }
-.managed-account-row { display: flex; gap: 8px; }
-.managed-account-select { flex: 1; padding: 10px; display: flex; align-items: center; gap: 11px; text-align: left; background: rgba(255,255,255,.035); border-radius: 13px; }
-.managed-account-select span { display: flex; flex-direction: column; }
-.managed-account-select small { margin-top: 2px; color: #9da2b0; }
-.managed-account-delete { width: 44px; display: grid; place-items: center; color: #ff809f; background: rgba(255, 73, 116, .08); border-radius: 13px; }
-.managed-account-delete svg { width: 18px; }
+.managed-account-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.managed-account-row {
+	display: flex;
+	gap: 8px;
+}
+.managed-account-select {
+	flex: 1;
+	padding: 10px;
+	display: flex;
+	align-items: center;
+	gap: 11px;
+	text-align: left;
+	background: rgba(255, 255, 255, 0.035);
+	border-radius: 13px;
+}
+.managed-account-select span {
+	display: flex;
+	flex-direction: column;
+}
+.managed-account-select small {
+	margin-top: 2px;
+	color: #9da2b0;
+}
+.managed-account-delete {
+	width: 44px;
+	display: grid;
+	place-items: center;
+	color: #ff809f;
+	background: rgba(255, 73, 116, 0.08);
+	border-radius: 13px;
+}
+.managed-account-delete svg {
+	width: 18px;
+}
 
 .account-popover-enter-active,
-.account-popover-leave-active { transition: opacity 170ms ease, transform 170ms ease; }
+.account-popover-leave-active {
+	transition:
+		opacity 170ms ease,
+		transform 170ms ease;
+}
 .account-popover-enter-from,
-.account-popover-leave-to { opacity: 0; transform: translateY(-8px) scale(.98); }
+.account-popover-leave-to {
+	opacity: 0;
+	transform: translateY(-8px) scale(0.98);
+}
 
 @media (max-width: 1050px) {
-	.account-trigger { min-width: 56px; width: 56px; padding: 8px; }
-	.account-trigger-copy, .account-trigger-chevron { display: none; }
-	.account-provider-grid { grid-template-columns: 1fr; }
+	.account-trigger {
+		min-width: 56px;
+		width: 56px;
+		padding: 8px;
+	}
+	.account-trigger-copy,
+	.account-trigger-chevron {
+		display: none;
+	}
+	.account-provider-grid {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -836,7 +1047,9 @@ onUnmounted(() => {
 	.account-trigger-chevron,
 	.account-popover-enter-active,
 	.account-popover-leave-active,
-	.account-provider-grid button { transition-duration: 1ms !important; }
+	.account-provider-grid button {
+		transition-duration: 1ms !important;
+	}
 }
 
 .selected {
