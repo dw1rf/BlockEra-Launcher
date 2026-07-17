@@ -138,7 +138,7 @@ impl DiscordGuard {
             .unwrap_or_else(|| DISCORD_LOGO_ASSET_KEY.to_owned());
         let small_text = player
             .as_ref()
-            .map(|player| format!("Скин {}", player.nickname))
+            .map(|player| format!("{}", player.nickname))
             .unwrap_or_else(|| "BlockEra Launcher".to_owned());
         let activity = Activity::new()
             .details(details)
