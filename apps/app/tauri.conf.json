@@ -42,7 +42,7 @@
 		]
 	},
 	"productName": "BlockEra Launcher",
-	"version": "0.10.2721",
+	"version": "0.10.2722",
 	"mainBinaryName": "BlockEra Launcher",
 	"identifier": "com.blockera.launcher",
 	"plugins": {
