@@ -83,6 +83,7 @@ pub async fn profile_create(
         loader_version: loader.map(|x| x.id),
         groups: Vec::new(),
         linked_data,
+        external_pack: None,
         created: Utc::now(),
         modified: Utc::now(),
         last_played: None,

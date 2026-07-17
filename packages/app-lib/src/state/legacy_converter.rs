@@ -334,6 +334,7 @@ where
 
                         None
                     }),
+                    external_pack: None,
                     created: profile.metadata.date_created,
                     modified: profile.metadata.date_modified,
                     last_played: profile.metadata.last_played,

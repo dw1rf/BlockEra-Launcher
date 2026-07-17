@@ -16,8 +16,8 @@ export type RecommendedPack = {
 	links: RecommendedPackLink[]
 }
 
-// Редакционный каталог BlockEra. Чтобы добавить сборку автора или стримера,
-// достаточно добавить сюда Modrinth ID, описание владельца и его ссылки.
+// Популярные проекты Modrinth. Готовые авторские .mrpack загружаются из
+// встроенного/удалённого каталога Theseus и намеренно хранятся отдельно.
 export const recommendedPacks: RecommendedPack[] = [
 	{
 		slug: 'fabulously-optimized',

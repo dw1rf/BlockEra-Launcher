@@ -1,31 +1,71 @@
 <script setup lang="ts">
 import {
 	ArrowLeftIcon,
+	CheckCircleIcon,
 	DownloadIcon,
+	FolderOpenIcon,
 	LinkIcon,
 	PackageIcon,
-	SearchIcon,
-	SparklesIcon,
+	PlayIcon,
+	RefreshCwIcon,
 	SpinnerIcon,
+	TrashIcon,
 	UserIcon,
+	XIcon,
 } from '@modrinth/assets'
 import { injectNotificationManager } from '@modrinth/ui'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import industrialEraCover from '@/assets/launcher/industrial-era-2-cover.png'
 import { recommendedPackBySlug } from '@/data/recommended-packs'
-import { get_project, get_project_many, get_version } from '@/helpers/cache'
+import { get_project, get_version } from '@/helpers/cache'
+import {
+	cancel_catalog_install,
+	get_catalog,
+	get_catalog_install_status,
+	install_catalog_pack,
+	verify_catalog_install,
+} from '@/helpers/pack'
+import { list as listProfiles, remove, run } from '@/helpers/profile'
+import { openProfileFolder } from '@/helpers/utils'
 import { install } from '@/store/install'
 
-type ProjectDependency = {
-	project_id?: string
+type CatalogPack = {
+	id: string
+	title: string
+	summary: string
+	description: string[]
+	mods: string[]
+	author: { displayName: string; channelName: string }
+	officialUrl: string
+	originalAuthor: string
+	unofficialIntegration: boolean
+	minecraft: string
+	forge: string
+	version: string
+	revision: string
+	size: number
+	coverUrl?: string
+	permission: string
+	download: { url: string }
 }
 
-type ModrinthVersion = {
-	id: string
-	version_number: string
-	dependencies: ProjectDependency[]
+type Profile = {
+	path: string
+	install_stage: string
+	external_pack?: { catalogId: string }
+}
+
+type InstallStatus = {
+	jobId: string
+	packId: string
+	state: 'downloading' | 'installing' | 'installed' | 'cancelled' | 'error'
+	downloaded: number
+	total: number
+	profilePath?: string
+	error?: string
 }
 
 type ModrinthProject = {
@@ -35,37 +75,61 @@ type ModrinthProject = {
 	icon_url?: string
 	downloads: number
 	versions: string[]
-	project_type: string
-	slug: string
 }
+
+type ModrinthVersion = { id: string; version_number: string }
 
 const route = useRoute()
 const router = useRouter()
 const { handleError } = injectNotificationManager()
-const pack = recommendedPackBySlug(String(route.params.slug))
-
+const slug = String(route.params.slug)
+const popularPack = recommendedPackBySlug(slug)
+const creatorPack = ref<CatalogPack>()
 const project = ref<ModrinthProject>()
 const latestVersion = ref<ModrinthVersion>()
-const dependencies = ref<ModrinthProject[]>([])
+const profiles = ref<Profile[]>([])
 const loading = ref(true)
-const installing = ref(false)
-const search = ref('')
-const showAll = ref(false)
+const installingPopular = ref(false)
+const installJobId = ref<string>()
+const installStatus = ref<InstallStatus>()
+const verification = ref<'idle' | 'checking' | 'valid' | 'corrupted'>('idle')
+let pollTimer: ReturnType<typeof setTimeout> | undefined
 
-const filteredDependencies = computed(() => {
-	const query = search.value.trim().toLocaleLowerCase('ru-RU')
-	const values = query
-		? dependencies.value.filter((dependency) =>
-				`${dependency.title} ${dependency.description}`.toLocaleLowerCase('ru-RU').includes(query),
-			)
-		: dependencies.value
-	return showAll.value || query ? values : values.slice(0, 48)
+const installedProfile = computed(() => {
+	const packId = creatorPack.value?.id
+	return profiles.value.find((profile) => profile.external_pack?.catalogId === packId)
 })
 
-const dependencyCount = computed(
-	() =>
-		latestVersion.value?.dependencies?.filter((dependency) => dependency.project_id).length ?? 0,
+const activeProfilePath = computed(
+	() => installStatus.value?.profilePath ?? installedProfile.value?.path,
 )
+
+const progress = computed(() => {
+	if (!installStatus.value?.total) return 0
+	return Math.min(100, (installStatus.value.downloaded / installStatus.value.total) * 100)
+})
+
+const creatorStateLabel = computed(() => {
+	if (verification.value === 'corrupted') return 'Повреждена'
+	switch (installStatus.value?.state) {
+		case 'downloading':
+			return `Загружается · ${Math.round(progress.value)}%`
+		case 'installing':
+			return 'Устанавливается'
+		case 'error':
+			return 'Ошибка'
+		case 'cancelled':
+			return 'Не установлена'
+		case 'installed':
+			return 'Установлена'
+		default:
+			return installedProfile.value ? 'Установлена' : 'Не установлена'
+	}
+})
+
+function formatBytes(value: number) {
+	return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value / 1024 / 1024)
+}
 
 function compactNumber(value?: number) {
 	return new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 }).format(
@@ -73,133 +137,284 @@ function compactNumber(value?: number) {
 	)
 }
 
-async function loadDependencies(ids: string[]) {
-	const chunks: string[][] = []
-	for (let index = 0; index < ids.length; index += 80) chunks.push(ids.slice(index, index + 80))
-	const results = await Promise.all(
-		chunks.map((chunk) => get_project_many(chunk, 'stale_while_revalidate').catch(() => [])),
-	)
-	return results.flat().sort((left, right) => left.title.localeCompare(right.title, 'ru'))
+async function refreshProfiles() {
+	profiles.value = await listProfiles().catch(() => [])
 }
 
-async function installPack() {
-	if (!pack || installing.value) return
-	installing.value = true
+async function pollInstall() {
+	if (!installJobId.value) return
 	try {
-		await install(pack.projectId, latestVersion.value?.id ?? null, null, 'BlockEraRecommended')
+		installStatus.value = await get_catalog_install_status(installJobId.value)
+		if (installStatus.value.state === 'installed') {
+			await refreshProfiles()
+			return
+		}
+		if (installStatus.value.state === 'error' || installStatus.value.state === 'cancelled') return
+		pollTimer = setTimeout(pollInstall, 750)
+	} catch (error) {
+		handleError(error)
+	}
+}
+
+async function installCreatorPack() {
+	if (!creatorPack.value) return
+	verification.value = 'idle'
+	try {
+		installJobId.value = await install_catalog_pack(creatorPack.value.id)
+		await pollInstall()
+	} catch (error) {
+		handleError(error)
+	}
+}
+
+async function cancelInstall() {
+	if (!installJobId.value) return
+	try {
+		await cancel_catalog_install(installJobId.value)
+	} catch (error) {
+		handleError(error)
+	}
+}
+
+async function verifyPack() {
+	if (!activeProfilePath.value) return
+	verification.value = 'checking'
+	try {
+		verification.value = (await verify_catalog_install(activeProfilePath.value))
+			? 'valid'
+			: 'corrupted'
+	} catch (error) {
+		verification.value = 'corrupted'
+		handleError(error)
+	}
+}
+
+async function playPack() {
+	if (!activeProfilePath.value) return
+	try {
+		await run(activeProfilePath.value)
+	} catch (error) {
+		handleError(error)
+	}
+}
+
+async function deletePack() {
+	if (!activeProfilePath.value) return
+	if (!window.confirm('Удалить профиль этой сборки и все его локальные файлы?')) return
+	try {
+		await remove(activeProfilePath.value)
+		installStatus.value = undefined
+		installJobId.value = undefined
+		verification.value = 'idle'
+		await refreshProfiles()
+	} catch (error) {
+		handleError(error)
+	}
+}
+
+async function reinstallPack() {
+	await deletePack()
+	if (!activeProfilePath.value) await installCreatorPack()
+}
+
+async function installPopularPack() {
+	if (!popularPack || installingPopular.value) return
+	installingPopular.value = true
+	try {
+		await install(
+			popularPack.projectId,
+			latestVersion.value?.id ?? null,
+			null,
+			'BlockEraRecommended',
+		)
 	} catch (error) {
 		handleError(error)
 	} finally {
-		installing.value = false
+		installingPopular.value = false
 	}
 }
 
 onMounted(async () => {
-	if (!pack) {
-		await router.replace('/library/recommended')
-		return
-	}
 	try {
-		project.value = await get_project(pack.projectId, 'stale_while_revalidate')
+		const response = await get_catalog().catch(() => null)
+		creatorPack.value = response?.catalog?.packs?.find((pack: CatalogPack) => pack.id === slug)
+		if (creatorPack.value) {
+			await refreshProfiles()
+			return
+		}
+		if (!popularPack) {
+			await router.replace('/library/recommended')
+			return
+		}
+		project.value = await get_project(popularPack.projectId, 'stale_while_revalidate')
 		const versionId = project.value.versions.at(-1)
-		latestVersion.value = versionId ? await get_version(versionId, 'stale_while_revalidate') : null
-		const ids = [
-			...new Set(
-				(latestVersion.value?.dependencies ?? [])
-					.map((dependency) => dependency.project_id)
-					.filter(Boolean),
-			),
-		] as string[]
-		dependencies.value = await loadDependencies(ids)
+		latestVersion.value = versionId
+			? await get_version(versionId, 'stale_while_revalidate')
+			: undefined
 	} catch (error) {
 		handleError(error)
 	} finally {
 		loading.value = false
 	}
 })
+
+onBeforeUnmount(() => {
+	if (pollTimer) clearTimeout(pollTimer)
+})
 </script>
 
 <template>
-	<section v-if="pack" class="pack-dossier" :style="{ '--pack-accent': pack.accent }">
+	<section v-if="creatorPack" class="pack-dossier creator-dossier">
 		<button class="back-button" @click="router.push('/library/recommended')">
 			<ArrowLeftIcon /> Все рекомендации
 		</button>
 
 		<div class="pack-hero">
 			<span class="hero-glow"></span>
-			<img :src="project?.icon_url ?? pack.iconUrl" alt="" />
+			<img
+				:src="creatorPack.coverUrl ?? industrialEraCover"
+				:alt="`Обложка ${creatorPack.title}`"
+			/>
 			<div class="hero-copy">
-				<p><SparklesIcon /> РЕКОМЕНДУЕТ BLOCKERA</p>
-				<h1>{{ project?.title ?? pack.title }}</h1>
-				<span>{{ pack.tagline }}</span>
+				<p>СБОРКА АВТОРА · {{ creatorPack.author.channelName }}</p>
+				<h1>{{ creatorPack.title }}</h1>
+				<span>{{ creatorPack.summary }}</span>
 				<div class="hero-meta">
-					<span><UserIcon /> {{ pack.ownerKind }}: {{ pack.owner }}</span>
-					<span><DownloadIcon /> {{ compactNumber(project?.downloads) }} загрузок</span>
-					<span><PackageIcon /> {{ latestVersion?.version_number ?? 'актуальная версия' }}</span>
+					<span><UserIcon /> {{ creatorPack.author.displayName }}</span>
+					<span><PackageIcon /> Minecraft {{ creatorPack.minecraft }}</span>
+					<span>Forge {{ creatorPack.forge }}</span>
+					<span>Версия {{ creatorPack.version }}</span>
+					<span>{{ formatBytes(creatorPack.size) }} МБ</span>
+					<span class="state-pill">{{ creatorStateLabel }}</span>
 				</div>
 			</div>
-			<button class="install-button" :disabled="installing || loading" @click="installPack">
-				<SpinnerIcon v-if="installing" class="spin" />
-				<DownloadIcon v-else />
-				{{ installing ? 'Устанавливаем…' : 'Установить сборку' }}
-			</button>
+			<div class="primary-actions">
+				<button
+					v-if="
+						!activeProfilePath &&
+						!['downloading', 'installing'].includes(installStatus?.state ?? '')
+					"
+					class="primary-button"
+					@click="installCreatorPack"
+				>
+					<DownloadIcon /> Установить
+				</button>
+				<button
+					v-if="installStatus?.state === 'downloading'"
+					class="danger-button"
+					@click="cancelInstall"
+				>
+					<XIcon /> Отменить
+				</button>
+				<button v-if="installStatus?.state === 'installing'" class="primary-button" disabled>
+					<SpinnerIcon class="spin" /> Устанавливается…
+				</button>
+				<button v-if="activeProfilePath" class="primary-button" @click="playPack">
+					<PlayIcon /> Играть
+				</button>
+			</div>
 		</div>
+
+		<div v-if="installStatus?.state === 'downloading'" class="progress-track">
+			<span :style="{ width: `${progress}%` }"></span>
+		</div>
+		<p v-if="installStatus?.error" class="error-message">{{ installStatus.error }}</p>
 
 		<div class="dossier-grid">
 			<article class="story-card">
 				<p class="section-label">О СБОРКЕ</p>
-				<p v-for="paragraph in pack.description" :key="paragraph">{{ paragraph }}</p>
-				<div class="author-card">
+				<p v-for="paragraph in creatorPack.description" :key="paragraph">{{ paragraph }}</p>
+				<div class="author-contact">
 					<div>
-						<small>{{ pack.ownerKind }}</small
-						><strong>{{ pack.owner }}</strong>
+						<span>Автор сборки</span>
+						<strong>{{ creatorPack.author.displayName }}</strong>
+						<small>{{ creatorPack.author.channelName }}</small>
 					</div>
-					<div class="author-links">
-						<button v-for="link in pack.links" :key="link.url" @click="openUrl(link.url)">
-							<LinkIcon /> {{ link.label }}
-						</button>
-					</div>
+					<button @click="openUrl(creatorPack.officialUrl)"><LinkIcon /> Discord автора</button>
 				</div>
 			</article>
 
 			<article class="mods-card">
 				<div class="mods-heading">
 					<div>
-						<p class="section-label">СОСТАВ ПОСЛЕДНЕЙ ВЕРСИИ</p>
-						<h2>{{ dependencyCount }} модов и компонентов</h2>
+						<p class="section-label">МОДЫ В СБОРКЕ</p>
+						<strong>Основные технологии и дополнения</strong>
 					</div>
-					<label
-						><SearchIcon /><input v-model="search" type="search" placeholder="Найти мод"
-					/></label>
+					<span>{{ creatorPack.mods.length }}</span>
 				</div>
-				<div v-if="loading" class="mods-loading">
-					<SpinnerIcon class="spin" /> Загружаем состав сборки…
+				<div class="mods-list">
+					<span v-for="mod in creatorPack.mods" :key="mod" class="mod-chip">
+						<PackageIcon /> {{ mod }}
+					</span>
 				</div>
-				<div v-else-if="filteredDependencies.length" class="mods-list">
+				<div v-if="activeProfilePath" class="secondary-actions instance-actions">
+					<button v-if="activeProfilePath" @click="openProfileFolder(activeProfilePath)">
+						<FolderOpenIcon /> Открыть папку
+					</button>
 					<button
-						v-for="dependency in filteredDependencies"
-						:key="dependency.id"
-						@click="openUrl(`https://modrinth.com/${dependency.project_type}/${dependency.slug}`)"
+						v-if="activeProfilePath"
+						:disabled="verification === 'checking'"
+						@click="verifyPack"
 					>
-						<img v-if="dependency.icon_url" :src="dependency.icon_url" alt="" />
-						<span v-else class="mod-placeholder"><PackageIcon /></span>
-						<span
-							><strong>{{ dependency.title }}</strong
-							><small>{{ dependency.description }}</small></span
-						>
-						<LinkIcon />
+						<SpinnerIcon v-if="verification === 'checking'" class="spin" />
+						<CheckCircleIcon v-else /> Проверить файлы
+					</button>
+					<button v-if="activeProfilePath" class="delete-action" @click="deletePack">
+						<TrashIcon /> Удалить
+					</button>
+					<button
+						v-if="activeProfilePath"
+						@click="router.push(`/instance/${encodeURIComponent(activeProfilePath)}`)"
+					>
+						<PackageIcon /> Открыть профиль
+					</button>
+					<button v-if="verification === 'corrupted'" @click="reinstallPack">
+						<RefreshCwIcon /> Переустановить после удаления
 					</button>
 				</div>
-				<p v-else class="empty-mods">Список компонентов для этой версии не опубликован.</p>
-				<button
-					v-if="!showAll && !search && dependencies.length > 48"
-					class="show-all"
-					@click="showAll = true"
-				>
-					Показать весь состав — {{ dependencies.length }}
-				</button>
 			</article>
 		</div>
+	</section>
+
+	<section
+		v-else-if="popularPack"
+		class="pack-dossier"
+		:style="{ '--pack-accent': popularPack.accent }"
+	>
+		<button class="back-button" @click="router.push('/library/recommended')">
+			<ArrowLeftIcon /> Все рекомендации
+		</button>
+		<div class="pack-hero">
+			<span class="hero-glow"></span>
+			<img :src="project?.icon_url ?? popularPack.iconUrl" alt="" />
+			<div class="hero-copy">
+				<p>ПОПУЛЯРНОЕ С MODRINTH</p>
+				<h1>{{ project?.title ?? popularPack.title }}</h1>
+				<span>{{ popularPack.tagline }}</span>
+				<div class="hero-meta">
+					<span><UserIcon /> {{ popularPack.ownerKind }}: {{ popularPack.owner }}</span>
+					<span><DownloadIcon /> {{ compactNumber(project?.downloads) }} загрузок</span>
+					<span><PackageIcon /> {{ latestVersion?.version_number ?? 'актуальная версия' }}</span>
+				</div>
+			</div>
+			<button
+				class="primary-button"
+				:disabled="installingPopular || loading"
+				@click="installPopularPack"
+			>
+				<SpinnerIcon v-if="installingPopular" class="spin" /><DownloadIcon v-else />
+				{{ installingPopular ? 'Устанавливается…' : 'Установить сборку' }}
+			</button>
+		</div>
+		<article class="story-card">
+			<p class="section-label">О СБОРКЕ</p>
+			<p v-for="paragraph in popularPack.description" :key="paragraph">{{ paragraph }}</p>
+			<div class="secondary-actions">
+				<button v-for="link in popularPack.links" :key="link.url" @click="openUrl(link.url)">
+					<LinkIcon /> {{ link.label }}
+				</button>
+			</div>
+		</article>
 	</section>
 </template>
 
@@ -210,6 +425,9 @@ onMounted(async () => {
 	flex-direction: column;
 	gap: 0.8rem;
 	color: #f8fafc;
+}
+.creator-dossier {
+	--pack-accent: #f59e0b;
 }
 .back-button {
 	align-self: flex-start;
@@ -222,23 +440,20 @@ onMounted(async () => {
 	color: rgba(226, 232, 240, 0.62);
 	cursor: pointer;
 }
-.back-button:hover {
-	color: #fff;
-}
-.back-button svg {
+.back-button svg,
+button svg {
 	width: 1rem;
 }
 .pack-hero {
 	position: relative;
 	isolation: isolate;
 	display: grid;
-	grid-template-columns: 7rem minmax(0, 1fr) auto;
+	grid-template-columns: 8rem minmax(0, 1fr) auto;
 	align-items: center;
 	gap: 1.4rem;
-	min-height: 10.5rem;
 	padding: 1.35rem;
 	overflow: hidden;
-	border: 1px solid color-mix(in srgb, var(--pack-accent) 30%, transparent);
+	border: 1px solid color-mix(in srgb, var(--pack-accent) 32%, transparent);
 	border-radius: 1rem;
 	background: linear-gradient(120deg, rgba(27, 32, 47, 0.98), rgba(8, 12, 20, 0.98));
 }
@@ -254,28 +469,18 @@ onMounted(async () => {
 	filter: blur(55px);
 }
 .pack-hero > img {
-	width: 7rem;
-	height: 7rem;
+	width: 8rem;
+	height: 8rem;
 	border-radius: 1.25rem;
 	object-fit: cover;
-	box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
 }
-.hero-copy {
-	min-width: 0;
-}
-.hero-copy > p,
+.hero-copy p,
 .section-label {
-	display: flex;
-	align-items: center;
-	gap: 0.4rem;
-	margin: 0 0 0.4rem;
+	margin: 0 0 0.45rem;
 	color: var(--pack-accent);
 	font-size: 0.67rem;
 	font-weight: 850;
 	letter-spacing: 0.12em;
-}
-.hero-copy > p svg {
-	width: 0.9rem;
 }
 .hero-copy h1 {
 	margin: 0;
@@ -285,7 +490,7 @@ onMounted(async () => {
 }
 .hero-copy > span {
 	display: block;
-	max-width: 42rem;
+	max-width: 44rem;
 	margin-top: 0.55rem;
 	color: rgba(226, 232, 240, 0.68);
 	line-height: 1.4;
@@ -307,34 +512,67 @@ onMounted(async () => {
 	color: rgba(226, 232, 240, 0.68);
 	font-size: 0.68rem;
 }
-.hero-meta svg {
-	width: 0.85rem;
+.hero-meta .state-pill {
+	color: #fbbf24;
 }
-.install-button {
+.primary-actions,
+.secondary-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+.primary-actions {
+	flex-direction: column;
+}
+.primary-button,
+.danger-button,
+.author-contact button,
+.secondary-actions button {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.55rem;
-	min-width: 12rem;
-	min-height: 3rem;
-	padding: 0 1rem;
-	border: 1px solid color-mix(in srgb, var(--pack-accent) 55%, white 5%);
+	gap: 0.5rem;
+	min-height: 2.7rem;
+	padding: 0 0.9rem;
+	border: 1px solid color-mix(in srgb, var(--pack-accent) 48%, white 5%);
 	border-radius: 0.65rem;
-	background: color-mix(in srgb, var(--pack-accent) 72%, #4c1d95);
+	background: color-mix(in srgb, var(--pack-accent) 68%, #4c1d95);
 	color: #fff;
-	font-weight: 800;
+	font-weight: 750;
 	cursor: pointer;
 }
-.install-button:disabled {
-	opacity: 0.65;
+.danger-button,
+.secondary-actions .delete-action {
+	border-color: rgba(248, 113, 113, 0.35);
+	background: rgba(127, 29, 29, 0.45);
+}
+button:disabled {
+	opacity: 0.6;
 	cursor: wait;
 }
-.install-button svg {
-	width: 1.05rem;
+.progress-track {
+	height: 0.45rem;
+	overflow: hidden;
+	border-radius: 1rem;
+	background: rgba(255, 255, 255, 0.07);
+}
+.progress-track span {
+	display: block;
+	height: 100%;
+	background: var(--pack-accent);
+	transition: width 200ms ease;
+}
+.error-message {
+	margin: 0;
+	padding: 0.75rem;
+	border: 1px solid rgba(248, 113, 113, 0.22);
+	border-radius: 0.7rem;
+	background: rgba(127, 29, 29, 0.18);
+	color: #fecaca;
 }
 .dossier-grid {
 	display: grid;
-	grid-template-columns: minmax(16rem, 0.62fr) minmax(24rem, 1.38fr);
+	grid-template-columns: minmax(20rem, 1fr) minmax(20rem, 1fr);
 	gap: 0.8rem;
 }
 .story-card,
@@ -345,162 +583,96 @@ onMounted(async () => {
 	background: rgba(13, 18, 28, 0.92);
 }
 .story-card > p:not(.section-label) {
-	margin: 0.7rem 0 0;
 	color: rgba(226, 232, 240, 0.72);
 	line-height: 1.58;
 }
-.author-card {
+.author-contact {
 	display: flex;
-	flex-direction: column;
-	gap: 0.8rem;
-	margin-top: 1.2rem;
-	padding: 1rem;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-top: 1rem;
+	padding: 0.9rem;
 	border-left: 2px solid var(--pack-accent);
 	background: rgba(255, 255, 255, 0.035);
 }
-.author-card div:first-child {
+.author-contact > div {
 	display: flex;
 	flex-direction: column;
+	gap: 0.2rem;
 }
-.author-card small {
-	color: var(--pack-accent);
+.author-contact span,
+.author-contact small {
+	color: rgba(226, 232, 240, 0.58);
 }
-.author-links {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.45rem;
-}
-.author-links button {
-	display: flex;
-	align-items: center;
-	gap: 0.35rem;
-	padding: 0.45rem 0.55rem;
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	border-radius: 0.5rem;
+.author-contact button {
+	flex: none;
+	border-color: rgba(255, 255, 255, 0.09);
 	background: rgba(255, 255, 255, 0.045);
-	color: rgba(241, 245, 249, 0.8);
 	font-size: 0.72rem;
-	cursor: pointer;
 }
-.author-links svg {
-	width: 0.8rem;
+.mods-card {
+	display: flex;
+	min-height: 0;
+	flex-direction: column;
 }
 .mods-heading {
 	display: flex;
-	align-items: flex-end;
+	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	margin-bottom: 0.8rem;
 }
-.mods-heading h2 {
-	margin: 0;
-	font-size: 1.15rem;
+.mods-heading .section-label {
+	margin-bottom: 0.25rem;
 }
-.mods-heading label {
-	display: flex;
-	align-items: center;
-	gap: 0.4rem;
-	min-width: 13rem;
-	padding: 0 0.6rem;
-	border: 1px solid rgba(255, 255, 255, 0.08);
+.mods-heading > span {
+	display: grid;
+	width: 2.2rem;
+	height: 2.2rem;
+	place-items: center;
+	border: 1px solid color-mix(in srgb, var(--pack-accent) 40%, transparent);
 	border-radius: 0.55rem;
-	background: rgba(4, 7, 13, 0.55);
-}
-.mods-heading label svg {
-	width: 0.9rem;
-	color: rgba(226, 232, 240, 0.45);
-}
-.mods-heading input {
-	width: 100%;
-	min-height: 2.35rem;
-	padding: 0;
-	border: 0;
-	background: transparent;
-	box-shadow: none;
+	background: color-mix(in srgb, var(--pack-accent) 10%, transparent);
+	color: var(--pack-accent);
+	font-size: 0.72rem;
+	font-weight: 850;
 }
 .mods-list {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 0.4rem;
-	max-height: 24rem;
-	overflow: auto;
-	padding-right: 0.2rem;
+	gap: 0.45rem;
+	max-height: 16.5rem;
+	margin-top: 0.9rem;
+	padding-right: 0.3rem;
+	overflow-y: auto;
+	scrollbar-color: color-mix(in srgb, var(--pack-accent) 45%, transparent) transparent;
 }
-.mods-list > button {
-	display: grid;
-	grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+.mod-chip {
+	display: flex;
 	align-items: center;
-	gap: 0.55rem;
-	min-height: 3rem;
-	padding: 0.38rem;
-	border: 1px solid rgba(255, 255, 255, 0.055);
-	border-radius: 0.55rem;
-	background: rgba(255, 255, 255, 0.025);
-	color: inherit;
-	text-align: left;
-	cursor: pointer;
-}
-.mods-list > button:hover {
-	border-color: color-mix(in srgb, var(--pack-accent) 35%, transparent);
-	background: rgba(255, 255, 255, 0.05);
-}
-.mods-list img,
-.mod-placeholder {
-	display: grid;
-	place-items: center;
-	width: 2.2rem;
-	height: 2.2rem;
-	border-radius: 0.45rem;
-	object-fit: cover;
-	background: rgba(255, 255, 255, 0.05);
-}
-.mods-list span:not(.mod-placeholder) {
+	gap: 0.45rem;
 	min-width: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 0.1rem;
+	padding: 0.48rem 0.55rem;
+	border: 1px solid rgba(255, 255, 255, 0.065);
+	border-radius: 0.5rem;
+	background: rgba(255, 255, 255, 0.025);
+	color: rgba(226, 232, 240, 0.78);
+	font-size: 0.7rem;
 }
-.mods-list strong,
-.mods-list small {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+.mod-chip svg {
+	width: 0.82rem;
+	flex: none;
+	color: var(--pack-accent);
 }
-.mods-list strong {
+.instance-actions {
+	margin-top: 0.9rem;
+	padding-top: 0.9rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.secondary-actions button {
+	border-color: rgba(255, 255, 255, 0.09);
+	background: rgba(255, 255, 255, 0.045);
 	font-size: 0.72rem;
-}
-.mods-list small {
-	color: rgba(226, 232, 240, 0.46);
-	font-size: 0.6rem;
-}
-.mods-list > button > svg {
-	width: 0.75rem;
-	color: rgba(226, 232, 240, 0.32);
-}
-.mod-placeholder svg {
-	width: 1rem;
-}
-.mods-loading,
-.empty-mods {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.6rem;
-	min-height: 10rem;
-	color: rgba(226, 232, 240, 0.55);
-}
-.mods-loading svg {
-	width: 1rem;
-}
-.show-all {
-	width: 100%;
-	margin-top: 0.65rem;
-	padding: 0.55rem;
-	border: 1px solid rgba(192, 132, 252, 0.2);
-	border-radius: 0.55rem;
-	background: rgba(126, 34, 206, 0.08);
-	color: #d8b4fe;
-	cursor: pointer;
 }
 .spin {
 	animation: spin 0.8s linear infinite;
@@ -510,27 +682,23 @@ onMounted(async () => {
 		transform: rotate(360deg);
 	}
 }
-@media (max-width: 1000px) {
+@media (max-width: 980px) {
+	.pack-hero {
+		grid-template-columns: 6rem 1fr;
+	}
+	.pack-hero > img {
+		width: 6rem;
+		height: 6rem;
+	}
+	.primary-actions,
+	.pack-hero > .primary-button {
+		grid-column: 1 / -1;
+	}
 	.dossier-grid {
 		grid-template-columns: 1fr;
 	}
-	.pack-hero {
-		grid-template-columns: 5.5rem 1fr;
-	}
-	.pack-hero > img {
-		width: 5.5rem;
-		height: 5.5rem;
-	}
-	.install-button {
-		grid-column: 1/-1;
-	}
-}
-@media (max-width: 700px) {
-	.mods-list {
-		grid-template-columns: 1fr;
-	}
-	.mods-heading {
-		align-items: stretch;
+	.author-contact {
+		align-items: flex-start;
 		flex-direction: column;
 	}
 }

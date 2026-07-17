@@ -39,6 +39,7 @@ pub struct Profile {
     pub groups: Vec<String>,
 
     pub linked_data: Option<LinkedData>,
+    pub external_pack: Option<ExternalPackMetadata>,
 
     pub created: DateTime<Utc>,
     pub modified: DateTime<Utc>,
@@ -55,6 +56,18 @@ pub struct Profile {
     pub force_fullscreen: Option<bool>,
     pub game_resolution: Option<WindowSize>,
     pub hooks: Hooks,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalPackMetadata {
+    pub catalog_id: String,
+    pub version: String,
+    pub sha256: String,
+    pub official_url: String,
+    pub author_display_name: String,
+    pub original_author: String,
+    pub unofficial_integration: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
@@ -283,6 +296,7 @@ impl ProjectType {
     }
 }
 
+#[derive(sqlx::FromRow)]
 struct ProfileQueryResult {
     path: String,
     install_stage: String,
@@ -312,6 +326,7 @@ struct ProfileQueryResult {
     override_hook_post_exit: Option<String>,
     protocol_version: Option<i64>,
     launcher_feature_version: String,
+    external_pack: Option<serde_json::Value>,
 }
 
 impl TryFrom<ProfileQueryResult> for Profile {
@@ -344,6 +359,10 @@ impl TryFrom<ProfileQueryResult> for Profile {
             } else {
                 None
             },
+            external_pack: x
+                .external_pack
+                .map(serde_json::from_value)
+                .transpose()?,
             created: Utc
                 .timestamp_opt(x.created, 0)
                 .single()
@@ -385,29 +404,23 @@ impl TryFrom<ProfileQueryResult> for Profile {
     }
 }
 
-macro_rules! select_profiles_with_predicate {
-    ($predicate:tt, $param:ident) => {
-        sqlx::query_as!(
-            ProfileQueryResult,
-            r#"
-            SELECT
-                path, install_stage, launcher_feature_version, name, icon_path,
-                game_version, protocol_version, mod_loader, mod_loader_version,
-                json(groups) as "groups!: serde_json::Value",
-                linked_project_id, linked_version_id, locked,
-                created, modified, last_played,
-                submitted_time_played, recent_time_played,
-                override_java_path,
-                json(override_extra_launch_args) as "override_extra_launch_args!: serde_json::Value", json(override_custom_env_vars) as "override_custom_env_vars!: serde_json::Value",
-                override_mc_memory_max, override_mc_force_fullscreen, override_mc_game_resolution_x, override_mc_game_resolution_y,
-                override_hook_pre_launch, override_hook_wrapper, override_hook_post_exit
-            FROM profiles
-            "#
-                + $predicate,
-            $param
-        )
-    };
-}
+const SELECT_PROFILES: &str = r#"
+    SELECT
+        path, install_stage, launcher_feature_version, name, icon_path,
+        game_version, protocol_version, mod_loader, mod_loader_version,
+        json(groups) AS groups,
+        linked_project_id, linked_version_id, locked,
+        created, modified, last_played,
+        submitted_time_played, recent_time_played,
+        override_java_path,
+        json(override_extra_launch_args) AS override_extra_launch_args,
+        json(override_custom_env_vars) AS override_custom_env_vars,
+        override_mc_memory_max, override_mc_force_fullscreen,
+        override_mc_game_resolution_x, override_mc_game_resolution_y,
+        override_hook_pre_launch, override_hook_wrapper,
+        override_hook_post_exit, json(external_pack) AS external_pack
+    FROM profiles
+"#;
 
 impl Profile {
     pub async fn get(
@@ -422,12 +435,13 @@ impl Profile {
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     ) -> crate::Result<Vec<Self>> {
         let ids = serde_json::to_string(&paths)?;
-        let results = select_profiles_with_predicate!(
-            "WHERE path IN (SELECT value FROM json_each($1))",
-            ids
-        )
-        .fetch_all(exec)
-        .await?;
+        let query = format!(
+            "{SELECT_PROFILES} WHERE path IN (SELECT value FROM json_each($1))"
+        );
+        let results = sqlx::query_as::<_, ProfileQueryResult>(&query)
+            .bind(ids)
+            .fetch_all(exec)
+            .await?;
 
         results
             .into_iter()
@@ -438,8 +452,7 @@ impl Profile {
     pub async fn get_all(
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
     ) -> crate::Result<Vec<Self>> {
-        let true_val = 1;
-        let results = select_profiles_with_predicate!("WHERE 1=$1", true_val)
+        let results = sqlx::query_as::<_, ProfileQueryResult>(SELECT_PROFILES)
             .fetch_all(exec)
             .await?;
 
@@ -480,8 +493,13 @@ impl Profile {
 
         let extra_launch_args = serde_json::to_string(&self.extra_launch_args)?;
         let custom_env_vars = serde_json::to_string(&self.custom_env_vars)?;
+        let external_pack = self
+            .external_pack
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()?;
 
-        sqlx::query!(
+        sqlx::query(
             "
             INSERT INTO profiles (
                 path, install_stage, name, icon_path,
@@ -493,7 +511,7 @@ impl Profile {
                 override_java_path, override_extra_launch_args, override_custom_env_vars,
                 override_mc_memory_max, override_mc_force_fullscreen, override_mc_game_resolution_x, override_mc_game_resolution_y,
                 override_hook_pre_launch, override_hook_wrapper, override_hook_post_exit,
-                protocol_version, launcher_feature_version
+                protocol_version, launcher_feature_version, external_pack
             )
             VALUES (
                 $1, $2, $3, $4,
@@ -505,7 +523,7 @@ impl Profile {
                 $17, jsonb($18), jsonb($19),
                 $20, $21, $22, $23,
                 $24, $25, $26,
-                $27, $28
+                $27, $28, jsonb($29)
             )
             ON CONFLICT (path) DO UPDATE SET
                 install_stage = $2,
@@ -542,37 +560,39 @@ impl Profile {
                 override_hook_post_exit = $26,
 
                 protocol_version = $27,
-                launcher_feature_version = $28
+                launcher_feature_version = $28,
+                external_pack = jsonb($29)
             ",
-            self.path,
-            install_stage,
-            self.name,
-            self.icon_path,
-            self.game_version,
-            mod_loader,
-            self.loader_version,
-            groups,
-            linked_data_project_id,
-            linked_data_version_id,
-            linked_data_locked,
-            created,
-            modified,
-            last_played,
-            submitted_time_played,
-            recent_time_played,
-            self.java_path,
-            extra_launch_args,
-            custom_env_vars,
-            memory_max,
-            self.force_fullscreen,
-            game_resolution_x,
-            game_resolution_y,
-            self.hooks.pre_launch,
-            self.hooks.wrapper,
-            self.hooks.post_exit,
-            self.protocol_version,
-            launcher_feature_version
         )
+            .bind(&self.path)
+            .bind(install_stage)
+            .bind(&self.name)
+            .bind(&self.icon_path)
+            .bind(&self.game_version)
+            .bind(mod_loader)
+            .bind(&self.loader_version)
+            .bind(groups)
+            .bind(linked_data_project_id)
+            .bind(linked_data_version_id)
+            .bind(linked_data_locked)
+            .bind(created)
+            .bind(modified)
+            .bind(last_played)
+            .bind(submitted_time_played)
+            .bind(recent_time_played)
+            .bind(&self.java_path)
+            .bind(extra_launch_args)
+            .bind(custom_env_vars)
+            .bind(memory_max)
+            .bind(self.force_fullscreen)
+            .bind(game_resolution_x)
+            .bind(game_resolution_y)
+            .bind(&self.hooks.pre_launch)
+            .bind(&self.hooks.wrapper)
+            .bind(&self.hooks.post_exit)
+            .bind(self.protocol_version)
+            .bind(launcher_feature_version)
+            .bind(external_pack)
             .execute(exec)
             .await?;
 

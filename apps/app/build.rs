@@ -139,7 +139,15 @@ fn main() {
             .plugin(
                 "pack",
                 InlinedPlugin::new()
-                    .commands(&["pack_install", "pack_get_profile_from_pack"])
+                    .commands(&[
+                        "pack_install",
+                        "pack_get_profile_from_pack",
+                        "pack_get_catalog",
+                        "pack_install_catalog",
+                        "pack_cancel_catalog_install",
+                        "pack_catalog_install_status",
+                        "pack_verify_catalog_install",
+                    ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
