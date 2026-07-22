@@ -52,10 +52,15 @@ public final class DetachedChatPanels {
 		int mouseX, int mouseY, boolean focused) {
 		boolean hovered = inside(mouseX, mouseY, bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
 		int panel = focused || hovered ? ThemeTokens.PANEL : alpha(ThemeTokens.PANEL_SOFT, 0.78F);
-		BlockeraDraw.roundedBorder(graphics, bounds.left(), bounds.top(), bounds.right(), bounds.bottom(),
-			ThemeTokens.RADIUS, focused ? ThemeTokens.BORDER_STRONG : ThemeTokens.BORDER, panel);
-		BlockeraDraw.roundedRect(graphics, bounds.left(), bounds.top(), bounds.right(),
-			bounds.top() + HEADER_HEIGHT, ThemeTokens.RADIUS, focused ? ThemeTokens.CARD : 0x8F25272A);
+		if (tab.background()) {
+			BlockeraDraw.roundedBorder(graphics, bounds.left(), bounds.top(), bounds.right(), bounds.bottom(),
+				ThemeTokens.RADIUS, focused ? ThemeTokens.BORDER_STRONG : ThemeTokens.BORDER, panel);
+		}
+		if (tab.background() || focused || hovered) {
+			BlockeraDraw.roundedRect(graphics, bounds.left(), bounds.top(), bounds.right(),
+				bounds.top() + HEADER_HEIGHT, ThemeTokens.RADIUS,
+				focused ? ThemeTokens.CARD : tab.background() ? 0x8F25272A : 0x6625272A);
+		}
 		graphics.fill(bounds.left(), bounds.top(), bounds.left() + 3, bounds.top() + HEADER_HEIGHT, tab.color());
 		UiText.drawSemibold(graphics, Component.literal(tab.name()), bounds.left() + 9, bounds.top() + 5,
 			ThemeTokens.TEXT);

@@ -41,6 +41,17 @@ public final class HudWidgetSettings {
 		return copy;
 	}
 
+	public boolean booleanOption(String widgetId, String key, boolean fallback) {
+		BuiltinHudCatalog.requireAllowedOption(widgetId, key);
+		Object value = options.get(key);
+		return value instanceof Boolean bool ? bool : fallback;
+	}
+
+	public void setBooleanOption(String widgetId, String key, boolean value) {
+		BuiltinHudCatalog.requireAllowedOption(widgetId, key);
+		options.put(key, value);
+	}
+
 	public static HudWidgetSettings of(boolean enabled, HudAnchor anchor, int x, int y) {
 		HudWidgetSettings settings = new HudWidgetSettings();
 		settings.enabled = enabled;

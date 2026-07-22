@@ -29,10 +29,8 @@ public final class BlockeraDraw {
 	public static void button(GuiGraphics graphics, int left, int top, int right, int bottom,
 		int fill, boolean focused, boolean accent) {
 		roundedRect(graphics, left, top, right, bottom, ThemeTokens.RADIUS, fill);
-		int highlight = accent ? 0x55FFFFFF : 0x28FFFFFF;
-		graphics.fill(left + ThemeTokens.RADIUS, top, right - ThemeTokens.RADIUS, top + 1, highlight);
 		if (focused) {
-			graphics.fill(left + ThemeTokens.RADIUS, bottom - 1, right - ThemeTokens.RADIUS, bottom,
+			insideOutline(graphics, left, top, right, bottom, ThemeTokens.RADIUS,
 				accent ? 0x88FFFFFF : ThemeTokens.ACCENT);
 		}
 	}

@@ -22,6 +22,7 @@ final class ChatConfigStoreTest {
 		config.setFilters(List.of(filter));
 		ChatTab mentions = new ChatTab("mentions", "Mentions", List.of("mentions"));
 		mentions.setWindowBounds(510, 32, 300, 144);
+		mentions.setBackground(false);
 		config.setTabs(List.of(ChatTab.all(), mentions));
 		config.setActiveTab("mentions");
 		config.setPosition(88, 64);
@@ -44,6 +45,7 @@ final class ChatConfigStoreTest {
 		assertEquals(32, second.config().tab("mentions").windowTop());
 		assertEquals(300, second.config().tab("mentions").windowWidth());
 		assertEquals(144, second.config().tab("mentions").windowHeight());
+		assertFalse(second.config().tab("mentions").background());
 		assertTrue(second.config().unlimitedHistory());
 		assertTrue(second.config().preserveHistory());
 		assertFalse(Files.exists(file.resolveSibling("chat.json.tmp")));

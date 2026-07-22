@@ -14,6 +14,7 @@ public final class ChatTab {
 	private List<String> filterIds = new ArrayList<>();
 	private int color = 0xFF168ED1;
 	private boolean detached = true;
+	private boolean background = true;
 	private int windowLeft = -1;
 	private int windowTop = -1;
 	private int windowWidth = 280;
@@ -28,13 +29,18 @@ public final class ChatTab {
 		this.filterIds = new ArrayList<>(Objects.requireNonNull(filterIds, "filterIds"));
 	}
 
-	public static ChatTab all() { return new ChatTab(ALL_ID, "All", List.of()); }
+	public static ChatTab all() {
+		ChatTab tab = new ChatTab(ALL_ID, "All", List.of());
+		tab.detached = false;
+		return tab;
+	}
 
 	public String id() { return id; }
 	public String name() { return name; }
 	public List<String> filterIds() { return Collections.unmodifiableList(filterIds); }
 	public int color() { return color; }
-	public boolean detached() { return !ALL_ID.equals(id) && detached; }
+	public boolean detached() { return detached; }
+	public boolean background() { return background; }
 	public int windowLeft() { return windowLeft; }
 	public int windowTop() { return windowTop; }
 	public int windowWidth() { return windowWidth; }
@@ -43,6 +49,7 @@ public final class ChatTab {
 	public void setName(String name) { this.name = Objects.requireNonNull(name, "name"); }
 	public void setColor(int color) { this.color = 0xFF000000 | color; }
 	public void setDetached(boolean detached) { this.detached = detached; }
+	public void setBackground(boolean background) { this.background = background; }
 	public void setWindowBounds(int left, int top, int width, int height) {
 		windowLeft = Math.max(0, left);
 		windowTop = Math.max(0, top);

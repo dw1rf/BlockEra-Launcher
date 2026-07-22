@@ -11,9 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 final class BuiltinHudCatalogTest {
 	@Test
-	void exposesExactlyTheFiftyReviewedForgeWidgets() {
-		assertEquals(50, BuiltinHudCatalog.widgets().size());
-		assertEquals(50, BuiltinHudCatalog.widgets().stream().map(HudWidgetMetadata::id).distinct().count());
+	void exposesReviewedWidgetsIncludingThePvpPanel() {
+		assertEquals(51, BuiltinHudCatalog.widgets().size());
+		assertEquals(51, BuiltinHudCatalog.widgets().stream().map(HudWidgetMetadata::id).distinct().count());
 		assertEquals("blockera:fps", BuiltinHudCatalog.widgets().getFirst().id());
 		assertEquals("blockera:measurement", BuiltinHudCatalog.widgets().getLast().id());
 		assertFalse(BuiltinHudCatalog.isAllowed("blockera:balance"));
@@ -28,5 +28,7 @@ final class BuiltinHudCatalogTest {
 		assertEquals(Set.of(HudCategory.PERFORMANCE, HudCategory.WORLD, HudCategory.PLAYER, HudCategory.SERVER), categories);
 		assertThrows(IllegalArgumentException.class,
 			() -> BuiltinHudCatalog.requireAllowedOption("blockera:fps", "unreviewed"));
+		assertEquals(Set.of("show_model", "show_health_bar", "show_armor", "show_cps", "show_combo"),
+			BuiltinHudCatalog.require("blockera:pvp_hud").allowedOptions());
 	}
 }

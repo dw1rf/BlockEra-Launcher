@@ -57,15 +57,17 @@ public final class BlockeraChatSettingsScreen extends Screen {
 			Component.translatable("blockera.chat.filter.add"), button -> addFilter(), true));
 		addRenderableWidget(new BlockeraButton(left + 122, bottom - 46, 96, 28,
 			Component.translatable("blockera.chat.filter.delete"), button -> deleteFilter()));
-		addRenderableWidget(new BlockeraButton(formLeft, bottom - 46, 112, 28,
+		addRenderableWidget(new BlockeraButton(formLeft, bottom - 80, 104, 28,
 			Component.translatable("blockera.chat.filter.color"), button -> cycleColor()));
-		addRenderableWidget(new BlockeraButton(formLeft + 120, bottom - 46, 112, 28,
+		addRenderableWidget(new BlockeraButton(formLeft + 112, bottom - 80, 104, 28,
 			Component.translatable("blockera.chat.filter.toggle"), button -> toggleFilter()));
-		addRenderableWidget(new BlockeraButton(formLeft + 240, bottom - 46, 138, 28,
+		addRenderableWidget(new BlockeraButton(formLeft + 224, bottom - 80, 124, 28,
 			Component.translatable("blockera.chat.filter.window"), button -> toggleDetached()));
+		addRenderableWidget(new BlockeraButton(formLeft + 356, bottom - 80, 124, 28,
+			Component.translatable("blockera.chat.filter.background"), button -> toggleBackground()));
 		addRenderableWidget(new BlockeraButton(right - 122, bottom - 46, 104, 28,
 			Component.translatable("gui.done"), button -> onClose(), true));
-		selectedIndex = clamp(selectedIndex, 0, Math.max(0, config().filters().size() - 1));
+		selectedIndex = clamp(selectedIndex, 0, config().filters().size());
 		loadSelected();
 	}
 
@@ -104,33 +106,47 @@ public final class BlockeraChatSettingsScreen extends Screen {
 		UiText.drawSemibold(graphics, Component.translatable("blockera.chat.filters"), left + 18, top + 68,
 			ThemeTokens.TEXT);
 		List<ChatFilterRule> filters = config().filters();
-		for (int index = scroll; index < filters.size(); index++) {
+		int rowCount = filters.size() + 1;
+		for (int index = scroll; index < rowCount; index++) {
 			int y = top + 92 + (index - scroll) * 36;
 			if (y + 30 > bottom - 58) break;
-			ChatFilterRule filter = filters.get(index);
+			boolean all = index == 0;
+			ChatFilterRule filter = all ? null : filters.get(index - 1);
+			ChatTab tab = all ? config().tab(ChatTab.ALL_ID) : config().tab(filter.id());
 			boolean selected = index == selectedIndex;
 			boolean hovered = inside(mouseX, mouseY, left + 16, y, left + 212, y + 30);
 			BlockeraDraw.roundedRect(graphics, left + 16, y, left + 212, y + 30, ThemeTokens.RADIUS,
 				selected ? ThemeTokens.SELECTION : hovered ? ThemeTokens.CARD_HOVER : ThemeTokens.CARD);
-			graphics.fill(left + 16, y, left + 20, y + 30, filter.enabled() ? filter.color() : ThemeTokens.MUTED);
-			UiText.draw(graphics, Component.literal(filter.name()), left + 28, y + 10,
+			graphics.fill(left + 16, y, left + 20, y + 30,
+				all || filter.enabled() ? tab.color() : ThemeTokens.MUTED);
+			UiText.draw(graphics, all ? Component.translatable("blockera.chat.tab.all")
+				: Component.literal(filter.name()), left + 28, y + 10,
 				selected ? ThemeTokens.TEXT : ThemeTokens.MUTED);
-		}
-		if (filters.isEmpty()) {
-			UiText.draw(graphics, Component.translatable("blockera.chat.filter.empty"), left + 18, top + 98,
-				ThemeTokens.MUTED);
 		}
 	}
 
 	private void renderForm(GuiGraphics graphics) {
 		int x = left + 244;
-		if (selected() == null) {
-			UiText.drawSemibold(graphics, Component.translatable("blockera.chat.filter.empty_hint"), x, top + 76,
+		UiText.drawSemibold(graphics, Component.translatable("blockera.chat.filter.editor"), x, top + 68,
+			ThemeTokens.TEXT);
+		if (selectedAll()) {
+			ChatTab all = config().tab(ChatTab.ALL_ID);
+			UiText.draw(graphics, Component.translatable("blockera.chat.tab.all_hint"), x, top + 96,
+				ThemeTokens.MUTED);
+			UiText.draw(graphics, Component.translatable("blockera.chat.filter.window_status",
+				all.detached() ? Component.translatable("blockera.state.enabled")
+					: Component.translatable("blockera.state.disabled")), x, top + 150,
+				all.detached() ? ThemeTokens.ACCENT : ThemeTokens.MUTED);
+			UiText.draw(graphics, Component.translatable("blockera.chat.filter.background_status",
+				all.background() ? Component.translatable("blockera.state.enabled")
+					: Component.translatable("blockera.state.disabled")), x, top + 170,
+				all.background() ? ThemeTokens.SUCCESS : ThemeTokens.MUTED);
+			UiText.draw(graphics, Component.translatable("blockera.chat.history.unlimited"), x, top + 202,
+				ThemeTokens.ACCENT);
+			UiText.draw(graphics, Component.translatable("blockera.chat.history.session_only"), x, top + 220,
 				ThemeTokens.MUTED);
 			return;
 		}
-		UiText.drawSemibold(graphics, Component.translatable("blockera.chat.filter.editor"), x, top + 68,
-			ThemeTokens.TEXT);
 		UiText.draw(graphics, Component.translatable("blockera.chat.filter.name"), x, top + 90, ThemeTokens.MUTED);
 		UiText.draw(graphics, Component.translatable("blockera.chat.filter.include_hint"), x, top + 150,
 			ThemeTokens.MUTED);
@@ -145,9 +161,13 @@ public final class BlockeraChatSettingsScreen extends Screen {
 			config().tab(filter.id()).detached() ? Component.translatable("blockera.state.enabled")
 				: Component.translatable("blockera.state.disabled")), x, top + 278,
 			config().tab(filter.id()).detached() ? ThemeTokens.ACCENT : ThemeTokens.MUTED);
-		UiText.draw(graphics, Component.translatable("blockera.chat.history.unlimited"), x, top + 298,
+		UiText.draw(graphics, Component.translatable("blockera.chat.filter.background_status",
+			config().tab(filter.id()).background() ? Component.translatable("blockera.state.enabled")
+				: Component.translatable("blockera.state.disabled")), x, top + 296,
+			config().tab(filter.id()).background() ? ThemeTokens.SUCCESS : ThemeTokens.MUTED);
+		UiText.draw(graphics, Component.translatable("blockera.chat.history.unlimited"), x, top + 316,
 			ThemeTokens.ACCENT);
-		UiText.draw(graphics, Component.translatable("blockera.chat.history.session_only"), x, top + 315,
+		UiText.draw(graphics, Component.translatable("blockera.chat.history.session_only"), x, top + 333,
 			ThemeTokens.MUTED);
 	}
 
@@ -164,7 +184,7 @@ public final class BlockeraChatSettingsScreen extends Screen {
 		if (event.button() == 0 && event.x() >= left + 16 && event.x() < left + 212
 			&& event.y() >= top + 92 && event.y() < bottom - 58) {
 			int index = scroll + (int) (event.y() - top - 92) / 36;
-			if (index >= 0 && index < config().filters().size()) {
+			if (index >= 0 && index <= config().filters().size()) {
 				applySelected();
 				selectedIndex = index;
 				loadSelected();
@@ -179,7 +199,7 @@ public final class BlockeraChatSettingsScreen extends Screen {
 		if (mouseX >= left && mouseX < left + 226) {
 			int visible = Math.max(1, (bottom - top - 150) / 36);
 			scroll = clamp(scroll - (int) Math.signum(verticalAmount), 0,
-				Math.max(0, config().filters().size() - visible));
+				Math.max(0, config().filters().size() + 1 - visible));
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -206,7 +226,7 @@ public final class BlockeraChatSettingsScreen extends Screen {
 			Math.min(Math.max(8, height - 150), 36 + windowIndex * 26), 280, 130);
 		tabs.add(tab);
 		config().setTabs(tabs);
-		selectedIndex = filters.size() - 1;
+		selectedIndex = filters.size();
 		loadSelected();
 		focusOnly(name);
 		saveAndRefresh();
@@ -217,22 +237,24 @@ public final class BlockeraChatSettingsScreen extends Screen {
 		if (selected == null) return;
 		String id = selected.id();
 		List<ChatFilterRule> filters = new ArrayList<>(config().filters());
-		filters.remove(selectedIndex);
+		filters.remove(selectedIndex - 1);
 		config().setFilters(filters);
 		config().setTabs(config().tabs().stream().filter(tab -> !tab.id().equals(id)).toList());
 		if (config().activeTab().equals(id)) config().setActiveTab(ChatTab.ALL_ID);
-		selectedIndex = clamp(selectedIndex, 0, Math.max(0, filters.size() - 1));
+		selectedIndex = clamp(selectedIndex, 0, filters.size());
 		loadSelected();
 		saveAndRefresh();
 	}
 
 	private void cycleColor() {
 		ChatFilterRule filter = selected();
-		if (filter == null) return;
+		ChatTab tab = selectedAll() ? config().tab(ChatTab.ALL_ID)
+			: filter == null ? null : config().tab(filter.id());
+		if (tab == null) return;
 		int current = 0;
-		for (int index = 0; index < COLORS.length; index++) if (COLORS[index] == filter.color()) current = index;
-		filter.setColor(COLORS[(current + 1) % COLORS.length]);
-		config().tab(filter.id()).setColor(filter.color());
+		for (int index = 0; index < COLORS.length; index++) if (COLORS[index] == tab.color()) current = index;
+		tab.setColor(COLORS[(current + 1) % COLORS.length]);
+		if (filter != null) filter.setColor(tab.color());
 		saveAndRefresh();
 	}
 
@@ -245,10 +267,21 @@ public final class BlockeraChatSettingsScreen extends Screen {
 
 	private void toggleDetached() {
 		ChatFilterRule filter = selected();
-		if (filter == null) return;
 		applySelected();
-		ChatTab tab = config().tab(filter.id());
+		ChatTab tab = selectedAll() ? config().tab(ChatTab.ALL_ID)
+			: filter == null ? null : config().tab(filter.id());
+		if (tab == null) return;
 		tab.setDetached(!tab.detached());
+		saveAndRefresh();
+		rebuildWidgets();
+	}
+
+	private void toggleBackground() {
+		ChatFilterRule filter = selected();
+		ChatTab tab = selectedAll() ? config().tab(ChatTab.ALL_ID)
+			: filter == null ? null : config().tab(filter.id());
+		if (tab == null) return;
+		tab.setBackground(!tab.background());
 		saveAndRefresh();
 		rebuildWidgets();
 	}
@@ -268,7 +301,8 @@ public final class BlockeraChatSettingsScreen extends Screen {
 	private void loadSelected() {
 		ChatFilterRule filter = selected();
 		if (name == null) return;
-		name.setValue(filter == null ? "" : filter.name());
+		name.setValue(selectedAll() ? Component.translatable("blockera.chat.tab.all").getString()
+			: filter == null ? "" : filter.name());
 		include.setValue(filter == null ? "" : String.join(", ", filter.include()));
 		exclude.setValue(filter == null ? "" : String.join(", ", filter.exclude()));
 		name.active = filter != null;
@@ -301,8 +335,11 @@ public final class BlockeraChatSettingsScreen extends Screen {
 	}
 
 	private ChatFilterRule selected() {
-		return config().filters().isEmpty() ? null : config().filters().get(selectedIndex);
+		return selectedIndex <= 0 || selectedIndex > config().filters().size()
+			? null : config().filters().get(selectedIndex - 1);
 	}
+
+	private boolean selectedAll() { return selectedIndex == 0; }
 
 	private boolean hasFilter(String id) {
 		return config().filters().stream().anyMatch(filter -> filter.id().equals(id));

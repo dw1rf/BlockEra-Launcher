@@ -9,6 +9,7 @@ import space.blockera.client.chat.BlockeraChatSettingsScreen;
 import space.blockera.client.hitbox.HitboxCategory;
 import space.blockera.client.hitbox.HitboxStyle;
 import space.blockera.client.hud.BlockeraHudEditorScreen;
+import space.blockera.client.hud.BlockeraPvpSettingsScreen;
 
 import java.util.Locale;
 
@@ -17,6 +18,7 @@ public final class BlockeraMenuScreen extends Screen {
 	public enum Tab {
 		OVERVIEW,
 		HUD,
+		PVP,
 		CHAT,
 		HITBOXES,
 		VISUALS,
@@ -55,15 +57,18 @@ public final class BlockeraMenuScreen extends Screen {
 		int buttonWidth = sidebar - 32;
 		int y = top + 74;
 		addTabButton(buttonLeft, y, buttonWidth, Tab.OVERVIEW, "blockera.control.overview");
-		addTabButton(buttonLeft, y + 39, buttonWidth, Tab.HUD, "blockera.control.hud");
-		addTabButton(buttonLeft, y + 70, buttonWidth, Tab.CHAT, "blockera.control.chat");
-		addTabButton(buttonLeft, y + 105, buttonWidth, Tab.HITBOXES, "blockera.control.hitboxes");
-		addTabButton(buttonLeft, y + 140, buttonWidth, Tab.VISUALS, "blockera.control.visuals");
-		addTabButton(buttonLeft, y + 175, buttonWidth, Tab.MODULES, "blockera.control.modules");
+		addTabButton(buttonLeft, y + 34, buttonWidth, Tab.HUD, "blockera.control.hud");
+		addTabButton(buttonLeft, y + 68, buttonWidth, Tab.PVP, "blockera.control.pvp");
+		addTabButton(buttonLeft, y + 102, buttonWidth, Tab.CHAT, "blockera.control.chat");
+		addTabButton(buttonLeft, y + 136, buttonWidth, Tab.HITBOXES, "blockera.control.hitboxes");
+		addTabButton(buttonLeft, y + 170, buttonWidth, Tab.VISUALS, "blockera.control.visuals");
+		addTabButton(buttonLeft, y + 204, buttonWidth, Tab.MODULES, "blockera.control.modules");
 		addRenderableWidget(new BlockeraButton(buttonLeft, bottom - 46, buttonWidth, 28,
 			Component.translatable("gui.back"), button -> onClose()));
 		if (selectedTab == Tab.HUD) {
 			addHudControls(sidebar);
+		} else if (selectedTab == Tab.PVP) {
+			addPvpControls(sidebar);
 		} else if (selectedTab == Tab.CHAT) {
 			addChatControls(sidebar);
 		} else if (selectedTab == Tab.HITBOXES) {
@@ -165,6 +170,15 @@ public final class BlockeraMenuScreen extends Screen {
 			button -> minecraft.setScreen(new BlockeraHudEditorScreen(this, BlockeraCoreServices.hudLayouts())), true));
 	}
 
+	private void addPvpControls(int sidebarWidth) {
+		int contentLeft = left + sidebarWidth + 24;
+		int contentRight = right - 24;
+		addRenderableWidget(new BlockeraButton(contentLeft, top + 286, contentRight - contentLeft, 30,
+			Component.translatable("blockera.pvp.open"),
+			button -> minecraft.setScreen(new BlockeraPvpSettingsScreen(this,
+				BlockeraCoreServices.hudLayouts())), true));
+	}
+
 	private void addTabButton(int x, int y, int width, Tab tab, String key) {
 		addRenderableWidget(new BlockeraButton(x, y, width, 30, Component.translatable(key),
 			button -> selectTab(tab), selectedTab == tab));
@@ -221,6 +235,7 @@ public final class BlockeraMenuScreen extends Screen {
 			switch (selectedTab) {
 			case OVERVIEW -> renderOverview(graphics, contentLeft);
 			case HUD -> renderHud(graphics, contentLeft);
+			case PVP -> renderPvp(graphics, contentLeft);
 			case CHAT -> renderChat(graphics, contentLeft);
 			case HITBOXES -> renderHitboxes(graphics, contentLeft);
 			case VISUALS -> renderVisuals(graphics, contentLeft);
@@ -286,6 +301,22 @@ public final class BlockeraMenuScreen extends Screen {
 				? "blockera.state.enabled" : "blockera.state.disabled"), ThemeTokens.SUCCESS);
 		UiText.draw(graphics, Component.translatable("blockera.hud.editor_in_progress"), contentLeft, top + 224,
 			ThemeTokens.MUTED);
+	}
+
+	private void renderPvp(GuiGraphics graphics, int contentLeft) {
+		var settings = BlockeraCoreServices.hudLayouts().settings("blockera:pvp_hud");
+		drawFeature(graphics, contentLeft, top + 78, right - 24,
+			Component.translatable("blockera.pvp.health"),
+			Component.translatable(settings.booleanOption("blockera:pvp_hud", "show_health_bar", true)
+				? "blockera.state.enabled" : "blockera.state.disabled"), ThemeTokens.HEALTH);
+		drawFeature(graphics, contentLeft, top + 145, right - 24,
+			Component.translatable("blockera.pvp.model"),
+			Component.translatable(settings.booleanOption("blockera:pvp_hud", "show_model", true)
+				? "blockera.state.enabled" : "blockera.state.disabled"), ThemeTokens.ACCENT);
+		drawFeature(graphics, contentLeft, top + 212, right - 24,
+			Component.translatable("blockera.hud.widget.pvp_hud"),
+			Component.translatable(settings.enabled ? "blockera.state.enabled" : "blockera.state.disabled"),
+			settings.enabled ? ThemeTokens.SUCCESS : ThemeTokens.MUTED);
 	}
 
 	private void renderHitboxes(GuiGraphics graphics, int contentLeft) {

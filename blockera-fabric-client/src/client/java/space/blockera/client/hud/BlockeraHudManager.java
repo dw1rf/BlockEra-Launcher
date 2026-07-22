@@ -64,6 +64,7 @@ public final class BlockeraHudManager {
 		registry.register(textWidget("blockera:durability", Component.literal("Durability"), this::durability));
 		registry.register(textWidget("blockera:armor", Component.literal("Armor"), this::armor));
 		registry.register(textWidget("blockera:health", Component.literal("Health"), this::health));
+		registry.register(pvpHudWidget());
 		registry.register(textWidget("blockera:food", Component.literal("Food"), this::food));
 		registry.register(textWidget("blockera:xp", Component.literal("Experience"), this::experience));
 		registry.register(textWidget("blockera:light", Component.literal("Light"), this::light));
@@ -118,6 +119,10 @@ public final class BlockeraHudManager {
             HudPoint point = settings.anchor.resolve(
                 graphics.guiWidth(), graphics.guiHeight(), scaledWidth, scaledHeight,
                 settings.offsetX, settings.offsetY
+            );
+            point = new HudPoint(
+                Math.max(0, Math.min(Math.max(0, graphics.guiWidth() - scaledWidth), point.x())),
+                Math.max(0, Math.min(Math.max(0, graphics.guiHeight() - scaledHeight), point.y()))
             );
             graphics.pose().pushMatrix();
             graphics.pose().translate(point.x(), point.y());
@@ -417,6 +422,65 @@ public final class BlockeraHudManager {
 						graphics, x, y, x + width(), y + height(), 42, 0.0F,
 						x + width() / 2.0F, y + height() / 2.0F, minecraft.player
 					);
+				}
+			}
+		};
+	}
+
+	private ClientHudWidget pvpHudWidget() {
+		return new ClientHudWidget() {
+			@Override public String id() { return "blockera:pvp_hud"; }
+			@Override public int width() { return 180; }
+			@Override public int height() { return 74; }
+			@Override public void render(GuiGraphics graphics, int x, int y, HudWidgetSettings settings) {
+				if (minecraft.player == null) return;
+				if (settings.background) {
+					BlockeraDraw.roundedRect(graphics, x, y, x + width(), y + height(),
+						ThemeTokens.RADIUS_LARGE, alpha(ThemeTokens.PANEL, settings.opacity));
+				}
+				float health = Math.max(0.0F, minecraft.player.getHealth());
+				float maximum = Math.max(1.0F, minecraft.player.getMaxHealth());
+				if (settings.booleanOption(id(), "show_health_bar", true)) {
+					int barLeft = x + 7;
+					int barRight = x + width() - 7;
+					UiText.drawSemibold(graphics, Component.literal(String.format(Locale.ROOT,
+						"\u2665 %.1f / %.1f", health, maximum)), barLeft, y + 6,
+						alpha(ThemeTokens.TEXT, settings.opacity));
+					graphics.fill(barLeft, y + 18, barRight, y + 21, alpha(0xFF34383D, settings.opacity));
+					int filled = Math.round((barRight - barLeft) * Math.min(1.0F, health / maximum));
+					graphics.fill(barLeft, y + 18, barLeft + filled, y + 21,
+						alpha(ThemeTokens.HEALTH, settings.opacity));
+				}
+				int textLeft = x + 58;
+				if (settings.booleanOption(id(), "show_model", true)) {
+					InventoryScreen.renderEntityInInventoryFollowsMouse(
+						graphics, x + 4, y + 21, x + 54, y + height() - 4, 26, 0.0F,
+						x + 29.0F, y + 48.0F, minecraft.player
+					);
+				} else {
+					textLeft = x + 8;
+				}
+				UiText.drawSemibold(graphics, minecraft.player.getDisplayName(), textLeft, y + 28,
+					alpha(ThemeTokens.TEXT, settings.opacity));
+				int line = y + 43;
+				if (settings.booleanOption(id(), "show_armor", true)) {
+					UiText.draw(graphics, Component.translatable("blockera.pvp.hud.armor",
+						minecraft.player.getArmorValue()),
+						textLeft, line, alpha(ThemeTokens.MUTED, settings.opacity));
+					line += 12;
+				}
+				StringBuilder footer = new StringBuilder();
+				if (settings.booleanOption(id(), "show_cps", true)) {
+					footer.append(Component.translatable("blockera.pvp.hud.cps",
+						attackClicks.size(), useClicks.size()).getString());
+				}
+				if (settings.booleanOption(id(), "show_combo", true)) {
+					if (!footer.isEmpty()) footer.append("  \u00B7  ");
+					footer.append(Component.translatable("blockera.pvp.hud.combo", combo).getString());
+				}
+				if (!footer.isEmpty()) {
+					UiText.draw(graphics, Component.literal(footer.toString()), textLeft, line,
+						alpha(ThemeTokens.ACCENT_SOFT, settings.opacity));
 				}
 			}
 		};

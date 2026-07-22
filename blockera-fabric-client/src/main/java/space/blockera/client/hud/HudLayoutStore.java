@@ -55,9 +55,10 @@ public final class HudLayoutStore {
 			int schemaVersion = requiredSchemaVersion(root);
 			boolean migrated = schemaVersion == 1;
 			HudLayoutDocument loaded = migrated ? migrateFabricSchema(root) : readSchemaFive(root, schemaVersion);
+			boolean completed = addMissingBuiltins(loaded);
 			validate(loaded);
 			document = loaded;
-			if (migrated) {
+			if (migrated || completed) {
 				save();
 			}
 		} catch (IOException | JsonParseException | IllegalArgumentException exception) {
@@ -163,6 +164,23 @@ public final class HudLayoutStore {
 		return migrated;
 	}
 
+	private static boolean addMissingBuiltins(HudLayoutDocument document) {
+		if (document == null || document.profiles == null) return false;
+		boolean changed = false;
+		for (HudProfile profile : document.profiles.values()) {
+			if (profile == null || profile.widgets == null) continue;
+			int index = 0;
+			for (HudWidgetMetadata metadata : BuiltinHudCatalog.widgets()) {
+				if (!profile.widgets.containsKey(metadata.id())) {
+					profile.widgets.put(metadata.id(), defaultSettings(metadata.id(), index));
+					changed = true;
+				}
+				index++;
+			}
+		}
+		return changed;
+	}
+
 	private static String migrateLegacyId(String id) {
 		return "blockera:target".equals(id) ? "blockera:target_info" : id;
 	}
@@ -230,6 +248,13 @@ public final class HudLayoutStore {
 		int y = 12 + row * 36;
 		HudWidgetSettings settings = HudWidgetSettings.of("blockera:fps".equals(id), anchor, x, y);
 		settings.options = new LinkedHashMap<>();
+		if ("blockera:pvp_hud".equals(id)) {
+			settings.options.put("show_model", true);
+			settings.options.put("show_health_bar", true);
+			settings.options.put("show_armor", true);
+			settings.options.put("show_cps", true);
+			settings.options.put("show_combo", true);
+		}
 		return settings;
 	}
 

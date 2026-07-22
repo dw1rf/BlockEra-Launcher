@@ -50,6 +50,11 @@ final class HudLayoutStoreTest {
         assertEquals(new HudPoint(45, 45), HudAnchor.CENTER.resolve(100, 100, 10, 10, 0, 0));
         assertEquals(new HudPoint(88, 87), HudAnchor.BOTTOM_RIGHT.resolve(100, 100, 10, 10, 2, 3));
         assertEquals(new HudPoint(47, 3), HudAnchor.TOP_CENTER.resolve(100, 100, 10, 10, 2, 3));
+		for (HudAnchor anchor : HudAnchor.values()) {
+			HudPoint offsets = anchor.offsetsForPosition(320, 180, 60, 24, 73, 41);
+			assertEquals(new HudPoint(73, 41), anchor.resolve(320, 180, 60, 24,
+				offsets.x(), offsets.y()));
+		}
     }
 
 	@Test

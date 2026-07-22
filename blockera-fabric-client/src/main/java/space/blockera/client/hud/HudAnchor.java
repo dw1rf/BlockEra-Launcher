@@ -32,4 +32,25 @@ public enum HudAnchor {
         };
         return new HudPoint(x, y);
     }
+
+    public HudPoint offsetsForPosition(
+        int screenWidth,
+        int screenHeight,
+        int width,
+        int height,
+        int x,
+        int y
+    ) {
+        int offsetX = switch (horizontal) {
+            case 0 -> x;
+            case 1 -> x - (screenWidth - width) / 2;
+            default -> screenWidth - width - x;
+        };
+        int offsetY = switch (vertical) {
+            case 0 -> y;
+            case 1 -> y - (screenHeight - height) / 2;
+            default -> screenHeight - height - y;
+        };
+        return new HudPoint(offsetX, offsetY);
+    }
 }

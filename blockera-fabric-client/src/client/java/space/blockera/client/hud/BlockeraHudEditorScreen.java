@@ -21,15 +21,20 @@ public final class BlockeraHudEditorScreen extends Screen {
 	private static final int ROW_HEIGHT = 30;
 	private static final int ROW_GAP = 5;
 	private static final int GRID = 8;
+	private static final int RESIZE_HANDLE = 10;
 	private final Screen parent;
 	private final HudLayoutStore layouts;
 	private HudEditorLayout editor;
 	private HudPreviewTransform preview;
 	private String selectedId = "blockera:fps";
 	private int libraryScroll;
-	private boolean dragging;
+	private Mode mode = Mode.NONE;
 	private double dragOffsetX;
 	private double dragOffsetY;
+	private float resizeStartScale;
+	private double resizeStartDistance;
+
+	private enum Mode { NONE, DRAG, RESIZE }
 
 	public BlockeraHudEditorScreen(Screen parent, HudLayoutStore layouts) {
 		super(Component.translatable("blockera.hud.editor.title"));
@@ -41,6 +46,7 @@ public final class BlockeraHudEditorScreen extends Screen {
 	protected void init() {
 		editor = HudEditorLayout.calculate(width, height);
 		preview = HudPreviewTransform.fit(editor.viewport(), width, height);
+		repairEnabledWidgetPositions();
 	}
 
 	@Override
@@ -144,6 +150,10 @@ public final class BlockeraHudEditorScreen extends Screen {
 			alpha(ThemeTokens.TEXT, settings.opacity));
 		if (selected) {
 			graphics.renderOutline(0, 0, widgetWidth, widgetHeight, ThemeTokens.ACCENT);
+			graphics.fill(widgetWidth - RESIZE_HANDLE, widgetHeight - 2, widgetWidth, widgetHeight,
+				ThemeTokens.ACCENT);
+			graphics.fill(widgetWidth - 2, widgetHeight - RESIZE_HANDLE, widgetWidth, widgetHeight,
+				ThemeTokens.ACCENT);
 		}
 		graphics.pose().popMatrix();
 		if (id.equals("blockera:player_model") && minecraft.player != null) {
@@ -221,14 +231,25 @@ public final class BlockeraHudEditorScreen extends Screen {
 			if (handleInspectorClick(mouseX, mouseY)) {
 				return true;
 			}
-			String hit = hitWidget(mouseX, mouseY);
+			String hit = hitResizeHandle(mouseX, mouseY);
+			if (hit != null) {
+				selectedId = hit;
+				HudPoint point = widgetPoint(hit);
+				var screen = preview.toScreen(mouseX, mouseY);
+				resizeStartScale = layouts.settings(hit).scale;
+				resizeStartDistance = Math.max(1.0D,
+					Math.hypot(screen.x() - point.x(), screen.y() - point.y()));
+				mode = Mode.RESIZE;
+				return true;
+			}
+			hit = hitWidget(mouseX, mouseY);
 			if (hit != null) {
 				selectedId = hit;
 				HudPoint point = widgetPoint(hit);
 				var screen = preview.toScreen(mouseX, mouseY);
 				dragOffsetX = screen.x() - point.x();
 				dragOffsetY = screen.y() - point.y();
-				dragging = true;
+				mode = Mode.DRAG;
 				return true;
 			}
 		}
@@ -237,25 +258,31 @@ public final class BlockeraHudEditorScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-		if (!dragging || event.button() != 0) {
+		if (mode == Mode.NONE || event.button() != 0) {
 			return super.mouseDragged(event, deltaX, deltaY);
 		}
 		var screen = preview.toScreen(event.x(), event.y());
 		HudWidgetSettings settings = layouts.settings(selectedId);
-		int widgetWidth = Math.round(virtualWidth(selectedId) * settings.scale);
-		int widgetHeight = Math.round(virtualHeight(selectedId) * settings.scale);
-		HudPoint base = settings.anchor.resolve(width, height, widgetWidth, widgetHeight, 0, 0);
-		int desiredX = clamp((int) Math.round(screen.x() - dragOffsetX), 0, width - widgetWidth);
-		int desiredY = clamp((int) Math.round(screen.y() - dragOffsetY), 0, height - widgetHeight);
-		settings.offsetX = snap(desiredX - base.x());
-		settings.offsetY = snap(desiredY - base.y());
+		if (mode == Mode.RESIZE) {
+			HudPoint point = widgetPoint(selectedId);
+			double distance = Math.max(1.0D, Math.hypot(screen.x() - point.x(), screen.y() - point.y()));
+			settings.scale = clamp((float) (resizeStartScale * distance / resizeStartDistance), 0.5F, 2.0F);
+			settings.scale = Math.round(settings.scale * 20.0F) / 20.0F;
+			moveWidgetTo(settings, point.x(), point.y());
+		} else {
+			int widgetWidth = Math.round(virtualWidth(selectedId) * settings.scale);
+			int widgetHeight = Math.round(virtualHeight(selectedId) * settings.scale);
+			int desiredX = clamp((int) Math.round(screen.x() - dragOffsetX), 0, width - widgetWidth);
+			int desiredY = clamp((int) Math.round(screen.y() - dragOffsetY), 0, height - widgetHeight);
+			moveWidgetTo(settings, snap(desiredX), snap(desiredY));
+		}
 		return true;
 	}
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		if (dragging && event.button() == 0) {
-			dragging = false;
+		if (mode != Mode.NONE && event.button() == 0) {
+			mode = Mode.NONE;
 			layouts.save();
 			return true;
 		}
@@ -302,6 +329,8 @@ public final class BlockeraHudEditorScreen extends Screen {
 		int y = area.y() + 58;
 		if (inside(mouseX, mouseY, x, y, contentWidth, 40)) {
 			settings.enabled = !settings.enabled;
+		} else if (inside(mouseX, mouseY, x, y + 50, contentWidth, 40)) {
+			cycleAnchor(settings);
 		} else if (inside(mouseX, mouseY, x, y + 144, 42, 26)) {
 			settings.scale = clamp(settings.scale - 0.1F, 0.5F, 2.0F);
 		} else if (inside(mouseX, mouseY, x + contentWidth - 42, y + 144, 42, 26)) {
@@ -343,6 +372,65 @@ public final class BlockeraHudEditorScreen extends Screen {
 		return null;
 	}
 
+	private String hitResizeHandle(double mouseX, double mouseY) {
+		if (!preview.contentBounds().contains(mouseX, mouseY)) return null;
+		var point = preview.toScreen(mouseX, mouseY);
+		List<HudWidgetMetadata> reverse = new ArrayList<>(BuiltinHudCatalog.widgets());
+		for (int index = reverse.size() - 1; index >= 0; index--) {
+			String id = reverse.get(index).id();
+			HudWidgetSettings settings = layouts.settings(id);
+			if (!settings.enabled || !id.equals(selectedId)) continue;
+			HudPoint origin = widgetPoint(id);
+			int w = Math.round(virtualWidth(id) * settings.scale);
+			int h = Math.round(virtualHeight(id) * settings.scale);
+			int handle = Math.max(6, Math.round(RESIZE_HANDLE * settings.scale));
+			if (inside(point.x(), point.y(), origin.x() + w - handle, origin.y() + h - handle,
+				handle, handle)) return id;
+		}
+		return null;
+	}
+
+	private void cycleAnchor(HudWidgetSettings settings) {
+		int widgetWidth = Math.round(virtualWidth(selectedId) * settings.scale);
+		int widgetHeight = Math.round(virtualHeight(selectedId) * settings.scale);
+		HudPoint current = settings.anchor.resolve(width, height, widgetWidth, widgetHeight,
+			settings.offsetX, settings.offsetY);
+		HudAnchor[] anchors = HudAnchor.values();
+		settings.anchor = anchors[(settings.anchor.ordinal() + 1) % anchors.length];
+		moveWidgetTo(settings, current.x(), current.y());
+	}
+
+	private void repairEnabledWidgetPositions() {
+		boolean changed = false;
+		for (HudWidgetMetadata widget : BuiltinHudCatalog.widgets()) {
+			HudWidgetSettings settings = layouts.settings(widget.id());
+			if (!settings.enabled) continue;
+			int widgetWidth = Math.round(virtualWidth(widget.id()) * settings.scale);
+			int widgetHeight = Math.round(virtualHeight(widget.id()) * settings.scale);
+			HudPoint current = settings.anchor.resolve(width, height, widgetWidth, widgetHeight,
+				settings.offsetX, settings.offsetY);
+			int repairedX = clamp(current.x(), 0, Math.max(0, width - widgetWidth));
+			int repairedY = clamp(current.y(), 0, Math.max(0, height - widgetHeight));
+			if (repairedX != current.x() || repairedY != current.y()) {
+				moveWidgetTo(widget.id(), settings, repairedX, repairedY);
+				changed = true;
+			}
+		}
+		if (changed) layouts.save();
+	}
+
+	private void moveWidgetTo(HudWidgetSettings settings, int x, int y) {
+		moveWidgetTo(selectedId, settings, x, y);
+	}
+
+	private void moveWidgetTo(String id, HudWidgetSettings settings, int x, int y) {
+		int widgetWidth = Math.round(virtualWidth(id) * settings.scale);
+		int widgetHeight = Math.round(virtualHeight(id) * settings.scale);
+		HudPoint offsets = settings.anchor.offsetsForPosition(width, height, widgetWidth, widgetHeight, x, y);
+		settings.offsetX = offsets.x();
+		settings.offsetY = offsets.y();
+	}
+
 	private HudPoint widgetPoint(String id) {
 		HudWidgetSettings settings = layouts.settings(id);
 		return settings.anchor.resolve(width, height,
@@ -351,11 +439,11 @@ public final class BlockeraHudEditorScreen extends Screen {
 	}
 
 	private static int virtualWidth(String id) {
-		return id.equals("blockera:player_model") ? 72 : 112;
+		return id.equals("blockera:player_model") ? 72 : id.equals("blockera:pvp_hud") ? 180 : 112;
 	}
 
 	private static int virtualHeight(String id) {
-		return id.equals("blockera:player_model") ? 118 : 34;
+		return id.equals("blockera:player_model") ? 118 : id.equals("blockera:pvp_hud") ? 74 : 34;
 	}
 
 	private static String previewValue(String id) {

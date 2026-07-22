@@ -8,6 +8,9 @@ import java.util.Set;
 /** Shared allow-list for the fifty reviewed, local-only widgets from the Forge client. */
 public final class BuiltinHudCatalog {
 	private static final Set<String> NO_OPTIONS = Set.of();
+	private static final Set<String> PVP_OPTIONS = Set.of(
+		"show_model", "show_health_bar", "show_armor", "show_cps", "show_combo"
+	);
 	private static final List<HudWidgetMetadata> WIDGETS = List.of(
 		widget("fps", HudCategory.PERFORMANCE),
 		widget("coordinates", HudCategory.WORLD),
@@ -22,6 +25,7 @@ public final class BuiltinHudCatalog {
 		widget("durability", HudCategory.PLAYER),
 		widget("armor", HudCategory.PLAYER),
 		widget("health", HudCategory.PLAYER),
+		widget("pvp_hud", HudCategory.PLAYER, PVP_OPTIONS),
 		widget("food", HudCategory.PLAYER),
 		widget("saturation", HudCategory.PLAYER),
 		widget("xp", HudCategory.PLAYER),
@@ -88,11 +92,15 @@ public final class BuiltinHudCatalog {
 	}
 
 	private static HudWidgetMetadata widget(String suffix, HudCategory category) {
+		return widget(suffix, category, NO_OPTIONS);
+	}
+
+	private static HudWidgetMetadata widget(String suffix, HudCategory category, Set<String> options) {
 		return new HudWidgetMetadata(
 			"blockera:" + suffix,
 			"blockera.hud.widget." + suffix,
 			category,
-			NO_OPTIONS
+			options
 		);
 	}
 

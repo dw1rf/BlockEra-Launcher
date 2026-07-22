@@ -12,12 +12,17 @@ import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Minimal loopback bridge to the launcher process.
@@ -49,8 +54,7 @@ public final class LauncherAccountBridge {
     }
 
     public boolean isAvailable() {
-        return System.getProperty("modrinth.internal.ipc.host") != null
-            && System.getProperty("modrinth.internal.ipc.port") != null;
+        return sharedRpcAvailable() || endpointAvailable();
     }
 
     public CompletableFuture<List<Account>> listAccounts() {
@@ -91,6 +95,10 @@ public final class LauncherAccountBridge {
     }
 
     private synchronized JsonElement call(String method, JsonArray arguments) throws IOException {
+        JsonElement sharedResponse = callSharedRpc(method, arguments);
+        if (sharedResponse != null) {
+            return sharedResponse;
+        }
         ensureConnected();
         String requestId = UUID.randomUUID().toString();
         JsonObject request = new JsonObject();
@@ -138,6 +146,77 @@ public final class LauncherAccountBridge {
             socket.getInputStream(), StandardCharsets.UTF_8));
         writer = new BufferedWriter(new OutputStreamWriter(
             socket.getOutputStream(), StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Uses the RPC connection opened by the launcher bootstrap. Opening an unrelated
+     * second connection made the account screen race the bootstrap on some systems.
+     * Reflection keeps the public Fabric jar independent from launcher internals and
+     * lets the socket implementation below remain a compatibility fallback.
+     */
+    private JsonElement callSharedRpc(String method, JsonArray arguments) throws IOException {
+        try {
+            Class<?> rpcClass = Class.forName("com.modrinth.theseus.rpc.TheseusRpc");
+            Object rpc = rpcClass.getMethod("getRpc").invoke(null);
+            Method callMethod = Arrays.stream(rpcClass.getMethods())
+                .filter(candidate -> candidate.getName().equals("callMethod")
+                    && candidate.getParameterCount() == 3)
+                .findFirst()
+                .orElse(null);
+            if (callMethod == null) {
+                return null;
+            }
+
+            Class<?> typeTokenClass = callMethod.getParameterTypes()[0];
+            String tokenPackage = typeTokenClass.getPackageName();
+            String gsonPackage = tokenPackage.endsWith(".reflect")
+                ? tokenPackage.substring(0, tokenPackage.length() - ".reflect".length())
+                : tokenPackage;
+            Class<?> jsonElementClass = Class.forName(gsonPackage + ".JsonElement");
+            Object typeToken = typeTokenClass.getMethod("get", Class.class)
+                .invoke(null, jsonElementClass);
+            Object[] values = new Object[arguments.size()];
+            for (int index = 0; index < arguments.size(); index++) {
+                JsonElement value = arguments.get(index);
+                values[index] = value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                    ? value.getAsString() : value.toString();
+            }
+            Object result = callMethod.invoke(rpc, typeToken, method, values);
+            if (!(result instanceof CompletableFuture<?> future)) {
+                throw new IOException("Launcher RPC returned an invalid future");
+            }
+            Object response = future.get(5, TimeUnit.SECONDS);
+            return JsonParser.parseString(response.toString());
+        } catch (ClassNotFoundException | NoSuchMethodException error) {
+            return null;
+        } catch (IllegalAccessException | InvocationTargetException error) {
+            Throwable cause = error instanceof InvocationTargetException invocation
+                ? invocation.getCause() : error;
+            if (cause instanceof IllegalStateException) {
+                return null;
+            }
+            throw new IOException("Unable to call launcher RPC", cause);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Launcher RPC was interrupted", error);
+        } catch (TimeoutException | java.util.concurrent.ExecutionException error) {
+            throw new IOException("Launcher RPC did not respond", error);
+        }
+    }
+
+    private static boolean sharedRpcAvailable() {
+        try {
+            Class<?> rpcClass = Class.forName("com.modrinth.theseus.rpc.TheseusRpc");
+            return rpcClass.getMethod("getRpc").invoke(null) != null;
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+                 | InvocationTargetException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean endpointAvailable() {
+        return System.getProperty("modrinth.internal.ipc.host") != null
+            && System.getProperty("modrinth.internal.ipc.port") != null;
     }
 
     private void disconnect() {

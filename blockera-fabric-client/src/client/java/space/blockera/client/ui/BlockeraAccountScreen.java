@@ -75,6 +75,18 @@ public final class BlockeraAccountScreen extends Screen {
             addRenderableWidget(next);
         }
 
+		if (accounts.isEmpty() && !switching) {
+			addRenderableWidget(new BlockeraButton(
+				left + 18,
+				top + 190,
+				panelWidth - 36,
+				ThemeTokens.CONTROL_HEIGHT,
+				Component.translatable("blockera.accounts.retry"),
+				ignored -> loadAccounts(),
+				true
+			));
+		}
+
         BlockeraButton back = new BlockeraButton(
             left + 18,
             top + 222,
@@ -89,14 +101,17 @@ public final class BlockeraAccountScreen extends Screen {
 
     private void loadAccounts() {
         loading = false;
+		status = Component.translatable("blockera.accounts.loading");
         LauncherAccountBridge bridge = LauncherAccountBridge.get();
         if (!bridge.isAvailable()) {
             status = Component.translatable("blockera.accounts.unavailable");
+			rebuildControls();
             return;
         }
         bridge.listAccounts().whenComplete((loaded, error) -> minecraft.execute(() -> {
             if (error != null) {
                 status = Component.translatable("blockera.accounts.error");
+				rebuildControls();
                 return;
             }
             accounts = loaded;

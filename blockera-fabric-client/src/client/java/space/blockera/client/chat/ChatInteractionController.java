@@ -32,6 +32,10 @@ public final class ChatInteractionController {
 			start(Mode.DRAG, mouseX, mouseY, bounds);
 			return true;
 		}
+		if (inside(mouseX, mouseY, bounds.left(), bounds.top(), bounds.right(), bounds.bottom())) {
+			start(Mode.DRAG, mouseX, mouseY, bounds);
+			return true;
+		}
 		return false;
 	}
 
