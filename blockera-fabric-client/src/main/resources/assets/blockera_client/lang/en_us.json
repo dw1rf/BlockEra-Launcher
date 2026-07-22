@@ -53,6 +53,7 @@
   "blockera.chat.filter.background": "Window background",
   "blockera.chat.filter.background_status": "Window background: %s",
   "blockera.chat.tab.all_hint": "All session messages without filtering",
+  "blockera.chat.tab.all_main": "All is the main chat and cannot be duplicated",
   "blockera.chat.filter.name": "Tab name",
   "blockera.chat.filter.include": "Included phrases",
   "blockera.chat.filter.exclude": "Excluded phrases",

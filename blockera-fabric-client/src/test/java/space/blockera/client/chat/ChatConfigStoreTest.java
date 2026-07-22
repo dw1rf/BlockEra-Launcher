@@ -53,6 +53,22 @@ final class ChatConfigStoreTest {
 	}
 
 	@Test
+	void allTabCannotBecomeADuplicateDetachedWindow() throws Exception {
+		Path file = directory.resolve("chat.json");
+		ChatConfig config = ChatConfig.defaults();
+		config.tab(ChatTab.ALL_ID).setDetached(true);
+
+		assertFalse(config.tab(ChatTab.ALL_ID).detached());
+		ChatConfigStore store = new ChatConfigStore(file);
+		store.replace(config);
+		store.save();
+		ChatConfigStore reloaded = new ChatConfigStore(file);
+		reloaded.load();
+
+		assertFalse(reloaded.config().tab(ChatTab.ALL_ID).detached());
+	}
+
+	@Test
 	void corruptConfigurationIsBackedUpAndDefaultsAreRestored() throws Exception {
 		Path file = directory.resolve("chat.json");
 		Files.writeString(file, "{broken");

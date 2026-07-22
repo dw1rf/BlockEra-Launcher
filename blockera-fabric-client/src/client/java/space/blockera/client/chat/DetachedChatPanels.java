@@ -18,6 +18,7 @@ import java.util.List;
 /** Standalone filter chats. Every filter window has its own persistent free-form geometry. */
 public final class DetachedChatPanels {
 	private static final int HEADER_HEIGHT = 18;
+	private static final int CLOSE_WIDTH = 18;
 	private static final int RESIZE_SIZE = 12;
 	private static final int PADDING = 5;
 	private static String activeTabId;
@@ -65,7 +66,13 @@ public final class DetachedChatPanels {
 		UiText.drawSemibold(graphics, Component.literal(tab.name()), bounds.left() + 9, bounds.top() + 5,
 			ThemeTokens.TEXT);
 		if (focused) {
-			UiText.draw(graphics, Component.literal("::"), bounds.right() - 18, bounds.top() + 5, ThemeTokens.DIM);
+			boolean closeHovered = inside(mouseX, mouseY, bounds.right() - CLOSE_WIDTH, bounds.top(),
+				bounds.right(), bounds.top() + HEADER_HEIGHT);
+			BlockeraDraw.roundedRect(graphics, bounds.right() - CLOSE_WIDTH, bounds.top(), bounds.right(),
+				bounds.top() + HEADER_HEIGHT, ThemeTokens.RADIUS,
+				closeHovered ? ThemeTokens.CARD_HOVER : 0x00000000);
+			UiText.drawCentered(graphics, Component.literal("×"), bounds.right() - CLOSE_WIDTH / 2,
+				bounds.top() + 5, closeHovered ? ThemeTokens.TEXT : ThemeTokens.MUTED);
 			graphics.fill(bounds.right() - RESIZE_SIZE, bounds.bottom() - 2, bounds.right(), bounds.bottom(),
 				ThemeTokens.ACCENT);
 			graphics.fill(bounds.right() - 2, bounds.bottom() - RESIZE_SIZE, bounds.right(), bounds.bottom(),
@@ -101,6 +108,11 @@ public final class DetachedChatPanels {
 			if (!tab.detached()) continue;
 			int originalIndex = detachedIndex(tab.id());
 			Bounds bounds = bounds(tab, originalIndex, screenWidth, screenHeight);
+			if (inside(mouseX, mouseY, bounds.right() - CLOSE_WIDTH, bounds.top(), bounds.right(),
+				bounds.top() + HEADER_HEIGHT)) {
+				close(tab);
+				return true;
+			}
 			if (inside(mouseX, mouseY, bounds.right() - RESIZE_SIZE, bounds.bottom() - RESIZE_SIZE,
 				bounds.right(), bounds.bottom())) {
 				begin(tab, Mode.RESIZE, bounds, mouseX, mouseY);
@@ -113,6 +125,15 @@ public final class DetachedChatPanels {
 			}
 		}
 		return false;
+	}
+
+	private static void close(ChatTab tab) {
+		tab.setDetached(false);
+		if (tab.id().equals(activeTabId)) {
+			mode = Mode.NONE;
+			activeTabId = null;
+		}
+		BlockeraCoreServices.chat().save();
 	}
 
 	public static boolean mouseDragged(double mouseX, double mouseY, int screenWidth, int screenHeight) {

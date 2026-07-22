@@ -31,6 +31,7 @@ public final class BlockeraChatSettingsScreen extends Screen {
 	private EditBox name;
 	private EditBox include;
 	private EditBox exclude;
+	private BlockeraButton detachedWindowButton;
 
 	public BlockeraChatSettingsScreen(Screen parent) {
 		super(Component.translatable("blockera.chat.settings.title"));
@@ -61,7 +62,7 @@ public final class BlockeraChatSettingsScreen extends Screen {
 			Component.translatable("blockera.chat.filter.color"), button -> cycleColor()));
 		addRenderableWidget(new BlockeraButton(formLeft + 112, bottom - 80, 104, 28,
 			Component.translatable("blockera.chat.filter.toggle"), button -> toggleFilter()));
-		addRenderableWidget(new BlockeraButton(formLeft + 224, bottom - 80, 124, 28,
+		detachedWindowButton = addRenderableWidget(new BlockeraButton(formLeft + 224, bottom - 80, 124, 28,
 			Component.translatable("blockera.chat.filter.window"), button -> toggleDetached()));
 		addRenderableWidget(new BlockeraButton(formLeft + 356, bottom - 80, 124, 28,
 			Component.translatable("blockera.chat.filter.background"), button -> toggleBackground()));
@@ -130,17 +131,14 @@ public final class BlockeraChatSettingsScreen extends Screen {
 		UiText.drawSemibold(graphics, Component.translatable("blockera.chat.filter.editor"), x, top + 68,
 			ThemeTokens.TEXT);
 		if (selectedAll()) {
-			ChatTab all = config().tab(ChatTab.ALL_ID);
 			UiText.draw(graphics, Component.translatable("blockera.chat.tab.all_hint"), x, top + 96,
 				ThemeTokens.MUTED);
-			UiText.draw(graphics, Component.translatable("blockera.chat.filter.window_status",
-				all.detached() ? Component.translatable("blockera.state.enabled")
-					: Component.translatable("blockera.state.disabled")), x, top + 150,
-				all.detached() ? ThemeTokens.ACCENT : ThemeTokens.MUTED);
+			UiText.draw(graphics, Component.translatable("blockera.chat.tab.all_main"), x, top + 150,
+				ThemeTokens.ACCENT);
 			UiText.draw(graphics, Component.translatable("blockera.chat.filter.background_status",
-				all.background() ? Component.translatable("blockera.state.enabled")
+				config().tab(ChatTab.ALL_ID).background() ? Component.translatable("blockera.state.enabled")
 					: Component.translatable("blockera.state.disabled")), x, top + 170,
-				all.background() ? ThemeTokens.SUCCESS : ThemeTokens.MUTED);
+				config().tab(ChatTab.ALL_ID).background() ? ThemeTokens.SUCCESS : ThemeTokens.MUTED);
 			UiText.draw(graphics, Component.translatable("blockera.chat.history.unlimited"), x, top + 202,
 				ThemeTokens.ACCENT);
 			UiText.draw(graphics, Component.translatable("blockera.chat.history.session_only"), x, top + 220,
@@ -266,6 +264,7 @@ public final class BlockeraChatSettingsScreen extends Screen {
 	}
 
 	private void toggleDetached() {
+		if (selectedAll()) return;
 		ChatFilterRule filter = selected();
 		applySelected();
 		ChatTab tab = selectedAll() ? config().tab(ChatTab.ALL_ID)
@@ -308,6 +307,7 @@ public final class BlockeraChatSettingsScreen extends Screen {
 		name.active = filter != null;
 		include.active = filter != null;
 		exclude.active = filter != null;
+		if (detachedWindowButton != null) detachedWindowButton.active = !selectedAll();
 	}
 
 	private EditBox fieldAt(double mouseX, double mouseY) {

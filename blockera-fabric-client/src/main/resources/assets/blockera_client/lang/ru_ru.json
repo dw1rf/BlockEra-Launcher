@@ -53,6 +53,7 @@
   "blockera.chat.filter.background": "Фон окна",
   "blockera.chat.filter.background_status": "Фон окна: %s",
   "blockera.chat.tab.all_hint": "Все сообщения текущей сессии без фильтрации",
+  "blockera.chat.tab.all_main": "«Все» — основной чат, его нельзя дублировать",
   "blockera.chat.filter.name": "Имя вкладки",
   "blockera.chat.filter.include": "Включаемые фразы",
   "blockera.chat.filter.exclude": "Исключаемые фразы",
