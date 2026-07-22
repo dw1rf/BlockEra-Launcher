@@ -31,6 +31,8 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             profile_run,
             profile_kill,
             profile_edit,
+            profile_blockera_client_compatibility,
+            profile_set_blockera_client,
             profile_edit_icon,
             profile_export_mrpack,
             profile_get_pack_export_candidates,
@@ -381,6 +383,28 @@ pub async fn profile_edit(path: &str, edit_profile: EditProfile) -> Result<()> {
     })
     .await?;
 
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn profile_blockera_client_compatibility(
+    path: &str,
+) -> Result<theseus::blockera_runtime::BlockeraClientCompatibility> {
+    let profile = profile::get(path).await?.ok_or_else(|| {
+        theseus::ErrorKind::UnmanagedProfileError(path.to_string()).as_error()
+    })?;
+    Ok(theseus::blockera_runtime::client_compatibility(
+        &profile.game_version,
+        profile.loader,
+    ))
+}
+
+#[tauri::command]
+pub async fn profile_set_blockera_client(
+    path: &str,
+    enabled: bool,
+) -> Result<()> {
+    theseus::blockera_runtime::set_client_enabled(path, enabled).await?;
     Ok(())
 }
 

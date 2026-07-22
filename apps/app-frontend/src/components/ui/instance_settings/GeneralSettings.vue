@@ -25,7 +25,14 @@ import { useRouter } from 'vue-router'
 import BackgroundPicker from '@/components/ui/BackgroundPicker.vue'
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { duplicate, edit, edit_icon, list, remove } from '@/helpers/profile'
+import {
+	duplicate,
+	edit,
+	edit_icon,
+	list,
+	remove,
+	set_blockera_client,
+} from '@/helpers/profile'
 import { createDesktopShortcut } from '@/helpers/utils'
 
 import type { GameInstance, InstanceSettingsTabProps } from '../../../helpers/types'
@@ -45,6 +52,28 @@ const groups = ref(props.instance.groups)
 const newCategoryInput = ref('')
 const shortcutPending = ref(false)
 const shortcutCreated = ref(false)
+const blockeraClientEnabled = ref(props.instance.blockera_client_enabled)
+const blockeraClientPending = ref(false)
+const blockeraClientError = ref('')
+const blockeraClientCompatible = computed(
+	() => props.instance.game_version === '1.21.11' && props.instance.loader === 'fabric',
+)
+
+async function toggleBlockeraClient(value: boolean) {
+	if (blockeraClientPending.value) return
+	const enabled = Boolean(value)
+	blockeraClientPending.value = true
+	blockeraClientError.value = ''
+	try {
+		await set_blockera_client(props.instance.path, enabled)
+		blockeraClientEnabled.value = enabled
+	} catch (error) {
+		blockeraClientError.value = String(error)
+		handleError(error)
+	} finally {
+		blockeraClientPending.value = false
+	}
+}
 
 const installing = computed(() => props.instance.install_stage !== 'installed')
 
@@ -307,6 +336,37 @@ const messages = defineMessages({
 			Выбранный кадр используется на главной странице и в карточках этой сборки.
 		</p>
 		<BackgroundPicker :scope="`instance:${props.instance.path}`" label="Выбрать фон сборки" />
+		<h2 class="m-0 mt-4 mb-1 text-lg font-extrabold text-contrast block">Blockera Client</h2>
+		<p class="m-0 mb-2">
+			Внутриигровой интерфейс Blockera, HUD-редактор, расширенный чат и честные PvP-инструменты.
+		</p>
+		<Checkbox
+			:model-value="blockeraClientEnabled"
+			:disabled="blockeraClientPending || (!blockeraClientCompatible && !blockeraClientEnabled)"
+			label="Blockera Client"
+			@update:model-value="toggleBlockeraClient"
+		/>
+		<p v-if="!blockeraClientCompatible" class="m-0 mt-2 text-secondary">
+			Доступно только для Minecraft 1.21.11 с Fabric.
+		</p>
+		<div v-if="blockeraClientError" class="mt-2 flex flex-col gap-2">
+			<p class="m-0 text-red">Не удалось проверить или установить Blockera Client.</p>
+			<div class="flex gap-2">
+				<ButtonStyled>
+					<button :disabled="blockeraClientPending" @click="toggleBlockeraClient(true)">
+						Повторить
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button :disabled="blockeraClientPending" @click="toggleBlockeraClient(false)">
+						Отключить Blockera Client
+					</button>
+				</ButtonStyled>
+				<ButtonStyled>
+					<button @click="blockeraClientError = ''">Отмена</button>
+				</ButtonStyled>
+			</div>
+		</div>
 		<template v-if="instance.install_stage == 'installed'">
 			<h2 class="m-0 mt-4 mb-1 text-lg font-extrabold text-contrast block">Быстрый запуск</h2>
 			<p class="m-0 mb-2">

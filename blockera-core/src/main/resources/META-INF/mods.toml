@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[43,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="blockera_core"
+version="${file.jarVersion}"
+displayName="Blockera Client Runtime"
+authors="Blockera"
+displayTest="IGNORE_ALL_VERSION"
+description='''
+First-party runtime for Blockera profiles: UI, HUD, configuration and service integrations.
+'''
+
+[[dependencies.blockera_core]]
+modId="forge"
+mandatory=true
+versionRange="[43.5.2,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.blockera_core]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.19.2,1.20)"
+ordering="NONE"
+side="CLIENT"

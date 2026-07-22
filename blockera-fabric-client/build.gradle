@@ -1,0 +1,192 @@
+plugins {
+    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        blockera_core {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Optional local integration API; public checkouts build without private add-ons.
+	def localNavigationApi = file('libs/baritone-api-fabric-1.15.0-8-gbc3dcde2.jar')
+	if (localNavigationApi.isFile()) {
+		modCompileOnly files(localNavigationApi)
+	}
+
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+def generatedModVersion = version
+processResources {
+    inputs.property 'version', generatedModVersion
+    filesMatching('fabric.mod.json') {
+        expand version: generatedModVersion
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
+
+def asciiTestRuntime = new File(gradle.gradleUserHomeDir, 'blockera-fabric-client/test-runtime')
+tasks.register('prepareAsciiTestRuntime', Sync) {
+    into(asciiTestRuntime)
+    from(sourceSets.test.output) { into 'classes' }
+    from(sourceSets.main.output) { into 'classes' }
+    from(sourceSets.client.output) { into 'classes' }
+    from(provider { configurations.testRuntimeClasspath.filter { it.isFile() } }) { into 'lib' }
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    dependsOn tasks.named('prepareAsciiTestRuntime')
+    doFirst {
+        classpath = files(new File(asciiTestRuntime, 'classes')) +
+            fileTree(new File(asciiTestRuntime, 'lib')) { include '*.jar' }
+    }
+}
+
+def privateAiIncludes = [
+    'space/blockera/client/BlockeraAiClient.class',
+    'space/blockera/client/BlockeraClientServices.class',
+    'space/blockera/client/ai/**',
+    'space/blockera/client/automation/**',
+    'space/blockera/client/core/**',
+    'space/blockera/client/navigation/**',
+    'space/blockera/client/targeting/**',
+    'space/blockera/client/voice/**',
+    'space/blockera/client/hud/BlockeraAiHudOverlay*.class'
+]
+
+tasks.named('jar', Jar).configure {
+    archiveBaseName = 'blockera-core-fabric'
+    exclude 'space/blockera/client/BlockeraAiClient.class'
+    exclude 'space/blockera/client/BlockeraClientServices.class'
+    exclude 'space/blockera/client/ai/**'
+    exclude 'space/blockera/client/automation/**'
+    exclude 'space/blockera/client/core/**'
+    exclude 'space/blockera/client/navigation/**'
+    exclude 'space/blockera/client/targeting/**'
+    exclude 'space/blockera/client/voice/**'
+    exclude 'space/blockera/client/hud/BlockeraAiHudOverlay*.class'
+}
+
+def sanitizePublicManifest = { archiveFile ->
+    def archivePath = archiveFile.toPath()
+    def archiveUri = java.net.URI.create("jar:${archivePath.toUri()}")
+    java.nio.file.FileSystems.newFileSystem(archiveUri, ['create': 'false']).withCloseable { zip ->
+        def manifestPath = zip.getPath('/META-INF/MANIFEST.MF')
+        def parsed = new java.util.jar.Manifest(java.nio.file.Files.newInputStream(manifestPath))
+        parsed.mainAttributes.remove(
+            new java.util.jar.Attributes.Name('Fabric-Loom-Client-Only-Entries')
+        )
+        def output = new java.io.ByteArrayOutputStream()
+        parsed.write(output)
+        java.nio.file.Files.write(
+            manifestPath,
+            output.toByteArray(),
+            java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+        )
+    }
+}
+
+tasks.named('remapJar').configure {
+    // Loom derives this split-source attribute before our public exclusions and
+    // writes it during remapping. The public mod is client-only already, so remove
+    // the redundant list after remapping to avoid leaking private class names.
+    doLast { sanitizePublicManifest(archiveFile.get().asFile) }
+}
+
+tasks.register('aiJar', Jar) {
+    dependsOn classes, clientClasses
+    archiveBaseName = 'blockera-ai-private'
+    archiveClassifier = 'dev-unmapped'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets.main.output) {
+        privateAiIncludes.each { include it }
+    }
+    from(sourceSets.client.output) {
+        privateAiIncludes.each { include it }
+    }
+    from('src/ai/resources') {
+        expand version: generatedModVersion
+    }
+}
+
+tasks.register('remapAiJar', net.fabricmc.loom.task.RemapJarTask) {
+    dependsOn tasks.named('aiJar')
+    inputFile = tasks.named('aiJar').flatMap { it.archiveFile }
+    archiveBaseName = 'blockera-ai-private'
+    archiveVersion = generatedModVersion
+    archiveClassifier = ''
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    addNestedDependencies = false
+}
+
+tasks.named('build').configure {
+    dependsOn tasks.named('remapAiJar')
+}
+
+tasks.register('copyPublicRuntime', Copy) {
+    from(configurations.modImplementation.filter {
+        it.name == "fabric-api-${project.fabric_api_version}.jar"
+    })
+    into(layout.buildDirectory.dir('public-runtime'))
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.named('sourcesJar', Jar).configure {
+    exclude 'space/blockera/client/BlockeraAiClient.java'
+    exclude 'space/blockera/client/BlockeraClientServices.java'
+    exclude 'space/blockera/client/ai/**'
+    exclude 'space/blockera/client/automation/**'
+    exclude 'space/blockera/client/core/**'
+    exclude 'space/blockera/client/navigation/**'
+    exclude 'space/blockera/client/targeting/**'
+    exclude 'space/blockera/client/voice/**'
+    exclude 'space/blockera/client/hud/BlockeraAiHudOverlay.java'
+}
+
+tasks.named('remapSourcesJar').configure {
+    doLast { sanitizePublicManifest(archiveFile.get().asFile) }
+}
+
+publishing {
+    publications {
+        create('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "blockera_core",
+  "version": "${version}",
+  "name": "Blockera Core",
+  "description": "First-party Blockera UI, HUD, chat and visual widget runtime.",
+  "authors": ["Blockera"],
+  "contact": {
+    "homepage": "https://blockera.space"
+  },
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "space.blockera.client.BlockeraCoreClient"
+    ]
+  },
+  "mixins": [
+    "blockera_client.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

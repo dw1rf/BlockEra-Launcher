@@ -20,11 +20,12 @@ use tracing::{info, trace};
 pub async fn profile_create(
     name: String,         // the name of the profile, and relative path
     game_version: String, // the game version of the profile
-    modloader: ModLoader, // the modloader to use
+    mut modloader: ModLoader, // the modloader to use
     loader_version: Option<String>, // the modloader version to use, set to "latest", "stable", or the ID of your chosen loader. defaults to latest
     icon_path: Option<String>,      // the icon for the profile
     linked_data: Option<LinkedData>, // the linked project ID (mainly for modpacks)- used for updating
     skip_install_profile: Option<bool>,
+    blockera_client_enabled: Option<bool>,
 ) -> crate::Result<String> {
     trace!("Creating new profile. {}", name);
     let state = State::get().await?;
@@ -60,6 +61,25 @@ pub async fn profile_create(
         "Creating profile at path {}",
         &canonicalize(&full_path)?.display()
     );
+    let blockera_client_enabled = blockera_client_enabled.unwrap_or(false);
+    if blockera_client_enabled {
+        if game_version != crate::blockera_runtime::FABRIC_GAME_VERSION {
+            return Err(ErrorKind::InputError(format!(
+                "Blockera Client supports Minecraft {} only",
+                crate::blockera_runtime::FABRIC_GAME_VERSION
+            ))
+            .into());
+        }
+        if modloader == ModLoader::Vanilla {
+            modloader = ModLoader::Fabric;
+        } else if modloader != ModLoader::Fabric {
+            return Err(ErrorKind::InputError(
+                "Blockera Client requires Fabric".to_string(),
+            )
+            .into());
+        }
+    }
+
     let loader = if modloader != ModLoader::Vanilla {
         get_loader_version_from_profile(
             &game_version,
@@ -84,6 +104,7 @@ pub async fn profile_create(
         groups: Vec::new(),
         linked_data,
         external_pack: None,
+        blockera_client_enabled,
         created: Utc::now(),
         modified: Utc::now(),
         last_played: None,
@@ -161,6 +182,7 @@ pub async fn profile_create_from_duplicate(
         profile.icon_path.clone(),
         profile.linked_data.clone(),
         Some(true),
+        Some(false),
     )
     .await?;
 

@@ -1,4 +1,8 @@
 use crate::State;
+use crate::blockera_runtime::{
+    BlockeraCoreArtifact, BlockeraIntegrationConfig, validate_core_artifact,
+    validate_integration_config,
+};
 use crate::util::fetch::REQWEST_CLIENT;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -35,6 +39,9 @@ pub struct CatalogModpack {
     pub revision: String,
     pub size: u64,
     pub download: CatalogDownload,
+    pub blockera_core: BlockeraCoreArtifact,
+    #[serde(default)]
+    pub integrations: BlockeraIntegrationConfig,
     pub cover_url: Option<String>,
     pub status: CatalogPackStatus,
     pub permission: String,
@@ -188,6 +195,18 @@ pub fn validate_catalog(catalog: &ModpackCatalog) -> crate::Result<()> {
             ))
             .into());
         }
+        validate_core_artifact(&pack.blockera_core).map_err(|_| {
+            crate::ErrorKind::InputError(format!(
+                "Catalog entry {} has invalid blockera-core metadata",
+                pack.id
+            ))
+        })?;
+        validate_integration_config(&pack.integrations).map_err(|_| {
+            crate::ErrorKind::InputError(format!(
+                "Catalog entry {} has invalid Blockera integration endpoints",
+                pack.id
+            ))
+        })?;
         let official_url = Url::parse(&pack.official_url)?;
         if official_url.scheme() != "https" {
             return Err(crate::ErrorKind::InputError(format!(

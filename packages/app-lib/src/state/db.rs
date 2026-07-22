@@ -173,3 +173,41 @@ pub(crate) async fn apply_migration_fix(eol: &str) -> crate::Result<bool> {
 
     Ok(changed)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn existing_profiles_default_to_blockera_client_disabled() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        sqlx::query(
+            r#"
+            INSERT INTO profiles (
+                path, install_stage, name, game_version, mod_loader, groups,
+                created, modified, override_extra_launch_args,
+                override_custom_env_vars
+            ) VALUES (
+                'existing', 'installed', 'Existing', '1.21.11', 'fabric',
+                jsonb('[]'), 1, 1, jsonb('null'), jsonb('null')
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let enabled: i64 = sqlx::query_scalar(
+            "SELECT blockera_client_enabled FROM profiles WHERE path = 'existing'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(enabled, 0);
+    }
+}

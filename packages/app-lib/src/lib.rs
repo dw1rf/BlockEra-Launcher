@@ -11,6 +11,7 @@ and launching Modrinth mod packs
 pub mod util; // This code is modified by AstralRinth
 
 mod api;
+pub mod blockera_runtime;
 mod error;
 mod event;
 mod launcher;

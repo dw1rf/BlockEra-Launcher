@@ -24,6 +24,7 @@ const LAUNCHER_LOG_PATH: &str = "launcher_log.txt";
 
 pub struct ProcessManager {
     processes: DashMap<Uuid, Process>,
+    account_switch_relaunches: DashMap<String, ()>,
 }
 
 impl Default for ProcessManager {
@@ -36,7 +37,38 @@ impl ProcessManager {
     pub fn new() -> Self {
         Self {
             processes: DashMap::new(),
+            account_switch_relaunches: DashMap::new(),
         }
+    }
+
+    /// Requests one clean relaunch after the currently running process exits.
+    /// Account tokens stay in the launcher; the game only receives an acknowledgement.
+    pub fn request_account_switch_relaunch(&self, profile_path: &str) {
+        self.account_switch_relaunches
+            .insert(profile_path.to_owned(), ());
+    }
+
+    fn take_account_switch_relaunch(&self, profile_path: &str) -> bool {
+        self.account_switch_relaunches
+            .remove(profile_path)
+            .is_some()
+    }
+
+    fn account_switch_relaunch_task(
+        profile_path: String,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(async move {
+            if let Err(error) = crate::api::profile::run(
+                &profile_path,
+                crate::api::profile::QuickPlayType::None,
+            )
+            .await
+            {
+                tracing::error!(
+                    "Failed to relaunch profile {profile_path} after account switch: {error}"
+                );
+            }
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -733,6 +765,10 @@ impl Process {
 
         let _ = state.friends_socket.update_status(None).await;
 
+        let relaunch_after_account_switch = state
+            .process_manager
+            .take_account_switch_relaunch(&profile_path);
+
         // If in tauri, window should show itself again after process exists if it was hidden
         #[cfg(feature = "tauri")]
         {
@@ -763,6 +799,12 @@ impl Process {
                     command.spawn().map_err(IOError::from)?;
                 }
             }
+        }
+
+        if relaunch_after_account_switch {
+            tokio::spawn(ProcessManager::account_switch_relaunch_task(
+                profile_path.clone(),
+            ));
         }
 
         Ok(())

@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"updatedAt": "2026-07-17T12:00:00Z",
+	"updatedAt": "2026-07-18T21:40:00Z",
 	"packs": [
 		{
 			"id": "nafi-aquian-industrial-era-2-0",
@@ -77,6 +77,20 @@
 			"download": {
 				"url": "https://github.com/dw1rf/BlockEra-Launcher/releases/download/modpack-nafi-industrial-era-2.0-blockera.1/nafi-aquian-industrial-era-2.0-blockera.1.mrpack",
 				"sha256": "146fa14f449cc69ab1089576cc1094a008ee3770d39b61e3ef3cdf1d578cc448"
+			},
+			"blockeraCore": {
+				"id": "blockera-core",
+				"version": "0.4.0",
+				"fileName": "blockera-core-0.4.0.jar",
+				"url": "https://github.com/dw1rf/BlockEra-Launcher/releases/download/blockera-core-v0.4.0/blockera-core-0.4.0.jar",
+				"sha256": "bfd563253662db3c8c5655780fe101e21bfb901a348177f065e82eec479c1c9e",
+				"size": 1139223,
+				"required": true,
+				"firstParty": true
+			},
+			"integrations": {
+				"apiBaseUrl": null,
+				"websocketUrl": null
 			},
 			"coverUrl": null,
 			"status": "ready",

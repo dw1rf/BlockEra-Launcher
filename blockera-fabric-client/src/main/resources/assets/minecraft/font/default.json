@@ -1,0 +1,12 @@
+{
+  "providers": [
+    {
+      "type": "reference",
+      "id": "blockera_client:ui_regular"
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/unifont"
+    }
+  ]
+}

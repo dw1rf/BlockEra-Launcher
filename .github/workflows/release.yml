@@ -39,15 +39,29 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Install Java
+      - name: Install Java 17 for legacy Forge core
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Install Java 21 for Fabric client
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
           cache: gradle
           cache-dependency-path: |
             packages/app-lib/java/*.gradle.kts
             packages/app-lib/java/gradle/wrapper/gradle-wrapper.properties
+            blockera-core/build.gradle
+            blockera-core/*.gradle.kts
+            blockera-core/gradle.properties
+            blockera-core/gradle/wrapper/gradle-wrapper.properties
+            blockera-fabric-client/build.gradle
+            blockera-fabric-client/settings.gradle
+            blockera-fabric-client/gradle.properties
+            blockera-fabric-client/gradle/wrapper/gradle-wrapper.properties
 
       - name: Cache Turbo build
         uses: actions/cache@v5

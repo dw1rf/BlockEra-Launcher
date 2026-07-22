@@ -40,6 +40,7 @@ pub struct Profile {
 
     pub linked_data: Option<LinkedData>,
     pub external_pack: Option<ExternalPackMetadata>,
+    pub blockera_client_enabled: bool,
 
     pub created: DateTime<Utc>,
     pub modified: DateTime<Utc>,
@@ -327,6 +328,7 @@ struct ProfileQueryResult {
     protocol_version: Option<i64>,
     launcher_feature_version: String,
     external_pack: Option<serde_json::Value>,
+    blockera_client_enabled: i64,
 }
 
 impl TryFrom<ProfileQueryResult> for Profile {
@@ -363,6 +365,7 @@ impl TryFrom<ProfileQueryResult> for Profile {
                 .external_pack
                 .map(serde_json::from_value)
                 .transpose()?,
+            blockera_client_enabled: x.blockera_client_enabled == 1,
             created: Utc
                 .timestamp_opt(x.created, 0)
                 .single()
@@ -418,7 +421,8 @@ const SELECT_PROFILES: &str = r#"
         override_mc_memory_max, override_mc_force_fullscreen,
         override_mc_game_resolution_x, override_mc_game_resolution_y,
         override_hook_pre_launch, override_hook_wrapper,
-        override_hook_post_exit, json(external_pack) AS external_pack
+        override_hook_post_exit, json(external_pack) AS external_pack,
+        blockera_client_enabled
     FROM profiles
 "#;
 
@@ -511,7 +515,8 @@ impl Profile {
                 override_java_path, override_extra_launch_args, override_custom_env_vars,
                 override_mc_memory_max, override_mc_force_fullscreen, override_mc_game_resolution_x, override_mc_game_resolution_y,
                 override_hook_pre_launch, override_hook_wrapper, override_hook_post_exit,
-                protocol_version, launcher_feature_version, external_pack
+                protocol_version, launcher_feature_version, external_pack,
+                blockera_client_enabled
             )
             VALUES (
                 $1, $2, $3, $4,
@@ -523,7 +528,7 @@ impl Profile {
                 $17, jsonb($18), jsonb($19),
                 $20, $21, $22, $23,
                 $24, $25, $26,
-                $27, $28, jsonb($29)
+                $27, $28, jsonb($29), $30
             )
             ON CONFLICT (path) DO UPDATE SET
                 install_stage = $2,
@@ -561,7 +566,8 @@ impl Profile {
 
                 protocol_version = $27,
                 launcher_feature_version = $28,
-                external_pack = jsonb($29)
+                external_pack = jsonb($29),
+                blockera_client_enabled = $30
             ",
         )
             .bind(&self.path)
@@ -593,6 +599,7 @@ impl Profile {
             .bind(self.protocol_version)
             .bind(launcher_feature_version)
             .bind(external_pack)
+            .bind(self.blockera_client_enabled)
             .execute(exec)
             .await?;
 

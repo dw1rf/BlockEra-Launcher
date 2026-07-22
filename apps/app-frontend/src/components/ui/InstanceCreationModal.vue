@@ -150,6 +150,29 @@
 						</div>
 					</section>
 
+					<section class="creation-panel blockera-client-panel">
+						<div class="panel-heading">
+							<span>03</span>
+							<div>
+								<h3>Blockera Client</h3>
+								<p>Внутриигровой интерфейс, HUD-редактор, расширенный чат и честные PvP-инструменты.</p>
+							</div>
+						</div>
+						<Checkbox
+							:model-value="blockera_client_enabled"
+							:disabled="!blockera_version_compatible"
+							label="Установить Blockera Client"
+							@update:model-value="setBlockeraClientEnabled"
+						/>
+						<p class="blockera-compatibility" :class="{ supported: blockera_version_compatible }">
+							{{
+								blockera_version_compatible
+									? 'Поддерживается: Minecraft 1.21.11 + Fabric. Для Vanilla Fabric будет выбран автоматически.'
+									: 'Доступно только для Minecraft 1.21.11.'
+							}}
+						</p>
+					</section>
+
 					<footer class="creation-actions">
 						<div>
 							<strong>{{ profile_name.trim() || 'Новая сборка' }}</strong
@@ -350,7 +373,7 @@ import { Avatar, Button, Checkbox, Chips, injectNotificationManager } from '@mod
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { open } from '@tauri-apps/plugin-dialog'
-import { computed, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, onUnmounted, ref, shallowRef, watch } from 'vue'
 import Multiselect from 'vue-multiselect'
 
 import CurseForgeProfileImportModal from '@/components/ui/CurseForgeProfileImportModal.vue'
@@ -380,6 +403,7 @@ const display_icon = ref(null)
 const creating = ref(false)
 const fileImporting = ref(false)
 const showSnapshots = ref(false)
+const blockera_client_enabled = ref(false)
 const creationType = ref('custom')
 const isShowing = ref(false)
 const creationBackdrop = computed(() =>
@@ -387,6 +411,29 @@ const creationBackdrop = computed(() =>
 		profile_name.value.trim() || `${loader.value}-${game_version.value || 'latest'}`,
 	),
 )
+const blockera_version_compatible = computed(() => game_version.value === '1.21.11')
+
+function setBlockeraClientEnabled(value) {
+	blockera_client_enabled.value = Boolean(value) && blockera_version_compatible.value
+	if (blockera_client_enabled.value && loader.value !== 'fabric') {
+		loader.value = 'fabric'
+		loader_version.value = 'stable'
+	}
+}
+
+watch(game_version, (version, previous) => {
+	if (version !== '1.21.11') {
+		blockera_client_enabled.value = false
+	} else if (previous !== '1.21.11') {
+		setBlockeraClientEnabled(true)
+	}
+})
+
+watch(loader, (value) => {
+	if (blockera_client_enabled.value && value !== 'fabric') {
+		blockera_client_enabled.value = false
+	}
+})
 
 function formatLoader(value) {
 	const labels = {
@@ -420,6 +467,7 @@ defineExpose({
 		showImportSummary.value = false
 		importResults.value = []
 		showSnapshots.value = false
+		blockera_client_enabled.value = false
 		loader.value = 'vanilla'
 		loader_version.value = 'stable'
 		icon.value = null
@@ -538,6 +586,8 @@ const create_instance = async () => {
 			loader.value,
 			loader.value === 'vanilla' ? null : (loader_version_value ?? 'stable'),
 			icon.value,
+			undefined,
+			blockera_client_enabled.value,
 		)
 
 		trackEvent('InstanceCreate', {

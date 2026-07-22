@@ -1,0 +1,76 @@
+plugins {
+	id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+	id 'org.spongepowered.mixin' version '0.7-SNAPSHOT'
+}
+
+group = 'space.blockera'
+version = '0.4.0'
+
+base {
+	archivesName = 'blockera-core'
+}
+
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+minecraft {
+	mappings channel: 'official', version: '1.19.2'
+
+	runs {
+		client {
+			workingDirectory project.file('run')
+			property 'forge.logging.console.level', 'info'
+
+			mods {
+				blockera_core {
+					source sourceSets.main
+				}
+			}
+		}
+	}
+}
+
+dependencies {
+	minecraft 'net.minecraftforge:forge:1.19.2-43.5.2'
+	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+	testImplementation platform('org.junit:junit-bom:5.10.2')
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+mixin {
+	add sourceSets.main, 'blockera_core.refmap.json'
+	config 'blockera_core.mixins.json'
+}
+
+tasks.named('test', Test).configure {
+	useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.release = 17
+	// Mixin's annotation processor intentionally does not claim Forge's runtime annotations.
+	options.compilerArgs.addAll(['-Xlint:all,-processing', '-Werror'])
+}
+
+tasks.named('jar', Jar).configure {
+	archiveFileName = 'blockera-core.jar'
+	manifest {
+		attributes([
+			'Specification-Title': 'Blockera Client Runtime',
+			'Specification-Vendor': 'Blockera',
+			'Specification-Version': project.version,
+			'Implementation-Title': project.name,
+			'Implementation-Version': project.version,
+			'Implementation-Vendor': 'Blockera',
+			'MixinConfigs': 'blockera_core.mixins.json'
+		])
+	}
+	finalizedBy 'reobfJar'
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+	preserveFileTimestamps = false
+	reproducibleFileOrder = true
+}

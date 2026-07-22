@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "space.blockera.core.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "blockera_core.refmap.json",
+  "client": [
+    "AbstractSliderButtonAccessor",
+    "AbstractSelectionListMixin",
+    "AbstractWidgetMixin",
+    "ChatComponentMixin",
+    "ChatScreenMixin",
+    "CommandSuggestionsMixin",
+    "FontMixin",
+    "GuiComponentMixin",
+	"GameRendererMixin",
+	"LightTextureMixin",
+	"MultiPlayerGameModeAccessor",
+    "ScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

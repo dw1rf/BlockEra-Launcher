@@ -20,6 +20,7 @@ pub async fn profile_create(
     loader_version: Option<String>, // the modloader version to use, set to "latest", "stable", or the ID of your chosen loader
     icon: Option<String>,           // the icon for the profile
     skip_install: Option<bool>,
+    blockera_client_enabled: Option<bool>,
 ) -> Result<String> {
     let res = profile::create::profile_create(
         name,
@@ -29,6 +30,7 @@ pub async fn profile_create(
         icon,
         None,
         skip_install,
+        blockera_client_enabled,
     )
     .await?;
     Ok(res)

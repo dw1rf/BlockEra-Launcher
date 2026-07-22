@@ -335,6 +335,7 @@ where
                         None
                     }),
                     external_pack: None,
+                    blockera_client_enabled: false,
                     created: profile.metadata.date_created,
                     modified: profile.metadata.date_modified,
                     last_played: profile.metadata.last_played,
