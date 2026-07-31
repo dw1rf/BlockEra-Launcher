@@ -387,7 +387,6 @@ async fn install_verified_pack(
         None,
         None,
         Some(true),
-        Some(false),
     )
     .await?;
 
@@ -405,15 +404,12 @@ async fn install_verified_pack(
             async { Ok(()) }
         })
         .await?;
-        crate::blockera_runtime::write_profile_manifest(&profile_path, pack)
-            .await?;
 
-        let installed_profile = install_zipped_mrpack(
+        install_zipped_mrpack(
             CreatePackLocation::FromFile { path },
             profile_path.clone(),
         )
-        .await?;
-        Ok(installed_profile)
+        .await
     }
     .await;
 

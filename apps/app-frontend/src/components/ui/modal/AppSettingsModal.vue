@@ -153,9 +153,13 @@ function show() {
 	modal.value.show()
 }
 
+function hide() {
+	modal.value?.hide()
+}
+
 const isOpen = computed(() => modal.value?.isOpen)
 
-defineExpose({ show, isOpen })
+defineExpose({ show, hide, isOpen })
 
 const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
 

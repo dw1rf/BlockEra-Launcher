@@ -21,7 +21,6 @@ use daedalus::modded::LoaderVersion;
 use rand::seq::SliceRandom; // This code is modified by AstralRinth
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sha2::{Digest, Sha256};
 use st::Profile;
 use std::fmt::Write;
@@ -457,7 +456,6 @@ pub async fn install_minecraft(
     }
 
     let protocol_version = read_protocol_version_from_jar(client_path).await?;
-    crate::blockera_runtime::ensure_profile(profile).await?;
 
     crate::api::profile::edit(&profile.path, |prof| {
         prof.install_stage = ProfileInstallStage::Installed;
@@ -524,8 +522,6 @@ pub async fn launch_minecraft(
 
     if profile.install_stage != ProfileInstallStage::Installed {
         install_minecraft(profile, None, false).await?;
-    } else {
-        crate::blockera_runtime::ensure_profile(profile).await?;
     }
 
     let state = State::get().await?;
@@ -672,67 +668,7 @@ pub async fn launch_minecraft(
     let (main_class_keep_alive, main_class_path) =
         get_resource_file!(env "JAVA_JARS_DIR" / "theseus.jar")?;
 
-    let account_switch_profile = profile.path.clone();
-    let rpc_server = RpcServerBuilder::new()
-        .handler(
-            "blockera.accounts.list",
-            Box::new(|_| {
-                Box::pin(async move {
-                    let state = State::get().await?;
-                    let users = Credentials::get_all(&state.pool).await?;
-                    let mut accounts = users
-                        .into_iter()
-                        .map(|(_, credentials)| {
-                            json!({
-                                "uuid": credentials.offline_profile.id,
-                                "username": credentials.offline_profile.name,
-                                "account_type": credentials.account_type,
-                                "active": credentials.active,
-                            })
-                        })
-                        .collect::<Vec<_>>();
-                    accounts.sort_by(|left, right| {
-                        left["username"]
-                            .as_str()
-                            .cmp(&right["username"].as_str())
-                    });
-                    Ok(json!(accounts))
-                })
-            }),
-        )
-        .handler(
-            "blockera.accounts.switch",
-            Box::new(move |args| {
-                let profile_path = account_switch_profile.clone();
-                Box::pin(async move {
-                    let uuid = args
-                        .first()
-                        .and_then(|value| value.as_str())
-                        .ok_or_else(|| {
-                            crate::ErrorKind::RpcError(
-                                "Missing account UUID".to_owned(),
-                            )
-                            .as_error()
-                        })?
-                        .parse::<uuid::Uuid>()
-                        .map_err(|error| {
-                            crate::ErrorKind::RpcError(format!(
-                                "Invalid account UUID: {error}"
-                            ))
-                            .as_error()
-                        })?;
-
-                    crate::api::minecraft_auth::set_default_user(uuid).await?;
-                    let state = State::get().await?;
-                    state
-                        .process_manager
-                        .request_account_switch_relaunch(&profile_path);
-                    Ok(json!({ "accepted": true }))
-                })
-            }),
-        )
-        .launch()
-        .await?;
+    let rpc_server = RpcServerBuilder::new().launch().await?;
 
     command.args(
         args::get_jvm_arguments(
@@ -762,11 +698,6 @@ pub async fn launch_minecraft(
             rpc_server.address(),
         )?
         .into_iter(),
-    );
-    command.args(
-        crate::blockera_runtime::integration_jvm_args(profile)
-            .await?
-            .into_iter(),
     );
 
     // The java launcher requires access to java.lang.reflect in order to force access in to

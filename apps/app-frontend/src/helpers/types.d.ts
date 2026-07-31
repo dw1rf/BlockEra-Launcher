@@ -14,7 +14,6 @@ type GameInstance = {
 	groups: string[]
 
 	linked_data?: LinkedData
-	blockera_client_enabled: boolean
 
 	created: Date
 	modified: Date

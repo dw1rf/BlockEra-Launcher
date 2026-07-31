@@ -103,7 +103,7 @@ onUnmounted(() => {
 	min-height: 100%;
 	padding: 1.5rem 2rem 2rem;
 	box-sizing: border-box;
-	overflow-y: auto;
+	overflow: visible;
 	background:
 		radial-gradient(circle at 82% 4%, rgba(126, 34, 206, 0.16), transparent 28rem), #060a12;
 }
