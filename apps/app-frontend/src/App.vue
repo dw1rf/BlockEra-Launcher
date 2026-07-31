@@ -410,6 +410,9 @@ function handleWindowDrag(event) {
 
 const router = useRouter()
 router.afterEach((to, from, failure) => {
+	if (!failure && to.fullPath !== from.fullPath) {
+		settingsModal.value?.hide()
+	}
 	trackEvent('PageView', {
 		path: to.path,
 		fromPath: from.path,
@@ -921,27 +924,31 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				</span>
 			</router-link>
 			<nav class="cinematic-nav" aria-label="Основная навигация">
-				<router-link to="/" class="cinematic-nav-link">
+				<router-link to="/" class="cinematic-nav-link" aria-label="Главная">
 					<HomeIcon />
 					<span>Главная</span>
 				</router-link>
-				<router-link to="/browse/modpack" class="cinematic-nav-link">
+				<router-link to="/browse/modpack" class="cinematic-nav-link" aria-label="Каталог">
 					<CompassIcon />
 					<span>Каталог</span>
 				</router-link>
-				<router-link to="/library" class="cinematic-nav-link">
+				<router-link to="/library" class="cinematic-nav-link" aria-label="Библиотека">
 					<CollectionIcon />
 					<span>Библиотека</span>
 				</router-link>
-				<router-link :to="modsRoute" class="cinematic-nav-link">
+				<router-link :to="modsRoute" class="cinematic-nav-link" aria-label="Моя сборка">
 					<BlocksIcon />
 					<span>Моя сборка</span>
 				</router-link>
-				<router-link to="/skins" class="cinematic-nav-link">
+				<router-link to="/skins" class="cinematic-nav-link" aria-label="Скины">
 					<ChangeSkinIcon />
 					<span>Скины</span>
 				</router-link>
-				<button class="cinematic-nav-link" @click="$refs.settingsModal.show()">
+				<button
+					class="cinematic-nav-link"
+					aria-label="Настройки"
+					@click="$refs.settingsModal.show()"
+				>
 					<SettingsIcon />
 					<span>Настройки</span>
 				</button>
@@ -1214,13 +1221,23 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	--right-bar-width: 0rem;
 }
 
+.app-grid-layout:has(.cinematic-topbar) {
+	position: fixed;
+	inset: 0 0 auto;
+	z-index: 30;
+	height: var(--top-bar-height);
+}
+
 .cinematic-topbar {
 	grid-area: status;
+	position: relative;
 	z-index: 30;
 	display: flex;
 	align-items: center;
 	min-width: 0;
 	height: var(--top-bar-height);
+	width: 100%;
+	box-sizing: border-box;
 	padding-left: 1.25rem;
 	overflow: visible;
 	background: rgba(7, 10, 17, 0.94);
@@ -1235,8 +1252,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	display: inline-flex;
 	align-items: center;
 	gap: 0.7rem;
-	min-width: 15.5rem;
+	min-width: max-content;
 	flex: 0 0 auto;
+	margin-right: clamp(0.5rem, 1.5vw, 2rem);
 	color: var(--color-contrast);
 	text-decoration: none;
 }
@@ -1268,12 +1286,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 }
 
 .cinematic-nav {
+	container-name: cinematic-nav;
+	container-type: inline-size;
 	display: flex;
 	min-width: 0;
 	flex: 1 1 auto;
 	align-items: center;
 	gap: 0.45rem;
 	height: 100%;
+	overflow: hidden;
 }
 
 .cinematic-nav-link {
@@ -1293,11 +1314,23 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	font: inherit;
 	text-decoration: none;
 	cursor: pointer;
+	white-space: nowrap;
 	transition:
 		transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
 		color 180ms cubic-bezier(0.4, 0, 0.2, 1),
 		background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
 		border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@container cinematic-nav (max-width: 48rem) {
+	.cinematic-nav-link span {
+		display: none;
+	}
+
+	.cinematic-nav-link {
+		min-width: 2.75rem;
+		padding-inline: 0.65rem;
+	}
 }
 
 .cinematic-nav-link svg {
@@ -1495,6 +1528,8 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	height: 100%;
 	overflow: auto;
 	overflow-x: hidden;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
 }
 
 .app-contents::before {

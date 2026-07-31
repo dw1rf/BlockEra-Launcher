@@ -18,15 +18,7 @@ import { install_to_existing_profile } from '@/helpers/pack.js'
     - icon is a path to an image file, which will be copied into the profile directory
 */
 
-export async function create(
-	name,
-	gameVersion,
-	modloader,
-	loaderVersion,
-	icon,
-	skipInstall,
-	blockeraClientEnabled = false,
-) {
+export async function create(name, gameVersion, modloader, loaderVersion, icon, skipInstall) {
 	//Trim string name to avoid "Unable to find directory"
 	name = name.trim()
 	return await invoke('plugin:profile-create|profile_create', {
@@ -36,16 +28,7 @@ export async function create(
 		loaderVersion,
 		icon,
 		skipInstall,
-		blockeraClientEnabled,
 	})
-}
-
-export async function get_blockera_client_compatibility(path) {
-	return await invoke('plugin:profile|profile_blockera_client_compatibility', { path })
-}
-
-export async function set_blockera_client(path, enabled) {
-	return await invoke('plugin:profile|profile_set_blockera_client', { path, enabled })
 }
 
 // duplicate a profile

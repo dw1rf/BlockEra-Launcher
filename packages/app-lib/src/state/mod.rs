@@ -46,6 +46,7 @@ mod mr_auth;
 pub use self::mr_auth::*;
 
 mod legacy_converter;
+mod retired_blockera_client;
 
 pub mod attached_world_data;
 pub mod server_join_log;
@@ -95,6 +96,15 @@ impl State {
 
             if let Err(e) = res {
                 tracing::error!("Error running discord RPC: {e}");
+            }
+
+            if let Err(error) =
+                retired_blockera_client::cleanup_all_profiles().await
+            {
+                tracing::warn!(
+                    error = ?error,
+                    "Could not finish removing retired Blockera Client artifacts"
+                );
             }
 
             let _ = state

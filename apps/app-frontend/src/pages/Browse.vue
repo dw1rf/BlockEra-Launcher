@@ -46,30 +46,64 @@ const [categories, loaders, availableGameVersions] = await Promise.all([
 
 const categoryLabels: Record<string, string> = {
 	adventure: 'Приключения',
+	audio: 'Звуки',
+	blocks: 'Блоки',
+	cartoon: 'Мультяшные',
+	challenging: 'Сложные',
+	combat: 'Сражения',
+	'core-shaders': 'Основные шейдеры',
 	cursed: 'Безумные',
 	decoration: 'Декор',
 	economy: 'Экономика',
+	entities: 'Существа',
+	environment: 'Окружение',
 	equipment: 'Экипировка',
+	exploration: 'Исследования',
+	fantasy: 'Фэнтези',
 	food: 'Еда',
-	game_mechanics: 'Игровая механика',
+	fonts: 'Шрифты',
+	'game-mechanics': 'Игровая механика',
+	gui: 'Интерфейс',
+	items: 'Предметы',
+	'kitchen-sink': 'Всё в одном',
 	library: 'Библиотеки',
+	lightweight: 'Лёгкие',
+	locale: 'Локализация',
 	magic: 'Магия',
 	management: 'Управление',
 	minigame: 'Мини-игры',
 	mobs: 'Мобы',
+	modded: 'Для модов',
+	models: 'Модели',
+	multiplayer: 'Мультиплеер',
 	optimization: 'Оптимизация',
+	quests: 'Задания',
+	realistic: 'Реалистичные',
+	'semi-realistic': 'Полуреалистичные',
+	simplistic: 'Упрощённые',
 	social: 'Социальные',
 	storage: 'Хранилища',
 	technology: 'Технологии',
+	themed: 'Тематические',
 	transportation: 'Транспорт',
+	tweaks: 'Улучшения',
 	utility: 'Утилиты',
+	'vanilla-like': 'В стиле ванилы',
 	worldgen: 'Генерация мира',
+}
+
+function normalizeCategoryName(name: string) {
+	return name.toLocaleLowerCase().replace(/[_ ]/g, '-')
+}
+
+function categoryLabel(name: string, fallback?: string) {
+	return categoryLabels[normalizeCategoryName(name)] ?? fallback ?? name
 }
 
 const localizedCategories = computed(() =>
 	(categories.value ?? []).map((category: Category) => ({
 		...category,
-		formatted_name: categoryLabels[category.name] ?? category.formatted_name,
+		formatted_name: categoryLabel(category.name, category.formatted_name),
 	})),
 )
 
@@ -80,12 +114,38 @@ const tags: Ref<Tags> = computed(() => ({
 }))
 
 function filterLabel(filter: { id: string; formatted_name: string }) {
-	if (filter.id.startsWith('category')) return 'Категории'
+	if (filter.id.startsWith('category')) {
+		const categoryHeader = filter.id.split('_').slice(2).join('_')
+		return (
+			(
+				{
+					categories: 'Категории',
+					features: 'Особенности',
+					resolutions: 'Разрешение',
+					performance_impact: 'Влияние на производительность',
+				} as Record<string, string>
+			)[categoryHeader] ?? 'Категории'
+		)
+	}
 	if (filter.id === 'game_version') return 'Версия игры'
-	if (filter.id === 'mod_loader') return 'Загрузчик'
+	if (filter.id.endsWith('_loader') || filter.id === 'mod_loader') return 'Загрузчик'
+	if (filter.id === 'plugin_platform') return 'Платформа'
 	if (filter.id === 'environment') return 'Сторона запуска'
 	if (filter.id === 'license') return 'Лицензия'
 	return filter.formatted_name
+}
+
+function filterOptionLabel(filterId: string, optionId: string, fallback?: string) {
+	if (filterId.startsWith('category')) return categoryLabel(optionId, fallback)
+	if (filterId === 'environment') {
+		return (
+			({ client: 'Клиент', server: 'Сервер' } as Record<string, string>)[optionId] ??
+			fallback ??
+			optionId
+		)
+	}
+	if (filterId === 'license' && optionId === 'open_source') return 'Открытый исходный код'
+	return fallback ?? optionId
 }
 
 function sortLabel(label?: string) {
@@ -94,7 +154,10 @@ function sortLabel(label?: string) {
 			{
 				Relevance: 'Релевантность',
 				Downloads: 'Загрузки',
+				Followers: 'Подписки',
 				Follows: 'Подписки',
+				'Date published': 'Дата публикации',
+				'Date updated': 'Дата обновления',
 				Newest: 'Новые',
 				Updated: 'Обновлённые',
 			} as Record<string, string>
@@ -213,6 +276,22 @@ const {
 	// Functions
 	createPageParams,
 } = useSearch(projectTypes, tags, instanceFilters)
+
+const localizedFilters = computed(() =>
+	filters.value.map((filter) => ({
+		...filter,
+		formatted_name: filterLabel(filter),
+		options: filter.options.map((option) => ({
+			...option,
+			formatted_name: filterOptionLabel(filter.id, option.id, option.formatted_name),
+		})),
+		toggle_groups: filter.toggle_groups?.map((group) => ({
+			...group,
+			formatted_name:
+				group.id === 'all_versions' ? 'Показать все версии' : group.formatted_name,
+		})),
+	})),
+)
 
 const offline = ref(!navigator.onLine)
 window.addEventListener('offline', () => {
@@ -481,11 +560,11 @@ const selectableProjectTypes = computed(() => {
 	}
 
 	const links = [
-		{ label: 'Modpacks', href: `/browse/modpack`, shown: modpacks },
-		{ label: 'Mods', href: `/browse/mod`, shown: mods },
-		{ label: 'Resource Packs', href: `/browse/resourcepack` },
-		{ label: 'Data Packs', href: `/browse/datapack`, shown: dataPacks },
-		{ label: 'Shaders', href: `/browse/shader` },
+		{ label: 'Сборки', href: `/browse/modpack`, shown: modpacks },
+		{ label: 'Моды', href: `/browse/mod`, shown: mods },
+		{ label: 'Ресурс-паки', href: `/browse/resourcepack` },
+		{ label: 'Дата-паки', href: `/browse/datapack`, shown: dataPacks },
+		{ label: 'Шейдеры', href: `/browse/shader` },
 	]
 
 	if (params) {
@@ -523,6 +602,18 @@ const messages = defineMessages({
 })
 
 const options = ref(null)
+const browseTitle = computed(
+	() =>
+		(
+			{
+				modpack: 'Сборки',
+				mod: 'Моды',
+				resourcepack: 'Ресурс-паки',
+				datapack: 'Дата-паки',
+				shader: 'Шейдеры',
+			} as Record<string, string>
+		)[String(projectType.value)] ?? 'Контент',
+)
 const handleRightClick = (event, result) => {
 	options.value.showMenu(event, result, [
 		{
@@ -558,7 +649,7 @@ void refreshSearch()
 		<section class="browse-hero">
 			<div class="browse-heading">
 				<p>КАТАЛОГ КОНТЕНТА</p>
-				<h1>{{ instance ? 'Контент для сборки' : 'Моды' }}</h1>
+				<h1>{{ instance ? 'Контент для сборки' : browseTitle }}</h1>
 				<span>Дополняйте игру проверенными модами, шейдерами и ресурсами.</span>
 			</div>
 			<NavTabs class="browse-tabs" :links="selectableProjectTypes" />
@@ -577,7 +668,7 @@ void refreshSearch()
 		</section>
 
 		<div class="browse-layout">
-			<aside v-if="filters" class="browse-filters">
+			<aside v-if="localizedFilters.length" class="browse-filters">
 				<div v-if="instance" class="instance-filter-toggle">
 					<Checkbox
 						v-model="instanceHideInstalled"
@@ -590,7 +681,7 @@ void refreshSearch()
 					<span>Фильтры</span><small>{{ results?.total_hits ?? 0 }} проектов</small>
 				</div>
 				<SearchSidebarFilter
-					v-for="filter in filters.filter((item) => item.display !== 'none')"
+					v-for="filter in localizedFilters.filter((item) => item.display !== 'none')"
 					:key="`main-filter-${filter.id}`"
 					v-model:selected-filters="currentFilters"
 					v-model:toggled-groups="toggledGroups"
@@ -648,7 +739,7 @@ void refreshSearch()
 				</div>
 				<SearchFilterControl
 					v-model:selected-filters="currentFilters"
-					:filters="filters.filter((f) => f.display !== 'none')"
+					:filters="localizedFilters.filter((f) => f.display !== 'none')"
 					:provided-filters="instanceFilters"
 					:overridden-provided-filter-types="overriddenProvidedFilterTypes"
 					:provided-message="messages.providedByInstance"
