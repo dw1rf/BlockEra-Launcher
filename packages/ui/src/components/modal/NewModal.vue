@@ -30,7 +30,7 @@
 					<div
 						v-if="!hideHeader"
 						data-tauri-drag-region
-						class="grid grid-cols-[auto_min-content] items-center gap-4 p-6 border-solid border-0 border-b-[1px] border-divider max-w-full"
+						class="modal-header grid grid-cols-[minmax(0,1fr)_min-content] items-center gap-4 p-6 border-solid border-0 border-b-[1px] border-divider max-w-full"
 					>
 						<div class="flex text-wrap break-words items-center gap-3 min-w-0">
 							<slot name="title">
@@ -66,7 +66,7 @@
 						</button>
 					</ButtonStyled>
 
-					<div v-if="scrollable" class="relative">
+					<div v-if="scrollable" class="modal-content relative">
 						<Transition
 							enter-active-class="transition-all duration-200 ease-out"
 							enter-from-class="opacity-0 max-h-0"
@@ -108,7 +108,13 @@
 						</Transition>
 					</div>
 
-					<div v-else :class="['overflow-y-auto p-6', { 'pt-12': props.mergeHeader && closable }]">
+					<div
+						v-else
+						:class="[
+							'modal-content overflow-y-auto p-6',
+							{ 'pt-12': props.mergeHeader && closable },
+						]"
+					>
 						<slot> You just lost the game.</slot>
 					</div>
 
@@ -418,6 +424,7 @@ onBeforeUnmount(() => {
 
 	> .modal-body {
 		position: relative;
+		min-width: 0;
 		box-shadow: 4px 4px 26px 10px rgba(0, 0, 0, 0.08);
 		max-height: calc(100% - 2 * var(--gap-lg));
 		max-width: min(var(--_max-width, 60rem), calc(100% - 2 * var(--gap-lg)));
@@ -442,6 +449,18 @@ onBeforeUnmount(() => {
 			width: calc(100% - 2 * var(--gap-lg));
 		}
 	}
+}
+
+.modal-header {
+	min-width: 0;
+	flex: 0 0 auto;
+}
+
+.modal-content {
+	min-width: 0;
+	min-height: 0;
+	max-width: 100%;
+	overflow-x: hidden;
 }
 
 :global(.blockera-glass-theme) .modal-container > .modal-body {

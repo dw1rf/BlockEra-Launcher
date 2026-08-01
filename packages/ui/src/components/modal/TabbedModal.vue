@@ -132,9 +132,11 @@ defineExpose({ selectedTab, setTab })
 .tabbed-modal-layout {
 	display: grid;
 	grid-template-columns: minmax(12.5rem, auto) minmax(0, 1fr);
-	width: clamp(42.5rem, 75vw, 62.5rem);
+	width: min(62.5rem, calc(100vw - 8rem));
+	min-width: 0;
 	max-width: calc(100vw - 3rem);
 	max-height: min(80vh, 47.5rem);
+	overflow: hidden;
 }
 
 .tabbed-modal-tabs {
@@ -145,6 +147,11 @@ defineExpose({ selectedTab, setTab })
 	padding-right: 1rem;
 	border: 0;
 	border-right: 1px solid var(--color-divider);
+}
+
+.tabbed-modal-layout > div:last-child {
+	min-width: 0;
+	min-height: 0;
 }
 
 .tabbed-modal-tab {
@@ -186,10 +193,14 @@ defineExpose({ selectedTab, setTab })
 
 .tabbed-modal-content {
 	width: 100%;
+	min-width: 0;
+	max-width: 100%;
 	height: min(70vh, 42rem);
 	max-height: calc(100vh - 11rem);
 	overflow-y: auto;
+	overflow-x: hidden;
 	padding-inline: 1rem;
+	box-sizing: border-box;
 }
 
 @media (max-width: 760px) {
