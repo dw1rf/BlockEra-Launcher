@@ -50,7 +50,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { type } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
 import { $fetch } from 'ofetch'
-import { computed, onMounted, onUnmounted, provide, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, provide, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
 import ModrinthLoadingIndicator from '@/components/LoadingIndicatorBar.vue'
@@ -67,7 +67,6 @@ import AppSettingsModal from '@/components/ui/modal/AppSettingsModal.vue'
 import AuthGrantFlowWaitModal from '@/components/ui/modal/AuthGrantFlowWaitModal.vue'
 import NavButton from '@/components/ui/NavButton.vue'
 import OnboardingModal from '@/components/ui/OnboardingModal.vue'
-import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
 import RunningAppBar from '@/components/ui/RunningAppBar.vue'
 import SplashScreen from '@/components/ui/SplashScreen.vue'
 import URLConfirmModal from '@/components/ui/URLConfirmModal.vue'
@@ -409,7 +408,18 @@ function handleWindowDrag(event) {
 }
 
 const router = useRouter()
+const renderRoute = ref(true)
+
+router.beforeEach(async (to, from) => {
+	if (to.fullPath !== from.fullPath) {
+		renderRoute.value = false
+		await nextTick()
+	}
+	return true
+})
+
 router.afterEach((to, from, failure) => {
+	renderRoute.value = true
 	if (!failure && to.fullPath !== from.fullPath) {
 		settingsModal.value?.hide()
 	}
@@ -420,6 +430,32 @@ router.afterEach((to, from, failure) => {
 	})
 })
 const route = useRoute()
+const showProjectBack = computed(() => route.path.startsWith('/project/'))
+const projectTypeFallback = computed(() => {
+	const type = String(route.query.type ?? 'modpack')
+	return ['modpack', 'mod', 'resourcepack', 'datapack', 'shader'].includes(type) ? type : 'modpack'
+})
+
+function closeActiveProject() {
+	if (window.history.state?.back) {
+		router.back()
+		return
+	}
+
+	if (route.query.i) {
+		void router.push(`/instance/${encodeURIComponent(String(route.query.i))}/content`)
+		return
+	}
+
+	void router.push(`/browse/${projectTypeFallback.value}`)
+}
+
+const routeViewKey = computed(() => {
+	const rootPath = route.matched[0]?.path ?? route.path
+	const entityId =
+		rootPath === '/project/:id' || rootPath === '/instance/:id' ? route.params.id : ''
+	return `${rootPath}:${String(entityId ?? '')}`
+})
 const cinematicShell = computed(
 	() =>
 		route.path === '/' ||
@@ -765,9 +801,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<LibraryIcon />
 			</NavButton>
 			<div class="h-px w-6 mx-auto my-2 bg-surface-5"></div>
-			<suspense>
-				<QuickInstanceSwitcher />
-			</suspense>
 			<NavButton
 				v-tooltip.right="'Создать сборку'"
 				:to="() => $refs.installationModal.show()"
@@ -790,7 +823,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<NavButton
 					v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
 					class="neon-icon pulse"
-					:to="() => $refs.settingsModal.show()"
+					:to="() => $refs.settingsModal.toggle()"
 				>
 					<SettingsIcon />
 				</NavButton>
@@ -798,7 +831,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			<template v-else>
 				<NavButton
 					v-tooltip.right="formatMessage(commonMessages.settingsLabel)"
-					:to="() => $refs.settingsModal.show()"
+					:to="() => $refs.settingsModal.toggle()"
 				>
 					<SettingsIcon />
 				</NavButton>
@@ -947,7 +980,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<button
 					class="cinematic-nav-link"
 					aria-label="Настройки"
-					@click="$refs.settingsModal.show()"
+					@click="$refs.settingsModal.toggle($event)"
 				>
 					<SettingsIcon />
 					<span>Настройки</span>
@@ -1010,7 +1043,16 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 		}"
 	>
-		<div class="app-viewport flex-grow router-view">
+		<div
+			class="app-viewport flex-grow router-view"
+			:class="{ 'project-route-active': showProjectBack }"
+		>
+			<ButtonStyled v-if="showProjectBack" class="project-route-back-control" type="transparent">
+				<button type="button" aria-label="Вернуться назад" @click="closeActiveProject">
+					<LeftArrowIcon aria-hidden="true" />
+					Назад
+				</button>
+			</ButtonStyled>
 			<transition name="popup-survey">
 				<div
 					v-if="availableSurvey"
@@ -1075,10 +1117,25 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			>
 				{{ formatMessage(messages.authUnreachableBody) }}
 			</Admonition>
-			<RouterView v-slot="{ Component }">
+			<div v-if="!renderRoute" class="route-loading-state" role="status" aria-live="polite">
+				<span class="route-loading-spinner" aria-hidden="true"></span>
+				<span>Загружаем раздел…</span>
+			</div>
+			<RouterView v-else v-slot="{ Component }">
 				<template v-if="Component">
-					<Suspense @pending="loading.startLoading()" @resolve="loading.stopLoading()">
-						<component :is="Component"></component>
+					<Suspense
+						:key="routeViewKey"
+						:timeout="0"
+						@pending="loading.startLoading()"
+						@resolve="loading.stopLoading()"
+					>
+						<component :is="Component" :key="routeViewKey"></component>
+						<template #fallback>
+							<div class="route-loading-state" role="status" aria-live="polite">
+								<span class="route-loading-spinner" aria-hidden="true"></span>
+								<span>Загружаем раздел…</span>
+							</div>
+						</template>
 					</Suspense>
 				</template>
 			</RouterView>
@@ -1240,10 +1297,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	box-sizing: border-box;
 	padding-left: 1.25rem;
 	overflow: visible;
-	background: rgba(7, 10, 17, 0.94);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
-	backdrop-filter: blur(20px);
+	background: var(--blockera-glass-surface-strong);
+	border-bottom: 1px solid var(--blockera-glass-border);
+	box-shadow:
+		inset 0 1px var(--blockera-glass-highlight),
+		0 12px 30px rgba(0, 0, 0, 0.22);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 	user-select: none;
 	-webkit-user-select: none;
 }
@@ -1307,7 +1366,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	height: 2.75rem;
 	padding: 0 1rem;
 	border: 1px solid transparent;
-	border-radius: 0.65rem;
+	border-radius: var(--blockera-radius-pill);
 	background: transparent;
 	box-shadow: none;
 	color: var(--color-base);
@@ -1316,10 +1375,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	cursor: pointer;
 	white-space: nowrap;
 	transition:
-		transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
-		color 180ms cubic-bezier(0.4, 0, 0.2, 1),
-		background-color 180ms cubic-bezier(0.4, 0, 0.2, 1),
-		border-color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+		transform var(--blockera-motion-fast) var(--blockera-ease),
+		color var(--blockera-motion-fast) var(--blockera-ease),
+		background-color var(--blockera-motion-fast) var(--blockera-ease),
+		border-color var(--blockera-motion-fast) var(--blockera-ease),
+		box-shadow var(--blockera-motion-fast) var(--blockera-ease);
 }
 
 @container cinematic-nav (max-width: 48rem) {
@@ -1342,13 +1402,59 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	transform: translateY(-1px);
 	color: var(--color-contrast);
 	background: rgba(255, 255, 255, 0.05);
+	border-color: var(--blockera-glass-border);
 }
 
 .cinematic-nav-link.router-link-active {
 	color: #e9d5ff;
-	background: rgba(116, 44, 220, 0.13);
-	border-color: rgba(168, 85, 247, 0.36);
+	background: var(--blockera-glass-accent);
+	border-color: var(--blockera-glass-border-active);
 	box-shadow: 0 0 24px rgba(126, 34, 206, 0.13);
+}
+
+.route-loading-state {
+	display: grid;
+	place-items: center;
+	align-content: center;
+	gap: 0.75rem;
+	min-height: min(32rem, calc(100vh - var(--top-bar-height)));
+	color: var(--color-secondary);
+}
+
+.app-viewport.project-route-active {
+	padding-top: 4.5rem;
+	box-sizing: border-box;
+}
+
+.project-route-back-control {
+	position: fixed;
+	top: calc(var(--top-bar-height) + 1rem);
+	left: 1.5rem;
+	z-index: 29;
+}
+
+.project-route-back-control :deep(button) {
+	background: var(--blockera-glass-surface-strong);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
+	border-color: var(--blockera-glass-border);
+	box-shadow:
+		inset 0 1px var(--blockera-glass-highlight),
+		0 10px 28px rgba(0, 0, 0, 0.25);
+}
+
+.route-loading-spinner {
+	width: 2rem;
+	height: 2rem;
+	border: 2px solid rgba(255, 255, 255, 0.12);
+	border-top-color: var(--blockera-accent);
+	border-radius: 50%;
+	animation: blockera-route-spin 0.8s linear infinite;
+}
+
+@keyframes blockera-route-spin {
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .cinematic-topbar-actions {

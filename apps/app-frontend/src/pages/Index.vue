@@ -18,8 +18,7 @@ import {
 	WorldIcon,
 	WrenchIcon,
 } from '@modrinth/assets'
-import { Avatar, injectNotificationManager, SkinPreviewRenderer } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
+import { injectNotificationManager, SkinPreviewRenderer } from '@modrinth/ui'
 import dayjs from 'dayjs'
 import { computed, inject, onMounted, onUnmounted, type Ref, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -470,13 +469,6 @@ onUnmounted(() => {
 						:style="{ backgroundImage: `url(${instanceBackground(instance.path)})` }"
 					></span>
 					<span class="card-shade"></span>
-					<Avatar
-						class="instance-avatar"
-						size="42px"
-						:src="instance.icon_path ? convertFileSrc(instance.icon_path) : null"
-						:tint-by="instance.path"
-						alt=""
-					/>
 					<span class="card-copy">
 						<strong>{{ instance.name }}</strong>
 						<small>{{ instance.game_version }} · {{ instance.loader }}</small>
@@ -1114,13 +1106,6 @@ onUnmounted(() => {
 		rgba(3, 7, 13, 0.22) 46%,
 		rgba(3, 7, 13, 0.96) 100%
 	);
-}
-
-.instance-avatar {
-	position: relative;
-	z-index: 1;
-	flex: 0 0 auto;
-	margin-right: 0.65rem;
 }
 
 .card-copy {

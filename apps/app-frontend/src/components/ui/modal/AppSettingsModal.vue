@@ -157,9 +157,13 @@ function hide() {
 	modal.value?.hide()
 }
 
-const isOpen = computed(() => modal.value?.isOpen)
+function toggle(event?: MouseEvent) {
+	modal.value?.toggle(event)
+}
 
-defineExpose({ show, hide, isOpen })
+const isOpen = computed(() => modal.value?.isOpen ?? false)
+
+defineExpose({ show, hide, toggle, isOpen })
 
 const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
 

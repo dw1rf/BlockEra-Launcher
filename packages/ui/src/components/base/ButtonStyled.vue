@@ -266,10 +266,12 @@ const fontSize = computed(() => {
 	@apply flex cursor-pointer flex-row items-center justify-center border-solid border-2 border-transparent bg-[--_bg] text-[--_text] h-[--_height] min-w-[--_width] rounded-[--_radius] px-[--_padding-x] py-[--_padding-y] gap-[--_gap] font-[--_font-weight] whitespace-nowrap;
 	box-shadow: var(--_box-shadow, inset 0 0 0 transparent);
 	transition:
-		scale 0.125s ease-in-out,
-		background-color 0.25s ease-in-out,
-		color 0.25s ease-in-out,
-		filter 0.25s ease-in-out;
+		transform var(--blockera-motion-press, 120ms) var(--blockera-ease, ease-out),
+		background-color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		border-color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		box-shadow var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		opacity var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out);
 
 	svg:first-child {
 		color: var(--_icon, var(--_text));
@@ -300,6 +302,23 @@ const fontSize = computed(() => {
 	}
 }
 
+:global(.blockera-glass-theme) .btn-wrapper :deep(:is(button, a, .button-like):first-child),
+:global(.blockera-glass-theme) .btn-wrapper :slotted(:is(button, a, .button-like):first-child) {
+	border-color: var(--blockera-glass-border, rgba(255, 255, 255, 0.1));
+	box-shadow:
+		inset 0 1px var(--blockera-glass-highlight, rgba(255, 255, 255, 0.08)),
+		var(--_box-shadow, none);
+
+	&:not([disabled]):not([disabled='true']):not(.disabled):hover {
+		transform: translateY(-1px);
+		border-color: var(--blockera-glass-border-active, rgba(192, 132, 252, 0.4));
+	}
+
+	&:not([disabled]):not([disabled='true']):not(.disabled):active {
+		transform: scale(0.97);
+	}
+}
+
 .btn-wrapper:not(.chip) :deep(:is(button, a, .button-like):first-child),
 .btn-wrapper:not(.chip) :slotted(:is(button, a, .button-like):first-child),
 .btn-wrapper:not(.chip) :slotted(*) > :is(button, a, .button-like):first-child,
@@ -310,7 +329,7 @@ const fontSize = computed(() => {
 	> *:first-child
 	> :is(button, a, .button-like):first-child {
 	&:not([disabled]):not([disabled='true']):not(.disabled) {
-		@apply active:scale-95;
+		transform: none;
 	}
 }
 

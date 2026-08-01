@@ -7,7 +7,6 @@
 			<ExportModal ref="exportModal" :instance="instance" />
 			<InstanceSettingsModal ref="settingsModal" :instance="instance" :offline="offline" />
 			<div class="instance-hero-main">
-				<Avatar :src="icon" :alt="instance.name" size="88px" :tint-by="instance.path" />
 				<div class="instance-identity">
 					<span class="instance-eyebrow">ТЕКУЩАЯ СБОРКА</span>
 					<h1>{{ instance.name }}</h1>
@@ -187,8 +186,7 @@ import {
 	UpdatedIcon,
 	XIcon,
 } from '@modrinth/assets'
-import { Avatar, injectNotificationManager, LoadingIndicator } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
+import { injectNotificationManager, LoadingIndicator } from '@modrinth/ui'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -489,10 +487,6 @@ const unlistenProcesses = await process_listener((e) => {
 		playing.value = false
 	}
 })
-
-const icon = computed(() =>
-	instance.value.icon_path ? convertFileSrc(instance.value.icon_path) : null,
-)
 
 const settingsModal = ref()
 const exportModal = ref()

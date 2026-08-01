@@ -7,8 +7,7 @@ import {
 	StopCircleIcon,
 	TimerIcon,
 } from '@modrinth/assets'
-import { Avatar, ButtonStyled, injectNotificationManager, useRelativeTime } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
+import { ButtonStyled, injectNotificationManager, useRelativeTime } from '@modrinth/ui'
 import dayjs from 'dayjs'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -164,16 +163,10 @@ onUnmounted(() => unlisten())
 <template>
 	<template v-if="compact">
 		<div
-			class="card-shadow grid grid-cols-[auto_1fr_auto] bg-bg-raised rounded-xl p-3 pl-4 gap-2 cursor-pointer hover:brightness-90 transition-all"
+			class="card-shadow grid grid-cols-[1fr_auto] bg-bg-raised rounded-xl p-3 pl-4 gap-2 cursor-pointer hover:brightness-90 transition-colors"
 			@click="seeInstance"
 			@mouseenter="checkProcess"
 		>
-			<Avatar
-				size="48px"
-				:src="instance.icon_path ? convertFileSrc(instance.icon_path) : null"
-				:tint-by="instance.path"
-				alt="Mod card"
-			/>
 			<div class="h-full flex items-center font-bold text-contrast leading-normal">
 				<span class="line-clamp-2">{{ instance.name }}</span>
 			</div>
@@ -199,7 +192,7 @@ onUnmounted(() => unlisten())
 					</button>
 				</ButtonStyled>
 			</div>
-			<div class="flex items-center col-span-3 gap-1 text-secondary font-semibold">
+			<div class="flex items-center col-span-2 gap-1 text-secondary font-semibold">
 				<TimerIcon />
 				<span class="text-sm">
 					<template v-if="instance.last_played">
@@ -217,15 +210,8 @@ onUnmounted(() => unlisten())
 			@click="seeInstance"
 			@mouseenter="checkProcess"
 		>
-			<div class="relative z-[1] flex items-center justify-center">
-				<Avatar
-					size="48px"
-					:src="instance.icon_path ? convertFileSrc(instance.icon_path) : null"
-					:tint-by="instance.path"
-					alt="Mod card"
-					:class="`transition-all ${modLoading || installing ? `brightness-[0.25] scale-[0.85]` : `group-hover:brightness-75`}`"
-				/>
-				<div class="absolute inset-0 flex items-center justify-center">
+			<div class="relative z-[1] ml-auto flex items-center justify-center order-2">
+				<div class="flex items-center justify-center">
 					<ButtonStyled v-if="playing" size="large" color="red" circular>
 						<button
 							v-tooltip="'Stop'"
@@ -294,9 +280,16 @@ onUnmounted(() => unlisten())
 	z-index: 0;
 	inset: 0;
 	background:
-		linear-gradient(90deg, rgba(8, 12, 20, 0.96) 0%, rgba(8, 12, 20, 0.78) 58%, rgba(8, 12, 20, 0.42) 100%),
+		linear-gradient(
+			90deg,
+			rgba(8, 12, 20, 0.96) 0%,
+			rgba(8, 12, 20, 0.78) 58%,
+			rgba(8, 12, 20, 0.42) 100%
+		),
 		var(--instance-card-background) center / cover;
-	transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms ease;
+	transition:
+		transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+		filter 180ms ease;
 }
 
 .instance-library-card:hover::before {
@@ -305,7 +298,11 @@ onUnmounted(() => unlisten())
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.instance-library-card::before { transition: none; }
-	.instance-library-card:hover::before { transform: none; }
+	.instance-library-card::before {
+		transition: none;
+	}
+	.instance-library-card:hover::before {
+		transform: none;
+	}
 }
 </style>

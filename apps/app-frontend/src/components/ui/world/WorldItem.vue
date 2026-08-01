@@ -29,7 +29,6 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { formatNumber, getPingLevel } from '@modrinth/utils'
-import { convertFileSrc } from '@tauri-apps/api/core'
 import dayjs from 'dayjs'
 import { Tooltip } from 'floating-vue'
 import type { Component } from 'vue'
@@ -81,7 +80,6 @@ const props = withDefaults(
 		// Instance
 		instancePath?: string
 		instanceName?: string
-		instanceIcon?: string
 	}>(),
 	{
 		playingInstance: false,
@@ -99,7 +97,6 @@ const props = withDefaults(
 
 		instancePath: undefined,
 		instanceName: undefined,
-		instanceIcon: undefined,
 	},
 )
 
@@ -283,12 +280,6 @@ const messages = defineMessages({
 							class="flex items-center gap-1 truncate hover:underline text-secondary smart-clickable:allow-pointer-events"
 							:to="`/instance/${instancePath}`"
 						>
-							<Avatar
-								:src="instanceIcon ? convertFileSrc(instanceIcon) : undefined"
-								size="16px"
-								:tint-by="instancePath"
-								class="shrink-0"
-							/>
 							<span class="truncate">{{ instanceName }}</span>
 						</router-link>
 					</template>

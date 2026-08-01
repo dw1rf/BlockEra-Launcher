@@ -1,34 +1,22 @@
 <template>
-	<nav
-		class="card-shadow experimental-styles-within relative flex w-fit overflow-clip rounded-full bg-bg-raised p-1 text-sm font-bold"
-	>
+	<nav class="blockera-nav-tabs experimental-styles-within" aria-label="Вкладки раздела">
 		<RouterLink
 			v-for="(link, index) in filteredLinks"
 			v-show="link.shown === undefined ? true : link.shown"
 			:key="index"
-			ref="tabLinkElements"
 			:to="query ? (link.href ? `?${query}=${link.href}` : '?') : link.href"
-			:class="`button-animation z-[1] flex flex-row items-center gap-2 px-4 py-2 focus:rounded-full ${activeIndex === index && !subpageSelected ? 'text-button-textSelected' : activeIndex === index && subpageSelected ? 'text-contrast' : 'text-primary'}`"
+			class="blockera-nav-tab"
+			:class="{ active: activeIndex === index, subpage: activeIndex === index && subpageSelected }"
+			:aria-current="activeIndex === index ? 'page' : undefined"
 		>
 			<component :is="link.icon" v-if="link.icon" class="size-5" />
 			<span class="text-nowrap">{{ link.label }}</span>
 		</RouterLink>
-		<div
-			:class="`navtabs-transition pointer-events-none absolute h-[calc(100%-0.5rem)] overflow-hidden rounded-full p-1 ${subpageSelected ? 'bg-button-bg' : 'bg-button-bgSelected'}`"
-			:style="{
-				left: sliderLeftPx,
-				top: sliderTopPx,
-				right: sliderRightPx,
-				bottom: sliderBottomPx,
-				opacity: sliderLeft === 4 && sliderLeft === sliderRight ? 0 : activeIndex === -1 ? 0 : 1,
-			}"
-			aria-hidden="true"
-		></div>
 	</nav>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { RouterLink, useRoute } from 'vue-router'
 
@@ -47,21 +35,12 @@ const props = defineProps<{
 	query?: string
 }>()
 
-const sliderLeft = ref(4)
-const sliderTop = ref(4)
-const sliderRight = ref(4)
-const sliderBottom = ref(4)
 const activeIndex = ref(-1)
-const oldIndex = ref(-1)
 const subpageSelected = ref(false)
 
 const filteredLinks = computed(() =>
 	props.links.filter((x) => (x.shown === undefined ? true : x.shown)),
 )
-const sliderLeftPx = computed(() => `${sliderLeft.value}px`)
-const sliderTopPx = computed(() => `${sliderTop.value}px`)
-const sliderRightPx = computed(() => `${sliderRight.value}px`)
-const sliderBottomPx = computed(() => `${sliderBottom.value}px`)
 
 function pickLink() {
 	let index = -1
@@ -79,82 +58,60 @@ function pickLink() {
 		}
 	}
 	activeIndex.value = index
-
-	if (activeIndex.value !== -1) {
-		startAnimation()
-	} else {
-		oldIndex.value = -1
-		sliderLeft.value = 0
-		sliderRight.value = 0
-	}
 }
-
-const tabLinkElements = ref()
-
-function startAnimation() {
-	const el = tabLinkElements.value[activeIndex.value].$el
-
-	if (!el || !el.offsetParent) return
-
-	const newValues = {
-		left: el.offsetLeft,
-		top: el.offsetTop,
-		right: el.offsetParent.offsetWidth - el.offsetLeft - el.offsetWidth,
-		bottom: el.offsetParent.offsetHeight - el.offsetTop - el.offsetHeight,
-	}
-
-	if (sliderLeft.value === 4 && sliderRight.value === 4) {
-		sliderLeft.value = newValues.left
-		sliderRight.value = newValues.right
-		sliderTop.value = newValues.top
-		sliderBottom.value = newValues.bottom
-	} else {
-		const delay = 200
-
-		if (newValues.left < sliderLeft.value) {
-			sliderLeft.value = newValues.left
-			setTimeout(() => {
-				sliderRight.value = newValues.right
-			}, delay)
-		} else {
-			sliderRight.value = newValues.right
-			setTimeout(() => {
-				sliderLeft.value = newValues.left
-			}, delay)
-		}
-
-		if (newValues.top < sliderTop.value) {
-			sliderTop.value = newValues.top
-			setTimeout(() => {
-				sliderBottom.value = newValues.bottom
-			}, delay)
-		} else {
-			sliderBottom.value = newValues.bottom
-			setTimeout(() => {
-				sliderTop.value = newValues.top
-			}, delay)
-		}
-	}
-}
-
-onMounted(() => {
-	window.addEventListener('resize', pickLink)
-	pickLink()
-})
-
-onUnmounted(() => {
-	window.removeEventListener('resize', pickLink)
-})
-
-watch(route, () => {
-	pickLink()
-})
+watch(() => route.fullPath, pickLink, { immediate: true })
 </script>
-<style scoped>
-.navtabs-transition {
-	/* Delay on opacity is to hide any jankiness as the page loads */
+<style scoped lang="scss">
+.blockera-nav-tabs {
+	display: flex;
+	width: fit-content;
+	max-width: 100%;
+	gap: 0.25rem;
+	padding: 0.3rem;
+	overflow-x: auto;
+	border: 1px solid var(--blockera-glass-border, rgba(255, 255, 255, 0.1));
+	border-radius: var(--blockera-radius-pill, 999px);
+	background: var(--blockera-glass-surface, rgba(23, 27, 39, 0.72));
+	box-shadow: inset 0 1px var(--blockera-glass-highlight, rgba(255, 255, 255, 0.08));
+	backdrop-filter: blur(var(--blockera-glass-blur, 18px)) saturate(125%);
+}
+
+.blockera-nav-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.55rem 1rem;
+	border-radius: var(--blockera-radius-pill, 999px);
+	color: var(--color-base);
+	font-size: 0.875rem;
+	font-weight: 700;
+	white-space: nowrap;
 	transition:
-		all 150ms cubic-bezier(0.4, 0, 0.2, 1) 0s,
-		opacity 250ms cubic-bezier(0.5, 0, 0.2, 1) 50ms;
+		transform var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		background-color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		box-shadow var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out);
+
+	&:hover {
+		color: var(--color-contrast);
+		background: rgba(255, 255, 255, 0.07);
+		transform: translateY(-1px);
+	}
+
+	&:active {
+		transform: scale(0.98);
+	}
+
+	&.active {
+		color: #f3e8ff;
+		background: var(--blockera-glass-accent, rgba(126, 44, 220, 0.28));
+		box-shadow:
+			inset 0 1px rgba(255, 255, 255, 0.11),
+			0 7px 18px rgba(73, 23, 120, 0.18);
+	}
+
+	&.subpage {
+		background: rgba(255, 255, 255, 0.08);
+	}
 }
 </style>

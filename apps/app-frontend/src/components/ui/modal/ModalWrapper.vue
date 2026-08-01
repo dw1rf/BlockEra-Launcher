@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NewModal as Modal } from '@modrinth/ui'
-import { useTemplateRef } from 'vue'
+import { ref, useTemplateRef } from 'vue'
 
 // import { hide_ads_window, show_ads_window } from '@/helpers/ads.js'
 import { useTheming } from '@/store/theme.ts'
@@ -32,18 +32,31 @@ const props = defineProps({
 	// },
 })
 const modal = useTemplateRef('modal')
+const isOpen = ref(false)
+
+function show(e?: MouseEvent) {
+	isOpen.value = true
+	modal.value?.show(e)
+}
+
+function hide() {
+	modal.value?.hide()
+}
+
+function toggle(e?: MouseEvent) {
+	if (isOpen.value) hide()
+	else show(e)
+}
 
 defineExpose({
-	show: (e?: MouseEvent) => {
-		// hide_ads_window()
-		modal.value?.show(e)
-	},
-	hide: () => {
-		modal.value?.hide()
-	},
+	show,
+	hide,
+	toggle,
+	isOpen,
 })
 
 function onModalHide() {
+	isOpen.value = false
 	// if (props.showAdOnClose) {
 	// 	show_ads_window()
 	// }
