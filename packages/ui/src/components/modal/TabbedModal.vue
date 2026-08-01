@@ -67,7 +67,8 @@ defineExpose({ selectedTab, setTab })
 				:aria-controls="`settings-panel-${index}`"
 				:aria-selected="selectedTab === index"
 				:tabindex="selectedTab === index ? 0 : -1"
-				:class="`flex gap-2 items-center text-left rounded-xl px-4 py-2 border-none text-nowrap font-semibold cursor-pointer active:scale-[0.97] transition-all ${selectedTab === index ? 'bg-button-bgSelected text-button-textSelected' : 'bg-transparent text-button-text hover:bg-button-bg hover:text-contrast'}`"
+				class="tabbed-modal-tab"
+				:class="{ active: selectedTab === index }"
 				@click="() => setTab(index)"
 				@keydown="handleTabKeydown($event, index)"
 			>
@@ -146,10 +147,47 @@ defineExpose({ selectedTab, setTab })
 	border-right: 1px solid var(--color-divider);
 }
 
+.tabbed-modal-tab {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.6rem 0.85rem;
+	border: 1px solid transparent;
+	border-radius: 0.85rem;
+	background: transparent;
+	color: var(--color-base);
+	font: inherit;
+	font-weight: 650;
+	text-align: left;
+	white-space: nowrap;
+	cursor: pointer;
+	transition:
+		transform var(--blockera-motion-press, 120ms) var(--blockera-ease, ease-out),
+		color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		background-color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		border-color var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out);
+}
+
+.tabbed-modal-tab:hover {
+	color: var(--color-contrast);
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.tabbed-modal-tab:active {
+	transform: scale(0.98);
+}
+
+.tabbed-modal-tab.active {
+	color: #ecd8ff;
+	border-color: var(--blockera-glass-border-active, rgba(192, 132, 252, 0.44));
+	background: var(--blockera-glass-accent, rgba(126, 44, 220, 0.28));
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.09);
+}
+
 .tabbed-modal-content {
 	width: 100%;
-	height: min(80vh, 47.5rem);
-	max-height: calc(100vh - 10rem);
+	height: min(70vh, 42rem);
+	max-height: calc(100vh - 11rem);
 	overflow-y: auto;
 	padding-inline: 1rem;
 }
@@ -172,6 +210,17 @@ defineExpose({ selectedTab, setTab })
 	.tabbed-modal-content {
 		height: min(70vh, 42rem);
 		padding: 0.75rem 0.25rem 0;
+	}
+}
+
+@media (max-height: 640px) {
+	.tabbed-modal-layout {
+		max-height: calc(100vh - 7rem);
+	}
+
+	.tabbed-modal-content {
+		height: calc(100vh - 9.5rem);
+		max-height: calc(100vh - 9.5rem);
 	}
 }
 </style>

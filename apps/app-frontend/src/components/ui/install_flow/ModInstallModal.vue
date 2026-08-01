@@ -1,15 +1,6 @@
 <script setup>
-import {
-	CheckIcon,
-	DownloadIcon,
-	PlusIcon,
-	RightArrowIcon,
-	UploadIcon,
-	XIcon,
-} from '@modrinth/assets'
-import { Avatar, Button, Card, injectNotificationManager } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
+import { CheckIcon, DownloadIcon, PlusIcon, RightArrowIcon } from '@modrinth/assets'
+import { Button, Card, injectNotificationManager } from '@modrinth/ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -38,9 +29,7 @@ const installModal = ref()
 const searchFilter = ref('')
 
 const showCreation = ref(false)
-const icon = ref(null)
 const name = ref(null)
-const display_icon = ref(null)
 const loader = ref(null)
 const gameVersion = ref(null)
 const creatingInstance = ref(false)
@@ -73,8 +62,6 @@ defineExpose({
 
 		showCreation.value = false
 		name.value = null
-		icon.value = null
-		display_icon.value = null
 		gameVersion.value = null
 		loader.value = null
 
@@ -151,35 +138,12 @@ async function install(instance) {
 const toggleCreation = () => {
 	showCreation.value = !showCreation.value
 	name.value = null
-	icon.value = null
-	display_icon.value = null
 	gameVersion.value = null
 	loader.value = null
 
 	if (showCreation.value) {
 		trackEvent('InstanceCreateStart', { source: 'ProjectInstallModal' })
 	}
-}
-
-const upload_icon = async () => {
-	const res = await open({
-		multiple: false,
-		filters: [
-			{
-				name: 'Image',
-				extensions: ['png', 'jpeg'],
-			},
-		],
-	})
-	icon.value = res.path ?? res
-
-	if (!icon.value) return
-	display_icon.value = convertFileSrc(icon.value)
-}
-
-const reset_icon = () => {
-	icon.value = null
-	display_icon.value = null
 }
 
 const createInstance = async () => {
@@ -201,7 +165,7 @@ const createInstance = async () => {
 					: 'vanilla'
 
 	try {
-		const id = await create(name.value, gameVersion, loader, 'latest', icon.value)
+		const id = await create(name.value, gameVersion, loader, 'latest', null)
 		await installMod(id, versions.value[0].id)
 		const instance = await get(id, true)
 		await installVersionDependencies(instance, versions.value[0])
@@ -212,7 +176,7 @@ const createInstance = async () => {
 			game_version: versions.value[0].game_versions[0],
 			loader: loader,
 			loader_version: 'latest',
-			has_icon: !!icon.value,
+			has_icon: false,
 			source: 'ProjectInstallModal',
 		})
 
@@ -253,10 +217,6 @@ const createInstance = async () => {
 						:to="`/instance/${encodeURIComponent(profile.path)}`"
 						@click="installModal.hide()"
 					>
-						<Avatar
-							:src="profile.icon_path ? convertFileSrc(profile.icon_path) : null"
-							class="profile-image"
-						/>
 						{{ profile.name }}
 					</router-link>
 					<div
@@ -285,19 +245,6 @@ const createInstance = async () => {
 			</div>
 			<Card v-if="showCreation" class="creation-card">
 				<div class="creation-container">
-					<div class="creation-icon">
-						<Avatar size="md" class="icon" :src="display_icon" />
-						<div class="creation-icon__description">
-							<Button @click="upload_icon()">
-								<UploadIcon />
-								<span class="no-wrap"> Select icon </span>
-							</Button>
-							<Button :disabled="!display_icon" @click="reset_icon()">
-								<XIcon />
-								<span class="no-wrap"> Remove icon </span>
-							</Button>
-						</div>
-					</div>
 					<div class="creation-settings">
 						<input
 							v-model="name"
@@ -339,26 +286,8 @@ const createInstance = async () => {
 	gap: 1rem;
 }
 
-.creation-icon {
-	display: flex;
-	flex-direction: row;
-	gap: 1rem;
-	align-items: center;
-	flex-grow: 1;
-
-	.creation-icon__description {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-}
-
 .creation-input {
 	width: 100%;
-}
-
-.no-wrap {
-	white-space: nowrap;
 }
 
 .creation-dropdown {

@@ -168,7 +168,10 @@ function openProject() {
 	emit('open')
 	void router.push({
 		path: `/project/${props.project.project_id ?? props.project.id}`,
-		query: { i: props.instance ? props.instance.path : undefined },
+		query: {
+			i: props.instance ? props.instance.path : undefined,
+			type: props.project.project_type,
+		},
 	})
 }
 

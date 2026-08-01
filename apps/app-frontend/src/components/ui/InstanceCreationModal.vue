@@ -45,25 +45,11 @@
 						<div class="panel-heading">
 							<span>01</span>
 							<div>
-								<h3>Название и значок</h3>
-								<p>Так сборка будет выглядеть в вашей библиотеке.</p>
+								<h3>Название сборки</h3>
+								<p>Карточка будет оформлена выбранным фоном.</p>
 							</div>
 						</div>
 						<div class="identity-fields">
-							<div class="image-upload">
-								<Avatar :src="display_icon" size="72px" :rounded="true" />
-								<button class="icon-upload" @click="upload_icon()">
-									<UploadIcon /> Выбрать значок
-								</button>
-								<button
-									v-if="display_icon"
-									class="icon-reset"
-									aria-label="Удалить значок"
-									@click="reset_icon"
-								>
-									<XIcon />
-								</button>
-							</div>
 							<label class="field-control">
 								<span>Название сборки</span>
 								<input
@@ -346,8 +332,7 @@ import {
 	UploadIcon,
 	XIcon,
 } from '@modrinth/assets'
-import { Avatar, Button, Checkbox, Chips, injectNotificationManager } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
+import { Button, Checkbox, Chips, injectNotificationManager } from '@modrinth/ui'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { open } from '@tauri-apps/plugin-dialog'
 import { computed, onUnmounted, ref, shallowRef } from 'vue'
@@ -375,8 +360,6 @@ const game_version = ref('')
 const loader = ref('vanilla')
 const loader_version = ref('stable')
 const specified_loader_version = ref('')
-const icon = ref(null)
-const display_icon = ref(null)
 const creating = ref(false)
 const fileImporting = ref(false)
 const showSnapshots = ref(false)
@@ -422,8 +405,6 @@ defineExpose({
 		showSnapshots.value = false
 		loader.value = 'vanilla'
 		loader_version.value = 'stable'
-		icon.value = null
-		display_icon.value = null
 		isShowing.value = true
 		modal.value.show()
 
@@ -537,7 +518,7 @@ const create_instance = async () => {
 			game_version.value,
 			loader.value,
 			loader.value === 'vanilla' ? null : (loader_version_value ?? 'stable'),
-			icon.value,
+			null,
 		)
 
 		trackEvent('InstanceCreate', {
@@ -545,7 +526,7 @@ const create_instance = async () => {
 			game_version: game_version.value,
 			loader: loader.value,
 			loader_version: loaderVersion,
-			has_icon: !!icon.value,
+			has_icon: false,
 			source: 'CreationModal',
 		})
 		hide()
@@ -554,28 +535,6 @@ const create_instance = async () => {
 	} finally {
 		creating.value = false
 	}
-}
-
-const upload_icon = async () => {
-	const res = await open({
-		multiple: false,
-		filters: [
-			{
-				name: 'Image',
-				extensions: ['png', 'jpeg', 'svg', 'webp', 'gif', 'jpg'],
-			},
-		],
-	})
-
-	icon.value = res.path ?? res
-
-	if (!icon.value) return
-	display_icon.value = convertFileSrc(icon.value)
-}
-
-const reset_icon = () => {
-	icon.value = null
-	display_icon.value = null
 }
 
 const selectable_versions = computed(() => {
@@ -827,18 +786,6 @@ async function retryFailedImports() {
 
 .text-input {
 	width: 20rem;
-}
-
-.image-upload {
-	display: flex;
-	gap: 1rem;
-}
-
-.image-input {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	justify-content: center;
 }
 
 .warning {
@@ -1138,54 +1085,9 @@ async function retryFailedImports() {
 
 .identity-fields {
 	display: grid;
-	grid-template-columns: auto minmax(0, 1fr);
+	grid-template-columns: minmax(0, 1fr);
 	align-items: end;
 	gap: 0.9rem;
-}
-
-.image-upload {
-	position: relative;
-	display: grid;
-	grid-template-columns: auto auto;
-	align-items: center;
-	gap: 0.55rem;
-}
-
-.image-upload :deep(.avatar) {
-	border: 1px solid rgba(191, 111, 255, 0.26);
-	background: rgba(255, 255, 255, 0.04);
-}
-
-.icon-upload,
-.icon-reset {
-	min-height: 2.65rem;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.45rem;
-	color: #d9c1eb;
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	border-radius: 0.72rem;
-	background: rgba(255, 255, 255, 0.045);
-	cursor: pointer;
-}
-
-.icon-upload {
-	padding: 0 0.8rem;
-	font-size: 0.73rem;
-	font-weight: 700;
-}
-.icon-upload svg,
-.icon-reset svg {
-	width: 0.95rem;
-}
-.icon-reset {
-	position: absolute;
-	width: 1.65rem;
-	min-height: 1.65rem;
-	left: 3.4rem;
-	top: -0.4rem;
-	color: #ff9ab3;
 }
 
 .field-control {

@@ -1,52 +1,61 @@
 <template>
-	<div
-		v-if="open"
-		:style="`${mouseX !== -1 ? `--_mouse-x: ${mouseX};` : ''} ${mouseY !== -1 ? `--_mouse-y: ${mouseY};` : ''}`"
-	>
+	<Teleport to="body">
 		<div
-			:class="{ shown: visible }"
-			class="tauri-overlay"
-			data-tauri-drag-region
-			@click="() => (closeOnClickOutside && closable ? hide() : {})"
-		/>
-		<div
-			:class="[
-				'modal-overlay',
-				{
-					shown: visible,
-					noblur: props.noblur,
-				},
-				computedFade,
-			]"
-			@click="() => (closeOnClickOutside && closable ? hide() : {})"
-		/>
-		<div
-			ref="modalContainer"
-			class="modal-container experimental-styles-within"
-			:class="{ shown: visible }"
-			role="dialog"
-			aria-modal="true"
-			:aria-label="header ?? 'Диалоговое окно'"
-			tabindex="-1"
-			:style="{
-				'--_max-width': maxWidth,
-				'--_width': width,
-			}"
+			v-if="open"
+			v-bind="$attrs"
+			:style="`${mouseX !== -1 ? `--_mouse-x: ${mouseX};` : ''} ${mouseY !== -1 ? `--_mouse-y: ${mouseY};` : ''}`"
 		>
-			<div class="modal-body flex flex-col bg-bg-raised rounded-2xl">
-				<div
-					v-if="!hideHeader"
-					data-tauri-drag-region
-					class="grid grid-cols-[auto_min-content] items-center gap-4 p-6 border-solid border-0 border-b-[1px] border-divider max-w-full"
-				>
-					<div class="flex text-wrap break-words items-center gap-3 min-w-0">
-						<slot name="title">
-							<span v-if="header" class="text-lg font-extrabold text-contrast">
-								{{ header }}
-							</span>
-						</slot>
+			<div
+				class="tauri-overlay shown"
+				data-tauri-drag-region
+				@click="() => (closeOnClickOutside && closable ? hide() : {})"
+			/>
+			<div
+				:class="['modal-overlay', 'shown', { noblur: props.noblur }, computedFade]"
+				@click="() => (closeOnClickOutside && closable ? hide() : {})"
+			/>
+			<div
+				ref="modalContainer"
+				class="modal-container experimental-styles-within shown"
+				role="dialog"
+				aria-modal="true"
+				:aria-label="header ?? 'Диалоговое окно'"
+				tabindex="-1"
+				:style="{
+					'--_max-width': maxWidth,
+					'--_width': width,
+				}"
+			>
+				<div class="modal-body flex flex-col bg-bg-raised rounded-2xl">
+					<div
+						v-if="!hideHeader"
+						data-tauri-drag-region
+						class="grid grid-cols-[auto_min-content] items-center gap-4 p-6 border-solid border-0 border-b-[1px] border-divider max-w-full"
+					>
+						<div class="flex text-wrap break-words items-center gap-3 min-w-0">
+							<slot name="title">
+								<span v-if="header" class="text-lg font-extrabold text-contrast">
+									{{ header }}
+								</span>
+							</slot>
+						</div>
+						<ButtonStyled v-if="closable" circular>
+							<button
+								v-tooltip="'Закрыть'"
+								aria-label="Закрыть"
+								:disabled="disableClose"
+								@click="hide"
+							>
+								<XIcon aria-hidden="true" />
+							</button>
+						</ButtonStyled>
 					</div>
-					<ButtonStyled v-if="closable" circular>
+
+					<ButtonStyled
+						v-if="props.mergeHeader && closable"
+						class="absolute top-4 right-4 z-10"
+						circular
+					>
 						<button
 							v-tooltip="'Закрыть'"
 							aria-label="Закрыть"
@@ -56,83 +65,74 @@
 							<XIcon aria-hidden="true" />
 						</button>
 					</ButtonStyled>
-				</div>
 
-				<ButtonStyled
-					v-if="props.mergeHeader && closable"
-					class="absolute top-4 right-4 z-10"
-					circular
-				>
-					<button v-tooltip="'Закрыть'" aria-label="Закрыть" :disabled="disableClose" @click="hide">
-						<XIcon aria-hidden="true" />
-					</button>
-				</ButtonStyled>
+					<div v-if="scrollable" class="relative">
+						<Transition
+							enter-active-class="transition-all duration-200 ease-out"
+							enter-from-class="opacity-0 max-h-0"
+							enter-to-class="opacity-100 max-h-24"
+							leave-active-class="transition-all duration-200 ease-in"
+							leave-from-class="opacity-100 max-h-24"
+							leave-to-class="opacity-0 max-h-0"
+						>
+							<div
+								v-if="showTopFade"
+								class="pointer-events-none absolute left-0 right-0 top-0 z-10 h-24 bg-gradient-to-b from-bg-raised to-transparent"
+							/>
+						</Transition>
 
-				<div v-if="scrollable" class="relative">
-					<Transition
-						enter-active-class="transition-all duration-200 ease-out"
-						enter-from-class="opacity-0 max-h-0"
-						enter-to-class="opacity-100 max-h-24"
-						leave-active-class="transition-all duration-200 ease-in"
-						leave-from-class="opacity-100 max-h-24"
-						leave-to-class="opacity-0 max-h-0"
-					>
 						<div
-							v-if="showTopFade"
-							class="pointer-events-none absolute left-0 right-0 top-0 z-10 h-24 bg-gradient-to-b from-bg-raised to-transparent"
-						/>
-					</Transition>
+							ref="scrollContainer"
+							:class="[
+								'overflow-y-auto p-6 !pb-1 sm:pb-6',
+								{ 'pt-12': props.mergeHeader && closable },
+							]"
+							:style="{ maxHeight: maxContentHeight }"
+							@scroll="checkScrollState"
+						>
+							<slot> You just lost the game.</slot>
+						</div>
 
-					<div
-						ref="scrollContainer"
-						:class="[
-							'overflow-y-auto p-6 !pb-1 sm:pb-6',
-							{ 'pt-12': props.mergeHeader && closable },
-						]"
-						:style="{ maxHeight: maxContentHeight }"
-						@scroll="checkScrollState"
-					>
+						<Transition
+							enter-active-class="transition-all duration-200 ease-out"
+							enter-from-class="opacity-0 max-h-0"
+							enter-to-class="opacity-100 max-h-24"
+							leave-active-class="transition-all duration-200 ease-in"
+							leave-from-class="opacity-100 max-h-24"
+							leave-to-class="opacity-0 max-h-0"
+						>
+							<div
+								v-if="showBottomFade"
+								class="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-bg-raised to-transparent"
+							/>
+						</Transition>
+					</div>
+
+					<div v-else :class="['overflow-y-auto p-6', { 'pt-12': props.mergeHeader && closable }]">
 						<slot> You just lost the game.</slot>
 					</div>
 
-					<Transition
-						enter-active-class="transition-all duration-200 ease-out"
-						enter-from-class="opacity-0 max-h-0"
-						enter-to-class="opacity-100 max-h-24"
-						leave-active-class="transition-all duration-200 ease-in"
-						leave-from-class="opacity-100 max-h-24"
-						leave-to-class="opacity-0 max-h-0"
-					>
-						<div
-							v-if="showBottomFade"
-							class="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-bg-raised to-transparent"
-						/>
-					</Transition>
-				</div>
-
-				<div v-else :class="['overflow-y-auto p-6', { 'pt-12': props.mergeHeader && closable }]">
-					<slot> You just lost the game.</slot>
-				</div>
-
-				<div v-if="$slots.actions" class="p-6 pt-0">
-					<slot name="actions" />
+					<div v-if="$slots.actions" class="p-6 pt-0">
+						<slot name="actions" />
+					</div>
 				</div>
 			</div>
 		</div>
-	</div>
-	<div v-else></div>
+		<div v-else></div>
+	</Teleport>
 </template>
 
-<script lang="ts">
-</script>
+<script lang="ts"></script>
 
 <script setup lang="ts">
 import { XIcon } from '@modrinth/assets'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 
 import { useScrollIndicator } from '../../composables/scroll-indicator'
 import ButtonStyled from '../base/ButtonStyled.vue'
 const openModalStack: symbol[] = []
+
+defineOptions({ inheritAttrs: false })
 
 const props = withDefaults(
 	defineProps<{
@@ -187,12 +187,9 @@ const computedFade = computed(() => {
 })
 
 const open = ref(false)
-const visible = ref(false)
 const modalContainer = ref<HTMLElement | null>(null)
 const modalId = Symbol('modal')
 let previouslyFocused: HTMLElement | null = null
-let showTimer: ReturnType<typeof setTimeout> | undefined
-let hideTimer: ReturnType<typeof setTimeout> | undefined
 
 const scrollContainer = ref<HTMLElement | null>(null)
 const { showTopFade, showBottomFade, checkScrollState } = useScrollIndicator(scrollContainer)
@@ -218,31 +215,24 @@ function show(event?: MouseEvent) {
 		focusInitialElement()
 		requestAnimationFrame(focusInitialElement)
 	})
-	clearTimeout(hideTimer)
-	showTimer = setTimeout(() => {
-		visible.value = true
-		void nextTick(focusInitialElement)
-	}, 50)
+	void nextTick(focusInitialElement)
 }
 
 function hide() {
 	if (props.disableClose || !open.value) return
 	props.onHide?.()
-	visible.value = false
+	open.value = false
 	removeFromModalStack()
-	clearTimeout(showTimer)
 	document.body.style.overflow = hasOtherOpenDialog() ? 'hidden' : ''
 	window.removeEventListener('mousedown', updateMousePosition)
 	document.removeEventListener('keydown', handleKeyDown, true)
-	hideTimer = setTimeout(() => {
-		open.value = false
-		void nextTick(() => previouslyFocused?.focus({ preventScroll: true }))
-	}, 300)
+	void nextTick(() => previouslyFocused?.focus({ preventScroll: true }))
 }
 
 defineExpose({
 	show,
 	hide,
+	isOpen: open,
 	checkScrollState,
 })
 
@@ -319,16 +309,10 @@ function trapFocus(event: KeyboardEvent) {
 }
 
 onBeforeUnmount(() => {
-	clearTimeout(showTimer)
-	clearTimeout(hideTimer)
 	window.removeEventListener('mousedown', updateMousePosition)
 	document.removeEventListener('keydown', handleKeyDown, true)
 	removeFromModalStack()
 	if (open.value) document.body.style.overflow = hasOtherOpenDialog() ? 'hidden' : ''
-})
-
-watch(visible, (isVisible) => {
-	if (isVisible) void nextTick(focusInitialElement)
 })
 </script>
 
@@ -340,7 +324,7 @@ watch(visible, (isVisible) => {
 	left: 0;
 	width: 100%;
 	height: 100px;
-	z-index: 20;
+	z-index: 91;
 
 	&.shown {
 		opacity: 1;
@@ -350,10 +334,15 @@ watch(visible, (isVisible) => {
 
 .modal-overlay {
 	position: fixed;
-	inset: -5rem;
-	z-index: 19;
+	top: -5rem;
+	left: -5rem;
+	width: calc(100vw + 10rem);
+	height: calc(100vh + 10rem);
+	z-index: 90;
 	opacity: 0;
-	transition: all 0.2s ease-out;
+	transition:
+		opacity var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		visibility var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out);
 	//transform: translate(
 	//    calc((-50vw + var(--_mouse-x, 50vw) * 1px) / 2),
 	//    calc((-50vh + var(--_mouse-y, 50vh) * 1px) / 2)
@@ -399,21 +388,22 @@ watch(visible, (isVisible) => {
 
 .modal-container {
 	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
+	inset: 0;
+	width: 100vw;
+	height: 100vh;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 21;
+	z-index: 92;
 	visibility: hidden;
 	pointer-events: none;
 	transform: translate(
 		calc((-50vw + var(--_mouse-x, 50vw) * 1px) / 16),
 		calc((-50vh + var(--_mouse-y, 50vh) * 1px) / 16)
 	);
-	transition: all 0.2s ease-out;
+	transition:
+		transform var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+		visibility var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out);
 
 	&.shown {
 		visibility: visible;
@@ -427,7 +417,7 @@ watch(visible, (isVisible) => {
 	}
 
 	> .modal-body {
-		position: fixed;
+		position: relative;
 		box-shadow: 4px 4px 26px 10px rgba(0, 0, 0, 0.08);
 		max-height: calc(100% - 2 * var(--gap-lg));
 		max-width: min(var(--_max-width, 60rem), calc(100% - 2 * var(--gap-lg)));
@@ -439,7 +429,10 @@ watch(visible, (isVisible) => {
 
 		visibility: hidden;
 		opacity: 0;
-		transition: all 0.2s ease-in-out;
+		transition:
+			opacity var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+			scale var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
+			visibility var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out);
 
 		@media (prefers-reduced-motion) {
 			transition: none !important;
@@ -448,6 +441,20 @@ watch(visible, (isVisible) => {
 		@media screen and (max-width: 640px) {
 			width: calc(100% - 2 * var(--gap-lg));
 		}
+	}
+}
+
+:global(.blockera-glass-theme) .modal-container > .modal-body {
+	border: 1px solid var(--blockera-glass-border, rgba(255, 255, 255, 0.1));
+	background: var(--blockera-glass-surface-strong, rgba(13, 16, 27, 0.9));
+	box-shadow:
+		inset 0 1px var(--blockera-glass-highlight, rgba(255, 255, 255, 0.08)),
+		var(--blockera-glass-shadow, 0 18px 52px rgba(0, 0, 0, 0.36));
+}
+
+@media (max-height: 640px) {
+	.modal-container > .modal-body {
+		max-height: calc(100% - 1rem);
 	}
 }
 </style>

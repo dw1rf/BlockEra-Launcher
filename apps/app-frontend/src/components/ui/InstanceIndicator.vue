@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { GameIcon, LeftArrowIcon } from '@modrinth/assets'
-import { Avatar, ButtonStyled } from '@modrinth/ui'
+import { ButtonStyled } from '@modrinth/ui'
 import { formatCategory } from '@modrinth/utils'
-import { convertFileSrc } from '@tauri-apps/api/core'
 
 type Instance = {
 	game_version: string
 	loader: string
 	path: string
 	install_stage: string
-	icon_path?: string
 	name: string
 }
 
@@ -26,11 +24,6 @@ defineProps<{
 			class="flex flex-col gap-4 text-primary"
 		>
 			<span class="flex items-center gap-2">
-				<Avatar
-					:src="instance.icon_path ? convertFileSrc(instance.icon_path) : undefined"
-					:alt="instance.name"
-					size="48px"
-				/>
 				<span class="flex flex-col gap-2">
 					<span class="font-extrabold bold text-contrast">
 						{{ instance.name }}

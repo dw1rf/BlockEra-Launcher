@@ -18,7 +18,6 @@ import {
 	useVIntl,
 } from '@modrinth/ui'
 import { capitalizeString } from '@modrinth/utils'
-import { convertFileSrc } from '@tauri-apps/api/core'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
@@ -58,8 +57,6 @@ if (props.instance.linked_data) {
 		loadingModpack.value = false
 	})
 }
-
-const instanceIcon = computed(() => props.instance.icon_path)
 
 const loader = computed(() => {
 	if (props.instance.loader === 'vanilla') {
@@ -130,13 +127,8 @@ onUnmounted(() => {
 			/>
 		</template>
 		<div
-			class="grid grid-cols-[auto_minmax(0,3fr)_minmax(0,4fr)_auto] items-center gap-2 p-3 bg-bg-raised card-shadow rounded-xl smart-clickable:highlight-on-hover"
+			class="grid grid-cols-[minmax(0,3fr)_minmax(0,4fr)_auto] items-center gap-2 p-3 bg-bg-raised card-shadow rounded-xl smart-clickable:highlight-on-hover"
 		>
-			<Avatar
-				:src="instanceIcon ? convertFileSrc(instanceIcon) : undefined"
-				:tint-by="instance.path"
-				size="48px"
-			/>
 			<div class="flex flex-col col-span-2 justify-between h-full">
 				<div class="flex items-center gap-2">
 					<div class="text-lg text-contrast font-bold truncate smart-clickable:underline-on-hover">

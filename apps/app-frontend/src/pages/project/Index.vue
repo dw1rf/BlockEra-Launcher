@@ -155,7 +155,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import { computed, ref, shallowRef, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
@@ -171,7 +171,6 @@ dayjs.extend(relativeTime)
 
 const { handleError } = injectNotificationManager()
 const route = useRoute()
-const router = useRouter()
 const breadcrumbs = useBreadcrumbs()
 const themeStore = useTheming()
 

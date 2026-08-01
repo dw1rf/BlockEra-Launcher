@@ -1,31 +1,19 @@
 <script setup lang="ts">
+import { CopyIcon, MonitorIcon, PlusIcon, SpinnerIcon, TrashIcon } from '@modrinth/assets'
 import {
-	CopyIcon,
-	EditIcon,
-	MonitorIcon,
-	PlusIcon,
-	SpinnerIcon,
-	TrashIcon,
-	UploadIcon,
-} from '@modrinth/assets'
-import {
-	Avatar,
 	ButtonStyled,
 	Checkbox,
 	defineMessages,
 	injectNotificationManager,
-	OverflowMenu,
 	useVIntl,
 } from '@modrinth/ui'
-import { convertFileSrc } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
-import { computed, type Ref, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import BackgroundPicker from '@/components/ui/BackgroundPicker.vue'
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { duplicate, edit, edit_icon, list, remove } from '@/helpers/profile'
+import { duplicate, edit, list, remove } from '@/helpers/profile'
 import { createDesktopShortcut } from '@/helpers/utils'
 
 import type { GameInstance, InstanceSettingsTabProps } from '../../../helpers/types'
@@ -39,7 +27,6 @@ const deleteConfirmModal = ref()
 const props = defineProps<InstanceSettingsTabProps>()
 
 const title = ref(props.instance.name)
-const icon: Ref<string | undefined> = ref(props.instance.icon_path)
 const groups = ref(props.instance.groups)
 
 const newCategoryInput = ref('')
@@ -73,31 +60,6 @@ const allInstances = ref((await list()) as GameInstance[])
 const availableGroups = computed(() => [
 	...new Set([...allInstances.value.flatMap((instance) => instance.groups), ...groups.value]),
 ])
-
-async function resetIcon() {
-	icon.value = undefined
-	await edit_icon(props.instance.path, null).catch(handleError)
-	trackEvent('InstanceRemoveIcon')
-}
-
-async function setIcon() {
-	const value = await open({
-		multiple: false,
-		filters: [
-			{
-				name: 'Image',
-				extensions: ['png', 'jpeg', 'svg', 'webp', 'gif', 'jpg'],
-			},
-		],
-	})
-
-	if (!value) return
-
-	icon.value = value
-	await edit_icon(props.instance.path, icon.value).catch(handleError)
-
-	trackEvent('InstanceSetIcon')
-}
 
 const editProfileObject = computed(() => ({
 	name: title.value.trim().substring(0, 32) ?? 'Instance',
@@ -165,22 +127,6 @@ const messages = defineMessages({
 		id: 'instance.settings.tabs.general.library-groups.create',
 		defaultMessage: 'Create new group',
 	},
-	editIcon: {
-		id: 'instance.settings.tabs.general.edit-icon',
-		defaultMessage: 'Edit icon',
-	},
-	selectIcon: {
-		id: 'instance.settings.tabs.general.edit-icon.select',
-		defaultMessage: 'Select icon',
-	},
-	replaceIcon: {
-		id: 'instance.settings.tabs.general.edit-icon.replace',
-		defaultMessage: 'Replace icon',
-	},
-	removeIcon: {
-		id: 'instance.settings.tabs.general.edit-icon.remove',
-		defaultMessage: 'Remove icon',
-	},
 	duplicateInstance: {
 		id: 'instance.settings.tabs.general.duplicate-instance',
 		defaultMessage: 'Duplicate instance',
@@ -228,44 +174,6 @@ const messages = defineMessages({
 		@proceed="removeProfile"
 	/>
 	<div class="block">
-		<div class="float-end ml-4 relative group">
-			<OverflowMenu
-				v-tooltip="formatMessage(messages.editIcon)"
-				class="bg-transparent border-none appearance-none p-0 m-0 cursor-pointer group-active:scale-95 transition-transform"
-				:options="[
-					{
-						id: 'select',
-						action: () => setIcon(),
-					},
-					{
-						id: 'remove',
-						color: 'danger',
-						action: () => resetIcon(),
-						shown: !!icon,
-					},
-				]"
-			>
-				<Avatar
-					:src="icon ? convertFileSrc(icon) : icon"
-					size="108px"
-					class="!border-4 group-hover:brightness-75"
-					:tint-by="props.instance.path"
-					no-shadow
-				/>
-				<div class="absolute top-0 right-0 m-2">
-					<div
-						class="p-2 m-0 text-primary flex items-center justify-center aspect-square bg-button-bg rounded-full border-button-border border-solid border-[1px] hovering-icon-shadow"
-					>
-						<EditIcon aria-hidden="true" class="h-4 w-4 text-primary" />
-					</div>
-				</div>
-				<template #select>
-					<UploadIcon />
-					{{ icon ? formatMessage(messages.replaceIcon) : formatMessage(messages.selectIcon) }}
-				</template>
-				<template #remove> <TrashIcon /> {{ formatMessage(messages.removeIcon) }} </template>
-			</OverflowMenu>
-		</div>
 		<label for="instance-name" class="m-0 mb-1 text-lg font-extrabold text-contrast block">
 			{{ formatMessage(messages.name) }}
 		</label>
@@ -377,8 +285,3 @@ const messages = defineMessages({
 		</ButtonStyled>
 	</div>
 </template>
-<style scoped lang="scss">
-.hovering-icon-shadow {
-	box-shadow: var(--shadow-inset-sm), var(--shadow-raised);
-}
-</style>
