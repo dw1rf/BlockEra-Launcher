@@ -198,31 +198,39 @@ onBeforeUnmount(() => clearTimeout(testResetTimer))
 <style lang="scss" scoped>
 .installation-input {
 	width: 100% !important;
+	min-width: 0;
 	flex-grow: 1;
 }
 
 .toggle-setting {
-	display: flex;
-	flex-wrap: wrap;
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	align-items: stretch;
+	min-width: 0;
+	max-width: 100%;
 	gap: 0.5rem;
 
 	&.compact {
+		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 	}
 }
 
 .installation-buttons {
 	display: flex;
+	min-width: 0;
+	max-width: 100%;
+	flex-wrap: wrap;
 	flex-direction: row;
 	align-items: center;
 	gap: 0.5rem;
 	margin: 0;
 
 	.btn {
-		width: max-content;
+		width: auto;
+		max-width: 100%;
+		flex: 0 1 auto;
 	}
 }
 

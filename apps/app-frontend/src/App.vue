@@ -408,9 +408,16 @@ function handleWindowDrag(event) {
 }
 
 const router = useRouter()
+const route = useRoute()
 const renderRoute = ref(true)
+const projectReturnPath = ref(null)
 
 router.beforeEach(async (to, from) => {
+	const enteringProject = to.path.startsWith('/project/') && !from.path.startsWith('/project/')
+	if (enteringProject) {
+		projectReturnPath.value = from.matched.length > 0 ? from.fullPath : null
+	}
+
 	if (to.fullPath !== from.fullPath) {
 		renderRoute.value = false
 		await nextTick()
@@ -422,6 +429,10 @@ router.afterEach((to, from, failure) => {
 	renderRoute.value = true
 	if (!failure && to.fullPath !== from.fullPath) {
 		settingsModal.value?.hide()
+		void nextTick(() => document.querySelector('.app-viewport')?.scrollTo(0, 0))
+	}
+	if (!failure && from.path.startsWith('/project/') && !to.path.startsWith('/project/')) {
+		projectReturnPath.value = null
 	}
 	trackEvent('PageView', {
 		path: to.path,
@@ -429,7 +440,6 @@ router.afterEach((to, from, failure) => {
 		failed: failure,
 	})
 })
-const route = useRoute()
 const showProjectBack = computed(() => route.path.startsWith('/project/'))
 const projectTypeFallback = computed(() => {
 	const type = String(route.query.type ?? 'modpack')
@@ -437,17 +447,17 @@ const projectTypeFallback = computed(() => {
 })
 
 function closeActiveProject() {
-	if (window.history.state?.back) {
-		router.back()
+	if (projectReturnPath.value) {
+		void router.replace(projectReturnPath.value)
 		return
 	}
 
 	if (route.query.i) {
-		void router.push(`/instance/${encodeURIComponent(String(route.query.i))}/content`)
+		void router.replace(`/instance/${encodeURIComponent(String(route.query.i))}/content`)
 		return
 	}
 
-	void router.push(`/browse/${projectTypeFallback.value}`)
+	void router.replace(`/browse/${projectTypeFallback.value}`)
 }
 
 const routeViewKey = computed(() => {
@@ -949,6 +959,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</section>
 		</div>
 		<header v-else class="cinematic-topbar" @mousedown="handleWindowDrag">
+			<button
+				v-if="showProjectBack"
+				v-tooltip.bottom="'Вернуться назад'"
+				class="cinematic-project-back"
+				type="button"
+				aria-label="Вернуться назад"
+				@click="closeActiveProject"
+			>
+				<LeftArrowIcon aria-hidden="true" />
+				<span>Назад</span>
+			</button>
 			<router-link to="/" class="cinematic-brand">
 				<BlockEraLogo aria-hidden="true" />
 				<span class="cinematic-brand-copy">
@@ -1043,16 +1064,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 		}"
 	>
-		<div
-			class="app-viewport flex-grow router-view"
-			:class="{ 'project-route-active': showProjectBack }"
-		>
-			<ButtonStyled v-if="showProjectBack" class="project-route-back-control" type="transparent">
-				<button type="button" aria-label="Вернуться назад" @click="closeActiveProject">
-					<LeftArrowIcon aria-hidden="true" />
-					Назад
-				</button>
-			</ButtonStyled>
+		<div class="app-viewport flex-grow router-view">
 			<transition name="popup-survey">
 				<div
 					v-if="availableSurvey"
@@ -1282,7 +1294,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	position: fixed;
 	inset: 0 0 auto;
 	z-index: 30;
+	width: 100%;
 	height: var(--top-bar-height);
+	overflow: hidden;
 }
 
 .cinematic-topbar {
@@ -1296,7 +1310,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	width: 100%;
 	box-sizing: border-box;
 	padding-left: 1.25rem;
-	overflow: visible;
+	overflow: hidden;
 	background: var(--blockera-glass-surface-strong);
 	border-bottom: 1px solid var(--blockera-glass-border);
 	box-shadow:
@@ -1305,6 +1319,44 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 	user-select: none;
 	-webkit-user-select: none;
+}
+
+.cinematic-project-back {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	min-width: 5.5rem;
+	flex: 0 0 auto;
+	height: 2.75rem;
+	margin-right: 0.7rem;
+	padding: 0 0.85rem;
+	border: 1px solid var(--blockera-glass-border);
+	border-radius: var(--blockera-radius-pill);
+	background: var(--blockera-glass-surface);
+	color: var(--color-contrast);
+	font: inherit;
+	font-weight: 750;
+	cursor: pointer;
+	transition:
+		transform var(--blockera-motion-fast) var(--blockera-ease),
+		background-color var(--blockera-motion-fast) var(--blockera-ease),
+		border-color var(--blockera-motion-fast) var(--blockera-ease);
+}
+
+.cinematic-project-back:hover {
+	transform: translateY(-1px);
+	border-color: var(--blockera-glass-border-active);
+	background: var(--blockera-glass-accent);
+}
+
+.cinematic-project-back:active {
+	transform: scale(0.98);
+}
+
+.cinematic-project-back svg {
+	width: 1.15rem;
+	height: 1.15rem;
 }
 
 .cinematic-brand {
@@ -1421,27 +1473,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	color: var(--color-secondary);
 }
 
-.app-viewport.project-route-active {
-	padding-top: 4.5rem;
-	box-sizing: border-box;
-}
-
-.project-route-back-control {
-	position: fixed;
-	top: calc(var(--top-bar-height) + 1rem);
-	left: 1.5rem;
-	z-index: 29;
-}
-
-.project-route-back-control :deep(button) {
-	background: var(--blockera-glass-surface-strong);
-	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
-	border-color: var(--blockera-glass-border);
-	box-shadow:
-		inset 0 1px var(--blockera-glass-highlight),
-		0 10px 28px rgba(0, 0, 0, 0.25);
-}
-
 .route-loading-spinner {
 	width: 2rem;
 	height: 2rem;
@@ -1478,6 +1509,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 }
 
 @media (max-width: 1400px) {
+	.cinematic-project-back {
+		min-width: 2.75rem;
+		padding: 0;
+	}
+
+	.cinematic-project-back span {
+		display: none;
+	}
+
 	.cinematic-brand {
 		min-width: auto;
 		margin-right: 0.5rem;
@@ -1560,7 +1600,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 .app-grid-layout {
 	display: grid;
 	grid-template: 'status status' 'nav dummy';
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto minmax(0, 1fr);
 	grid-template-rows: auto 1fr;
 	position: relative;
 	//z-index: 0;
@@ -1592,11 +1632,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	border-top-left-radius: var(--radius-xl);
 
 	display: grid;
-	grid-template-columns: 1fr 0px;
+	grid-template-columns: minmax(0, 1fr) 0px;
 	// transition: grid-template-columns 0.4s ease-in-out;
 
 	&.sidebar-enabled {
-		grid-template-columns: 1fr 300px;
+		grid-template-columns: minmax(0, 1fr) 300px;
 	}
 }
 
@@ -1631,6 +1671,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 
 .app-viewport {
 	flex-grow: 1;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
 	height: 100%;
 	overflow: auto;
 	overflow-x: hidden;

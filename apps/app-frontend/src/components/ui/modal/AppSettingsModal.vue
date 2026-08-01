@@ -405,7 +405,29 @@ code {
 }
 
 :deep(.settings-cinematic .modal-body > div:nth-child(2)) {
+	min-width: 0;
+	overflow-x: hidden;
 	padding: 1rem 1.25rem 1.25rem;
+}
+
+:deep(.settings-cinematic .tabbed-modal-layout) {
+	width: min(62.5rem, calc(100vw - 8rem));
+	min-width: 0;
+	max-width: 100%;
+}
+
+:deep(.settings-cinematic .tabbed-modal-tabs) {
+	min-width: 14.5rem;
+}
+
+:deep(.settings-cinematic .tabbed-modal-content) {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	height: min(36rem, calc(100vh - 12rem));
+	overflow-x: hidden;
+	padding: 0.2rem 0.5rem 1.5rem 1.25rem;
+	box-sizing: border-box;
 }
 :deep(.settings-cinematic .modal-body > div:nth-child(2) > div > div:first-child) {
 	min-width: 14.5rem;
@@ -443,9 +465,12 @@ code {
 :deep(
 	.settings-cinematic .modal-body > div:nth-child(2) > div > div:last-child > div.overflow-y-auto
 ) {
-	width: min(46rem, calc(100vw - 24rem));
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
 	height: min(36rem, calc(100vh - 12rem));
 	padding: 0.2rem 0.5rem 1.5rem 1.25rem;
+	box-sizing: border-box;
 }
 
 :deep(.launcher-settings-page) {
@@ -574,8 +599,9 @@ code {
 }
 :deep(.java-version-row) {
 	display: grid;
-	grid-template-columns: 11rem minmax(0, 1fr);
+	grid-template-columns: minmax(8.5rem, 10rem) minmax(0, 1fr);
 	align-items: center;
+	min-width: 0;
 	gap: 1rem;
 	padding: 0.8rem;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -586,8 +612,14 @@ code {
 }
 :deep(.java-version-row > div:first-child) {
 	display: flex;
+	min-width: 0;
 	flex-direction: column;
 	gap: 0.25rem;
+}
+
+:deep(.java-version-row > .toggle-setting) {
+	min-width: 0;
+	max-width: 100%;
 }
 :deep(.java-version-row strong) {
 	color: #fff;
