@@ -463,14 +463,6 @@ onBeforeUnmount(() => {
 	overflow-x: hidden;
 }
 
-:global(.blockera-glass-theme) .modal-container > .modal-body {
-	border: 1px solid var(--blockera-glass-border, rgba(255, 255, 255, 0.1));
-	background: var(--blockera-glass-surface-strong, rgba(13, 16, 27, 0.9));
-	box-shadow:
-		inset 0 1px var(--blockera-glass-highlight, rgba(255, 255, 255, 0.08)),
-		var(--blockera-glass-shadow, 0 18px 52px rgba(0, 0, 0, 0.36));
-}
-
 @media (max-height: 640px) {
 	.modal-container > .modal-body {
 		max-height: calc(100% - 1rem);
