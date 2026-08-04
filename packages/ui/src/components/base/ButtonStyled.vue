@@ -302,23 +302,6 @@ const fontSize = computed(() => {
 	}
 }
 
-:global(.blockera-glass-theme) .btn-wrapper :deep(:is(button, a, .button-like):first-child),
-:global(.blockera-glass-theme) .btn-wrapper :slotted(:is(button, a, .button-like):first-child) {
-	border-color: var(--blockera-glass-border, rgba(255, 255, 255, 0.1));
-	box-shadow:
-		inset 0 1px var(--blockera-glass-highlight, rgba(255, 255, 255, 0.08)),
-		var(--_box-shadow, none);
-
-	&:not([disabled]):not([disabled='true']):not(.disabled):hover {
-		transform: translateY(-1px);
-		border-color: var(--blockera-glass-border-active, rgba(192, 132, 252, 0.4));
-	}
-
-	&:not([disabled]):not([disabled='true']):not(.disabled):active {
-		transform: scale(0.97);
-	}
-}
-
 .btn-wrapper:not(.chip) :deep(:is(button, a, .button-like):first-child),
 .btn-wrapper:not(.chip) :slotted(:is(button, a, .button-like):first-child),
 .btn-wrapper:not(.chip) :slotted(*) > :is(button, a, .button-like):first-child,

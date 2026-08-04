@@ -1311,7 +1311,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	z-index: var(--blockera-layer-topbar, 30);
 	width: calc(100vw - 24px);
 	height: var(--top-bar-height);
-	border-radius: 14px;
+	border-radius: 14px 14px 0 0;
 	overflow: visible;
 	transform: translateX(-50%);
 }
@@ -1326,15 +1326,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	height: var(--top-bar-height);
 	width: 100%;
 	box-sizing: border-box;
-	border-radius: 14px;
+	border-radius: 14px 14px 0 0;
 	padding-left: 1.25rem;
 	overflow: hidden;
 	background:
-		linear-gradient(110deg, rgba(24, 29, 43, 0.84), rgba(10, 13, 24, 0.78)),
-		radial-gradient(circle at 72% 140%, rgba(104, 67, 255, 0.24), transparent 34rem);
+		radial-gradient(circle at 72% 140%, rgba(104, 67, 255, 0.16), transparent 34rem),
+		linear-gradient(110deg, #151927, #0d101b);
+	border: 1px solid rgba(217, 205, 255, 0.12);
 	border-bottom: 1px solid var(--blockera-glass-border);
-	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
-	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
+	box-shadow: none;
 	user-select: none;
 	-webkit-user-select: none;
 }
@@ -1605,24 +1605,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	z-index: 2;
 	left: 50%;
 	right: auto;
-	top: calc(var(--top-bar-height) + 24px);
+	top: calc(var(--top-bar-height) + 12px);
 	bottom: 12px;
 	width: calc(100vw - 24px);
-	height: calc(100vh - var(--top-bar-height) - 36px);
-	border-radius: 14px;
-	border: 1px solid rgba(164, 120, 255, 0.24);
-	border-top-color: transparent;
+	height: calc(100vh - var(--top-bar-height) - 24px);
+	border-radius: 0 0 14px 14px;
+	border: 1px solid rgba(217, 205, 255, 0.12);
+	border-top: 0;
 	overflow: hidden;
 	transform: translateX(-50%);
 	grid-template-columns: minmax(0, 1fr);
 	background:
-		radial-gradient(circle at 78% -12%, rgba(100, 50, 182, 0.14), transparent 34rem),
-		radial-gradient(circle at 12% 112%, rgba(45, 94, 190, 0.1), transparent 38rem),
+		radial-gradient(ellipse 68% 22% at 50% 108%, rgba(41, 76, 184, 0.2), transparent 74%),
+		radial-gradient(circle at 78% -12%, rgba(100, 50, 182, 0.1), transparent 34rem),
 		linear-gradient(180deg, #070a13 0%, #050912 100%);
-	box-shadow:
-		0 22px 34px -10px rgba(35, 95, 255, 0.82),
-		18px 14px 38px -20px rgba(105, 62, 224, 0.72),
-		-18px 14px 38px -20px rgba(55, 92, 222, 0.5);
+	box-shadow: inset 0 -1px rgba(104, 132, 255, 0.34);
 }
 
 .app-contents.cinematic-shell-contents::before {
