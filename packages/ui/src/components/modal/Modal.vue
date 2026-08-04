@@ -88,7 +88,7 @@ defineExpose({
 	left: 0;
 	width: 100%;
 	height: 100px;
-	z-index: 20;
+	z-index: var(--blockera-layer-modal-native, 20);
 
 	&.shown {
 		opacity: 1;
@@ -103,7 +103,7 @@ defineExpose({
 	left: 0;
 	width: 100%;
 	height: 100%;
-	z-index: 19;
+	z-index: var(--blockera-layer-modal-backdrop, 19);
 	transition: all 0.3s ease-in-out;
 
 	@media (prefers-reduced-motion) {
@@ -131,7 +131,7 @@ defineExpose({
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 21;
+	z-index: var(--blockera-layer-modal, 21);
 	visibility: hidden;
 	pointer-events: none;
 

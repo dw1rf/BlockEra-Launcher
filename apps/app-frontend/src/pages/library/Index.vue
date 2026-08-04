@@ -165,8 +165,9 @@ onUnmounted(() => {
 	padding: 0.75rem 0.9rem;
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	border-radius: 0.85rem;
-	background: rgba(5, 8, 15, 0.66);
-	backdrop-filter: blur(14px);
+	background: var(--blockera-glass-surface);
+	box-shadow: inset 0 1px var(--blockera-glass-highlight);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 }
 
 .library-stats strong {
@@ -186,8 +187,11 @@ onUnmounted(() => {
 	padding: 1.1rem;
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	border-radius: 1.15rem;
-	background: rgba(12, 17, 27, 0.86);
-	box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
+	background: var(--blockera-glass-panel);
+	box-shadow:
+		inset 0 1px var(--blockera-glass-highlight),
+		0 20px 48px rgba(0, 0, 0, 0.18);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 }
 
 .library-tabs {
@@ -216,8 +220,8 @@ onUnmounted(() => {
 :deep(.library-workspace .instances > div > div) {
 	min-height: 4.6rem;
 	border: 1px solid rgba(255, 255, 255, 0.07);
-	background: linear-gradient(135deg, rgba(22, 29, 43, 0.96), rgba(13, 18, 28, 0.96)) !important;
-	box-shadow: none;
+	background: linear-gradient(135deg, rgba(27, 33, 47, 0.76), rgba(14, 19, 30, 0.76)) !important;
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.045);
 }
 
 :deep(.library-workspace .instances > div > div:hover) {

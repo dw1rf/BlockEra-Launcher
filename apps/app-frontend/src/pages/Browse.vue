@@ -287,8 +287,7 @@ const localizedFilters = computed(() =>
 		})),
 		toggle_groups: filter.toggle_groups?.map((group) => ({
 			...group,
-			formatted_name:
-				group.id === 'all_versions' ? 'Показать все версии' : group.formatted_name,
+			formatted_name: group.id === 'all_versions' ? 'Показать все версии' : group.formatted_name,
 		})),
 	})),
 )
@@ -605,13 +604,13 @@ const options = ref(null)
 const browseTitle = computed(
 	() =>
 		(
-			{
+			({
 				modpack: 'Сборки',
 				mod: 'Моды',
 				resourcepack: 'Ресурс-паки',
 				datapack: 'Дата-паки',
 				shader: 'Шейдеры',
-			} as Record<string, string>
+			}) as Record<string, string>
 		)[String(projectType.value)] ?? 'Контент',
 )
 const handleRightClick = (event, result) => {
@@ -882,7 +881,9 @@ void refreshSearch()
 .browse-results {
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	border-radius: 1.05rem;
-	background: rgba(12, 17, 27, 0.88);
+	background: var(--blockera-glass-panel);
+	box-shadow: inset 0 1px var(--blockera-glass-highlight);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 }
 
 .browse-filters {

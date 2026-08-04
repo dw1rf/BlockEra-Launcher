@@ -5,9 +5,17 @@
 				<p class="input-label">Profile Code</p>
 				<div class="iconified-input">
 					<SearchIcon aria-hidden="true" class="text-lg" />
-					<input ref="codeInput" v-model="profileCode" autocomplete="off" class="h-12 card-shadow"
-						spellcheck="false" type="text" placeholder="Enter CurseForge profile code" maxlength="20"
-						@keyup.enter="importProfile" />
+					<input
+						ref="codeInput"
+						v-model="profileCode"
+						autocomplete="off"
+						class="h-12 card-shadow"
+						spellcheck="false"
+						type="text"
+						placeholder="Enter CurseForge profile code"
+						maxlength="20"
+						@keyup.enter="importProfile"
+					/>
 					<Button v-if="profileCode" class="r-btn" @click="() => (profileCode = '')">
 						<XIcon />
 					</Button>
@@ -34,16 +42,20 @@
 			</div>
 
 			<div class="button-row">
-				<Button @click="hide" :disabled="importing">
+				<Button :disabled="importing" @click="hide">
 					<XIcon />
 					Cancel
 				</Button>
-				<Button v-if="!metadata" @click="fetchMetadata" :disabled="!profileCode.trim() || fetching"
-					color="secondary">
+				<Button
+					v-if="!metadata"
+					:disabled="!profileCode.trim() || fetching"
+					color="secondary"
+					@click="fetchMetadata"
+				>
 					<SearchIcon v-if="!fetching" />
 					{{ fetching ? 'Checking...' : 'Check Profile' }}
 				</Button>
-				<Button v-if="metadata" @click="importProfile" :disabled="importing" color="primary">
+				<Button v-if="metadata" :disabled="importing" color="primary" @click="importProfile">
 					<DownloadIcon v-if="!importing" />
 					{{ importing ? 'Importing...' : 'Import Profile' }}
 				</Button>
@@ -53,27 +65,21 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import { DownloadIcon, SearchIcon, XIcon } from '@modrinth/assets'
 import { Button } from '@modrinth/ui'
-import {
-	XIcon,
-	SearchIcon,
-	DownloadIcon
-} from '@modrinth/assets'
-import {
-	fetch_curseforge_profile_metadata,
-	import_curseforge_profile
-} from '@/helpers/import.js'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { loading_listener } from '@/helpers/events.js'
+import { fetch_curseforge_profile_metadata, import_curseforge_profile } from '@/helpers/import.js'
 
 const props = defineProps({
 	closeParent: {
 		type: Function,
-		default: null
-	}
+		default: null,
+	},
 })
 
 const router = useRouter()
@@ -89,7 +95,7 @@ const importProgress = ref({
 	percentage: 0,
 	message: 'Starting import...',
 	totalMods: 0,
-	downloadedMods: 0
+	downloadedMods: 0,
 })
 
 let unlistenLoading = null
@@ -108,7 +114,7 @@ defineExpose({
 			percentage: 0,
 			message: 'Starting import...',
 			totalMods: 0,
-			downloadedMods: 0
+			downloadedMods: 0,
 		}
 		modal.value?.show()
 
@@ -136,7 +142,7 @@ const fetchMetadata = async () => {
 		const result = await fetch_curseforge_profile_metadata(profileCode.value.trim())
 		metadata.value = result
 		trackEvent('CurseForgeProfileMetadataFetched', {
-			profileCode: profileCode.value.trim()
+			profileCode: profileCode.value.trim(),
 		})
 	} catch (err) {
 		console.error('Failed to fetch CurseForge profile metadata:', err)
@@ -158,7 +164,7 @@ const importProfile = async () => {
 		percentage: 0,
 		message: 'Starting import...',
 		totalMods: 0,
-		downloadedMods: 0
+		downloadedMods: 0,
 	}
 
 	// Fallback progress timer in case loading events don't work
@@ -170,10 +176,10 @@ const importProfile = async () => {
 	}, 1000)
 
 	try {
-		const { result, profilePath } = await import_curseforge_profile(profileCode.value.trim())
+		const { profilePath } = await import_curseforge_profile(profileCode.value.trim())
 
 		trackEvent('CurseForgeProfileImported', {
-			profileCode: profileCode.value.trim()
+			profileCode: profileCode.value.trim(),
 		})
 
 		hide()
@@ -227,7 +233,10 @@ onMounted(async () => {
 					// Custom progress calculation for different stages
 					if (message.includes('Fetching') || message.includes('metadata')) {
 						finalProgress = Math.min(10, baseProgress)
-					} else if (message.includes('Downloading profile ZIP') || message.includes('profile ZIP')) {
+					} else if (
+						message.includes('Downloading profile ZIP') ||
+						message.includes('profile ZIP')
+					) {
 						finalProgress = Math.min(15, 10 + (baseProgress - 10) * 0.5)
 					} else if (message.includes('Extracting') || message.includes('ZIP')) {
 						finalProgress = Math.min(20, 15 + (baseProgress - 15) * 0.5)
@@ -367,14 +376,14 @@ onUnmounted(() => {
 	height: 100%;
 	background: var(--color-brand);
 	border-radius: 2px;
-  transition: width 0.3s ease;
-  min-width: 0;
+	transition: width 0.3s ease;
+	min-width: 0;
 }
 
 .button-row {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  margin-top: auto;
+	display: flex;
+	gap: 0.5rem;
+	justify-content: flex-end;
+	margin-top: auto;
 }
 </style>

@@ -395,8 +395,10 @@ code {
 :deep(.settings-cinematic .modal-body) {
 	border: 1px solid rgba(168, 85, 247, 0.24);
 	background:
-		radial-gradient(circle at 14% 0%, rgba(126, 34, 206, 0.16), transparent 23rem), #0b101a !important;
+		radial-gradient(circle at 14% 0%, rgba(126, 34, 206, 0.16), transparent 23rem),
+		var(--blockera-glass-surface-overlay) !important;
 	box-shadow: 0 32px 100px rgba(0, 0, 0, 0.55) !important;
+	backdrop-filter: blur(var(--blockera-glass-blur-strong)) saturate(125%);
 }
 
 :deep(.settings-cinematic .modal-body > div:first-child) {
@@ -510,7 +512,7 @@ code {
 	padding: 1rem;
 	border: 1px solid rgba(255, 255, 255, 0.075);
 	border-radius: 0.9rem;
-	background: linear-gradient(135deg, rgba(21, 27, 40, 0.92), rgba(13, 18, 28, 0.92));
+	background: linear-gradient(135deg, rgba(27, 33, 47, 0.72), rgba(14, 19, 30, 0.72));
 	box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
 }
 

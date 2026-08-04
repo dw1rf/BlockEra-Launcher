@@ -219,6 +219,14 @@ const modpack = computed(() => props.project.project_type === 'modpack')
 <style scoped>
 .search-card {
 	position: relative;
+	min-width: 0;
+	border: 1px solid rgba(231, 220, 255, 0.1);
+	background: linear-gradient(135deg, rgba(27, 33, 47, 0.72), rgba(14, 19, 30, 0.72)) !important;
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.045);
+}
+
+.search-card:hover {
+	border-color: var(--blockera-glass-border-active, rgba(192, 132, 252, 0.46));
 }
 
 .search-card-open {

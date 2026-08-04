@@ -606,7 +606,7 @@ onUnmounted(() => {
 	width: 100%;
 	height: 100%;
 	font-family: var(--mono-font);
-	background: #070a10;
+	background: rgba(5, 8, 15, 0.8);
 	color: var(--color-contrast);
 	border: 1px solid rgba(155, 85, 224, 0.18);
 	border-radius: 13px;

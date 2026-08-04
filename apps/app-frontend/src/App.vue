@@ -748,11 +748,20 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 
 <template>
 	<SplashScreen v-if="!stateFailed" ref="splashScreen" data-tauri-drag-region />
-	<div id="teleports"></div>
+	<div
+		id="teleports"
+		:class="{
+			'blockera-glass-theme': cinematicShell,
+			'disable-advanced-rendering': !themeStore.advancedRendering,
+		}"
+	></div>
 	<div
 		v-if="stateInitialized"
 		class="app-grid-layout experimental-styles-within relative"
-		:class="{ 'disable-advanced-rendering': !themeStore.advancedRendering }"
+		:class="{
+			'blockera-glass-theme': cinematicShell,
+			'disable-advanced-rendering': !themeStore.advancedRendering,
+		}"
 	>
 		<Suspense>
 			<AppSettingsModal ref="settingsModal" @open-onboarding="showOnboarding = true" />
@@ -982,10 +991,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					<HomeIcon />
 					<span>Главная</span>
 				</router-link>
-				<router-link to="/browse/modpack" class="cinematic-nav-link" aria-label="Каталог">
-					<CompassIcon />
-					<span>Каталог</span>
-				</router-link>
 				<router-link to="/library" class="cinematic-nav-link" aria-label="Библиотека">
 					<CollectionIcon />
 					<span>Библиотека</span>
@@ -993,6 +998,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<router-link :to="modsRoute" class="cinematic-nav-link" aria-label="Моя сборка">
 					<BlocksIcon />
 					<span>Моя сборка</span>
+				</router-link>
+				<router-link to="/browse/modpack" class="cinematic-nav-link" aria-label="Каталог">
+					<CompassIcon />
+					<span>Каталог</span>
 				</router-link>
 				<router-link to="/skins" class="cinematic-nav-link" aria-label="Скины">
 					<ChangeSkinIcon />
@@ -1061,6 +1070,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 		:class="{
 			'sidebar-enabled': sidebarVisible && !cinematicShell,
 			'cinematic-shell-contents': cinematicShell,
+			'blockera-glass-theme': cinematicShell,
 			'disable-advanced-rendering': !themeStore.advancedRendering,
 		}"
 	>
@@ -1087,14 +1097,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					</div>
 				</div>
 			</transition>
-			<div
-				class="loading-indicator-container h-8 fixed z-50"
-				:style="{
-					top: 'calc(var(--top-bar-height))',
-					left: 'calc(var(--left-bar-width))',
-					width: 'calc(100% - var(--left-bar-width) - var(--right-bar-width))',
-				}"
-			>
+			<div class="loading-indicator-container absolute inset-x-0 top-0 h-2">
 				<ModrinthLoadingIndicator />
 			</div>
 			<div
@@ -1283,6 +1286,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	--right-bar-width: 300px;
 }
 
+#teleports {
+	position: fixed;
+	inset: 0;
+	z-index: var(--blockera-layer-popover, 120);
+	pointer-events: none;
+}
+
+#teleports > * {
+	pointer-events: auto;
+}
+
 .app-grid-layout:has(.cinematic-topbar),
 .app-contents.cinematic-shell-contents {
 	--top-bar-height: 4.75rem;
@@ -1292,33 +1306,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 
 .app-grid-layout:has(.cinematic-topbar) {
 	position: fixed;
-	inset: 0 0 auto;
-	z-index: 30;
-	width: 100%;
+	left: 50%;
+	top: 12px;
+	z-index: var(--blockera-layer-topbar, 30);
+	width: calc(100vw - 24px);
 	height: var(--top-bar-height);
-	overflow: hidden;
+	border-radius: 14px;
+	overflow: visible;
+	transform: translateX(-50%);
 }
 
 .cinematic-topbar {
 	grid-area: status;
 	position: relative;
-	z-index: 30;
+	z-index: var(--blockera-layer-topbar, 30);
 	display: flex;
 	align-items: center;
 	min-width: 0;
 	height: var(--top-bar-height);
 	width: 100%;
 	box-sizing: border-box;
+	border-radius: 14px;
 	padding-left: 1.25rem;
 	overflow: hidden;
-	background: var(--blockera-glass-surface-strong);
+	background:
+		linear-gradient(110deg, rgba(24, 29, 43, 0.84), rgba(10, 13, 24, 0.78)),
+		radial-gradient(circle at 72% 140%, rgba(104, 67, 255, 0.24), transparent 34rem);
 	border-bottom: 1px solid var(--blockera-glass-border);
-	box-shadow:
-		inset 0 1px var(--blockera-glass-highlight),
-		0 12px 30px rgba(0, 0, 0, 0.22);
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
 	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 	user-select: none;
 	-webkit-user-select: none;
+}
+
+.disable-advanced-rendering .cinematic-topbar {
+	background: #0f1320;
+	backdrop-filter: none;
 }
 
 .cinematic-project-back {
@@ -1579,12 +1602,27 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 }
 
 .app-contents.cinematic-shell-contents {
-	left: 0;
-	top: var(--top-bar-height);
-	height: calc(100vh - var(--top-bar-height));
-	border-radius: 0;
+	z-index: 2;
+	left: 50%;
+	right: auto;
+	top: calc(var(--top-bar-height) + 24px);
+	bottom: 12px;
+	width: calc(100vw - 24px);
+	height: calc(100vh - var(--top-bar-height) - 36px);
+	border-radius: 14px;
+	border: 1px solid rgba(164, 120, 255, 0.24);
+	border-top-color: transparent;
+	overflow: hidden;
+	transform: translateX(-50%);
 	grid-template-columns: minmax(0, 1fr);
-	background: #050912;
+	background:
+		radial-gradient(circle at 78% -12%, rgba(100, 50, 182, 0.14), transparent 34rem),
+		radial-gradient(circle at 12% 112%, rgba(45, 94, 190, 0.1), transparent 38rem),
+		linear-gradient(180deg, #070a13 0%, #050912 100%);
+	box-shadow:
+		0 22px 34px -10px rgba(35, 95, 255, 0.82),
+		18px 14px 38px -20px rgba(105, 62, 224, 0.72),
+		-18px 14px 38px -20px rgba(55, 92, 222, 0.5);
 }
 
 .app-contents.cinematic-shell-contents::before {
@@ -1641,8 +1679,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 }
 
 .loading-indicator-container {
+	z-index: 2;
 	border-top-left-radius: var(--radius-xl);
 	overflow: hidden;
+	pointer-events: none;
 }
 
 .app-sidebar {

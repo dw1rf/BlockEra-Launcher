@@ -743,10 +743,13 @@ Button {
 	align-items: center;
 	justify-content: space-between;
 	gap: 20px;
-	background: linear-gradient(125deg, rgba(21, 27, 39, 0.98), rgba(17, 18, 31, 0.96));
+	background:
+		linear-gradient(125deg, rgba(32, 29, 48, 0.38), rgba(12, 17, 29, 0.2)),
+		var(--blockera-glass-panel);
 	border: 1px solid rgba(171, 91, 255, 0.26);
 	border-radius: 20px;
 	box-shadow: 0 24px 55px rgba(0, 0, 0, 0.26);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 	overflow: hidden;
 
 	&::after {
@@ -875,10 +878,12 @@ Button {
 	margin: 13px 0;
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
-	background: rgba(16, 22, 33, 0.84);
+	background: var(--blockera-glass-panel);
 	border: 1px solid rgba(255, 255, 255, 0.07);
 	border-radius: 16px;
 	overflow: hidden;
+	box-shadow: inset 0 1px var(--blockera-glass-highlight);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 }
 .instance-health-strip > div {
 	min-width: 0;
@@ -938,9 +943,11 @@ Button {
 }
 .instance-content-card,
 .instance-quick-panel {
-	background: rgba(14, 20, 30, 0.88);
+	background: var(--blockera-glass-panel);
 	border: 1px solid rgba(255, 255, 255, 0.075);
 	border-radius: 18px;
+	box-shadow: inset 0 1px var(--blockera-glass-highlight);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 }
 .instance-content-card {
 	min-width: 0;
@@ -953,15 +960,17 @@ Button {
 	display: flex;
 	gap: 6px;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+	background: rgba(4, 7, 13, 0.22);
 }
 .instance-tabs a,
 .instance-tabs button {
 	position: relative;
 	width: auto;
 	min-width: 0;
-	padding: 16px 14px 14px;
-	border: 0;
-	border-radius: 0;
+	margin-block: 8px;
+	padding: 9px 14px;
+	border: 1px solid transparent;
+	border-radius: var(--blockera-radius-pill);
 	background: transparent;
 	color: #8f96a5;
 	text-decoration: none;
@@ -973,21 +982,18 @@ Button {
 .instance-tabs a:hover,
 .instance-tabs button:hover,
 .instance-tabs button:focus-visible {
-	background: rgba(255, 255, 255, 0.035);
+	background: rgba(255, 255, 255, 0.055);
+	border-color: var(--blockera-glass-border);
 	color: #f7eeff;
 }
 .instance-tabs a.router-link-exact-active {
 	color: #f7eeff;
+	background: var(--blockera-glass-accent);
+	border-color: var(--blockera-glass-border-active);
+	box-shadow: 0 0 20px rgba(126, 34, 206, 0.12);
 }
 .instance-tabs a.router-link-exact-active::after {
-	content: '';
-	position: absolute;
-	height: 2px;
-	left: 12px;
-	right: 12px;
-	bottom: -1px;
-	background: #a94fff;
-	box-shadow: 0 0 12px #9a3eef;
+	display: none;
 }
 .instance-quick-panel {
 	padding: 14px;
@@ -1016,8 +1022,8 @@ Button {
 	gap: 10px;
 	color: #eef0f5;
 	text-align: left;
-	background: rgba(255, 255, 255, 0.032);
-	border: 1px solid transparent;
+	background: var(--blockera-glass-row);
+	border: 1px solid rgba(231, 220, 255, 0.06);
 	border-radius: 11px;
 	cursor: pointer;
 	transition:

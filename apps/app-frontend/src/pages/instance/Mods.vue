@@ -352,7 +352,7 @@ import {
 	get_version_many,
 } from '@/helpers/cache.js'
 import { profile_listener } from '@/helpers/events.js'
-import { type InstanceUpdateReport,runInstanceUpdate } from '@/helpers/instance-update'
+import { type InstanceUpdateReport, runInstanceUpdate } from '@/helpers/instance-update'
 import {
 	add_project_from_path,
 	get_projects,
@@ -1002,6 +1002,19 @@ onUnmounted(() => {
 		background: transparent;
 		border-color: rgba(255, 255, 255, 0.07);
 		box-shadow: none;
+	}
+	:deep(.bg-bg-raised.rounded-xl) {
+		display: flex;
+		flex-direction: column;
+		gap: 7px;
+		background: transparent !important;
+	}
+	:deep(.bg-bg-raised.rounded-xl > div) {
+		margin-bottom: 0 !important;
+		background: var(--blockera-glass-row);
+		border: 1px solid rgba(231, 220, 255, 0.085);
+		border-radius: 13px;
+		box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
 	}
 	:deep(.content-list-item) {
 		margin-bottom: 7px;

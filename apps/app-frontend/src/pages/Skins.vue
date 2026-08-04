@@ -639,7 +639,8 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 	box-sizing: border-box;
 	background:
 		radial-gradient(circle at 50% 40%, rgba(147, 51, 234, 0.2), transparent 48%),
-		linear-gradient(145deg, rgba(18, 24, 37, 0.96), rgba(8, 12, 21, 0.96));
+		var(--blockera-glass-panel);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 }
 
 .panel-heading,
@@ -710,7 +711,8 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 
 .skins-container {
 	padding: 1.2rem;
-	background: linear-gradient(145deg, rgba(18, 24, 37, 0.93), rgba(9, 14, 23, 0.93));
+	background: var(--blockera-glass-panel);
+	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
 }
 
 .library-heading > span {

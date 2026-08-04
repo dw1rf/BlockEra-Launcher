@@ -1,24 +1,38 @@
 <template>
 	<div ref="root" class="update-center-root">
 		<button
+			ref="trigger"
 			v-tooltip="'Центр обновлений'"
 			class="update-center-trigger"
 			type="button"
 			aria-label="Открыть центр обновлений"
+			aria-controls="blockera-update-center-dialog"
 			:aria-expanded="open"
-			@click="open = !open"
+			@click="toggleCenter"
 		>
 			<DownloadIcon />
 			<span v-if="totalUpdates > 0">{{ totalUpdates }}</span>
 		</button>
+	</div>
+	<Teleport to="#teleports">
 		<transition name="update-popover">
-			<section v-if="open" class="update-center-popover">
+			<section
+				v-if="open"
+				id="blockera-update-center-dialog"
+				ref="panel"
+				class="update-center-popover"
+				role="dialog"
+				aria-modal="false"
+				aria-labelledby="blockera-update-center-title"
+				tabindex="-1"
+				:style="popoverStyle"
+			>
 				<header>
 					<div>
 						<span>ЦЕНТР ОБНОВЛЕНИЙ</span>
-						<h3>BlockEra</h3>
+						<h3 id="blockera-update-center-title">BlockEra</h3>
 					</div>
-					<button type="button" aria-label="Закрыть" @click="open = false"><XIcon /></button>
+					<button type="button" aria-label="Закрыть" @click="closeCenter(true)"><XIcon /></button>
 				</header>
 
 				<nav class="update-tabs" role="tablist" aria-label="Разделы центра обновлений">
@@ -164,16 +178,16 @@
 				</div>
 			</section>
 		</transition>
-	</div>
+	</Teleport>
 </template>
 
 <script setup lang="ts">
 import { DownloadIcon, RefreshCwIcon, XIcon } from '@modrinth/assets'
 import { getVersion } from '@tauri-apps/api/app'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, type CSSProperties, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { releaseNotes } from '@/data/release-notes'
-import { type InstanceUpdateReport,runInstanceUpdate } from '@/helpers/instance-update'
+import { type InstanceUpdateReport, runInstanceUpdate } from '@/helpers/instance-update'
 import { get_projects, list } from '@/helpers/profile'
 import {
 	availableUpdate,
@@ -198,7 +212,11 @@ type UpdateItem = {
 type Profile = Awaited<ReturnType<typeof list>>[number]
 
 const root = ref<HTMLElement>()
+const trigger = ref<HTMLButtonElement>()
+const panel = ref<HTMLElement>()
 const open = ref(false)
+const openedFromTrigger = ref(false)
+const popoverStyle = ref<CSSProperties>({})
 const activeTab = ref<'updates' | 'notes'>('updates')
 const loading = ref(false)
 const updatingAll = ref(false)
@@ -297,17 +315,76 @@ async function updateAllInstances() {
 	updatingAll.value = false
 }
 
+function positionPopover() {
+	if (!trigger.value) return
+	const margin = 12
+	const gap = 10
+	const triggerBounds = trigger.value.getBoundingClientRect()
+	const width = Math.min(430, window.innerWidth - margin * 2)
+	const left = Math.min(
+		Math.max(margin, triggerBounds.right - width),
+		window.innerWidth - width - margin,
+	)
+	const top = triggerBounds.bottom + gap
+	const maxHeight = Math.max(240, window.innerHeight - top - margin)
+	popoverStyle.value = {
+		left: `${Math.round(left)}px`,
+		top: `${Math.round(top)}px`,
+		width: `${Math.round(width)}px`,
+		maxHeight: `${Math.round(maxHeight)}px`,
+	}
+}
+
+async function closeCenter(restoreFocus = false) {
+	if (!open.value) return
+	open.value = false
+	await nextTick()
+	if (restoreFocus && openedFromTrigger.value) trigger.value?.focus({ preventScroll: true })
+	openedFromTrigger.value = false
+}
+
+function toggleCenter() {
+	if (open.value) {
+		void closeCenter(true)
+		return
+	}
+	openedFromTrigger.value = true
+	positionPopover()
+	open.value = true
+}
+
 function handleOutside(event: MouseEvent) {
-	if (open.value && root.value && !root.value.contains(event.target as Node)) open.value = false
+	const target = event.target as Node
+	if (
+		open.value &&
+		root.value &&
+		!root.value.contains(target) &&
+		panel.value &&
+		!panel.value.contains(target)
+	) {
+		void closeCenter(false)
+	}
 }
 
 function handleKey(event: KeyboardEvent) {
-	if (event.key === 'Escape') open.value = false
+	if (event.key === 'Escape' && open.value) {
+		event.stopPropagation()
+		void closeCenter(true)
+	}
 }
+
+watch(open, async (isOpen) => {
+	if (!isOpen) return
+	await nextTick()
+	positionPopover()
+	if (openedFromTrigger.value) panel.value?.focus({ preventScroll: true })
+})
 
 onMounted(async () => {
 	document.addEventListener('click', handleOutside)
 	document.addEventListener('keydown', handleKey)
+	window.addEventListener('resize', positionPopover)
+	window.addEventListener('scroll', positionPopover, true)
 	currentVersion.value = await getVersion()
 	const seenKey = 'blockera-release-notes-seen'
 	if (
@@ -315,6 +392,7 @@ onMounted(async () => {
 		localStorage.getItem(seenKey) !== currentVersion.value
 	) {
 		activeTab.value = 'notes'
+		positionPopover()
 		open.value = true
 		localStorage.setItem(seenKey, currentVersion.value)
 	}
@@ -324,6 +402,8 @@ onMounted(async () => {
 onBeforeUnmount(() => {
 	document.removeEventListener('click', handleOutside)
 	document.removeEventListener('keydown', handleKey)
+	window.removeEventListener('resize', positionPopover)
+	window.removeEventListener('scroll', positionPopover, true)
 })
 </script>
 
@@ -366,18 +446,26 @@ onBeforeUnmount(() => {
 	font-weight: 850;
 }
 .update-center-popover {
-	position: absolute;
-	z-index: 9000;
+	position: fixed;
+	top: calc(4.75rem + 10px);
+	right: 12px;
+	z-index: 1;
+	display: grid;
+	grid-template-rows: auto auto minmax(0, 1fr);
 	width: min(430px, calc(100vw - 24px));
-	right: 0;
-	top: 54px;
+	max-height: calc(100vh - 4.75rem - 22px);
+	box-sizing: border-box;
+	overflow: hidden;
 	padding: 15px;
 	color: #f7f4fb;
-	background: rgba(11, 14, 23, 0.98);
-	border: 1px solid rgba(177, 94, 255, 0.28);
+	background: var(--blockera-glass-surface-overlay, rgba(11, 14, 23, 0.9));
+	border: 1px solid var(--blockera-glass-border-active, rgba(177, 94, 255, 0.28));
 	border-radius: 18px;
-	box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
-	backdrop-filter: blur(24px);
+	box-shadow:
+		inset 0 1px var(--blockera-glass-highlight, rgba(255, 255, 255, 0.09)),
+		0 25px 70px rgba(0, 0, 0, 0.55);
+	backdrop-filter: blur(var(--blockera-glass-blur-strong, 22px)) saturate(135%);
+	outline: none;
 }
 .update-center-popover > header,
 .update-tab-panel > footer {
@@ -442,6 +530,11 @@ onBeforeUnmount(() => {
 }
 .update-tab-panel {
 	margin-top: 11px;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
 }
 .launcher-update {
 	padding: 12px;
@@ -523,8 +616,6 @@ onBeforeUnmount(() => {
 }
 .update-instance-list,
 .release-notes-panel {
-	max-height: min(390px, calc(100vh - 260px));
-	overflow: auto;
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
