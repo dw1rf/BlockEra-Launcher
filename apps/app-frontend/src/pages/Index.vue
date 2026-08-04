@@ -281,11 +281,6 @@ async function openSelectedInstance() {
 	await router.push(`/instance/${encodeURIComponent(selectedInstance.value.path)}`)
 }
 
-function cardBackgroundPosition(index: number) {
-	const positions = ['42% 40%', '62% 54%', '28% 48%', '74% 38%', '50% 70%', '18% 60%']
-	return positions[index % positions.length]
-}
-
 function instanceBackground(path: string) {
 	return backgroundRevision.value >= 0 ? instanceBackgroundFor(path) : ''
 }
@@ -456,11 +451,10 @@ onUnmounted(() => {
 			</div>
 			<div class="instance-carousel">
 				<button
-					v-for="(instance, index) in visibleInstances"
+					v-for="instance in visibleInstances"
 					:key="instance.path"
 					class="instance-card"
 					:class="{ selected: instance.path === selectedInstance?.path }"
-					:style="{ backgroundPosition: cardBackgroundPosition(index) }"
 					@click="selectInstance(instance)"
 					@contextmenu.prevent.stop="openInstanceFolderMenu($event, instance)"
 				>
@@ -532,9 +526,10 @@ onUnmounted(() => {
 	z-index: -3;
 	background-image: var(--cinematic-hero);
 	background-size: cover;
-	background-position: center 48%;
+	background-position: center center;
+	background-repeat: no-repeat;
 	filter: saturate(0.92) contrast(1.06) brightness(0.78);
-	transform: scale(1.02);
+	transform: none;
 	transition:
 		transform 600ms var(--smooth),
 		filter 600ms var(--smooth);
@@ -563,12 +558,13 @@ onUnmounted(() => {
 	position: relative;
 	align-self: end;
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(19rem, min(23rem, 32vw));
+	grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
 	align-items: flex-end;
-	gap: 3rem;
+	gap: clamp(1.5rem, 3vw, 3rem);
 	width: 100%;
-	max-width: 100%;
+	max-width: 1960px;
 	min-width: 0;
+	margin-inline: auto;
 }
 
 .hero-copy {
@@ -736,6 +732,7 @@ onUnmounted(() => {
 	min-width: 0;
 	flex: 0 0 auto;
 	flex-direction: column;
+	justify-self: end;
 	gap: 0.8rem;
 }
 
@@ -984,14 +981,17 @@ onUnmounted(() => {
 	position: relative;
 	z-index: 4;
 	width: 100%;
-	max-width: 100%;
+	max-width: 1960px;
 	min-width: 0;
+	margin-inline: auto;
 	padding: 1rem 1.2rem 1.15rem;
 	border: 1px solid rgba(255, 255, 255, 0.13);
 	border-radius: 0.8rem;
-	background: rgba(5, 10, 18, 0.78);
-	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
-	backdrop-filter: blur(20px);
+	background: var(--blockera-glass-panel);
+	box-shadow:
+		inset 0 1px var(--blockera-glass-highlight),
+		0 20px 50px rgba(0, 0, 0, 0.28);
+	backdrop-filter: blur(var(--blockera-glass-blur-strong)) saturate(125%);
 }
 
 .dock-heading {
@@ -1085,8 +1085,9 @@ onUnmounted(() => {
 }
 
 .card-image {
-	background-position: inherit;
-	background-size: 190%;
+	background-position: center center;
+	background-size: cover;
+	background-repeat: no-repeat;
 	filter: saturate(0.86) brightness(0.72);
 	transition:
 		transform 350ms var(--smooth),

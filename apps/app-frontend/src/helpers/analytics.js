@@ -20,5 +20,7 @@ export const optInAnalytics = () => {
 }
 
 export const trackEvent = (eventName, properties) => {
+	void eventName
+	void properties
 	// posthog.capture(eventName, properties)
 }

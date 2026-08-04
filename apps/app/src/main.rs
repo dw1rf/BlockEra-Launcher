@@ -208,7 +208,7 @@ fn main() {
                 ));
             });
 
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(target_os = "macos")]
             if let Some(window) = app.get_window("main")
                 && let Err(e) = window.set_shadow(true)
             {

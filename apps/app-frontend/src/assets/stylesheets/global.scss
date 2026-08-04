@@ -67,13 +67,27 @@
 	--blockera-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
 	--blockera-control-height: 2.25rem;
 	--blockera-glass-surface: rgba(23, 27, 39, 0.72);
-	--blockera-glass-surface-strong: rgba(13, 16, 27, 0.88);
+	--blockera-glass-surface-strong: rgba(13, 16, 27, 0.82);
+	--blockera-glass-surface-overlay: rgba(11, 14, 23, 0.9);
+	--blockera-glass-panel: rgba(14, 20, 31, 0.74);
+	--blockera-glass-raised: rgba(27, 33, 47, 0.68);
+	--blockera-glass-row: rgba(255, 255, 255, 0.035);
+	--blockera-glass-control: rgba(31, 35, 48, 0.76);
 	--blockera-glass-border: rgba(231, 220, 255, 0.14);
 	--blockera-glass-border-active: rgba(192, 132, 252, 0.46);
 	--blockera-glass-highlight: rgba(255, 255, 255, 0.09);
 	--blockera-glass-accent: rgba(126, 44, 220, 0.28);
 	--blockera-glass-shadow: 0 18px 52px rgba(0, 0, 0, 0.36);
 	--blockera-glass-blur: 18px;
+	--blockera-glass-blur-strong: 22px;
+	--blockera-layer-shell: 1;
+	--blockera-layer-topbar: 30;
+	--blockera-layer-frame: 1;
+	--blockera-layer-popover: 120;
+	--blockera-layer-modal-backdrop: 190;
+	--blockera-layer-modal: 200;
+	--blockera-layer-modal-native: 201;
+	--blockera-layer-context: 300;
 	--blockera-radius-pill: 999px;
 	--blockera-motion-press: 120ms;
 	--blockera-motion-fast: 180ms;
@@ -81,13 +95,24 @@
 	--blockera-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.blockera-glass-theme .glass-group {
+.blockera-glass-theme :is(.glass-group, .blockera-glass-panel) {
 	border: 1px solid var(--blockera-glass-border);
-	background: var(--blockera-glass-surface);
+	background: var(--blockera-glass-panel);
 	box-shadow:
 		inset 0 1px var(--blockera-glass-highlight),
 		var(--blockera-glass-shadow);
 	backdrop-filter: blur(var(--blockera-glass-blur)) saturate(125%);
+}
+
+.blockera-glass-theme .blockera-glass-raised {
+	border: 1px solid var(--blockera-glass-border);
+	background: var(--blockera-glass-raised);
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.blockera-glass-theme .blockera-glass-row {
+	border: 1px solid rgba(231, 220, 255, 0.09);
+	background: var(--blockera-glass-row);
 }
 
 .blockera-glass-theme
@@ -98,7 +123,7 @@
 		[role='combobox']
 	) {
 	border-color: var(--blockera-glass-border);
-	background-color: rgba(31, 35, 48, 0.82);
+	background-color: var(--blockera-glass-control);
 	box-shadow: inset 0 1px rgba(255, 255, 255, 0.045);
 	transition:
 		border-color var(--blockera-motion-fast) var(--blockera-ease),
@@ -127,8 +152,35 @@
 		opacity var(--blockera-motion-fast) var(--blockera-ease);
 }
 
-.disable-advanced-rendering :is(.glass-group, .blockera-nav-tabs),
+.disable-advanced-rendering
+	:is(.glass-group, .blockera-glass-panel, .blockera-nav-tabs, .update-center-popover),
 .disable-advanced-rendering .modal-overlay {
+	backdrop-filter: none !important;
+}
+
+.disable-advanced-rendering :is(.glass-group, .blockera-glass-panel) {
+	background: #111625;
+}
+
+.disable-advanced-rendering .update-center-popover {
+	background: #0d111c;
+}
+
+.disable-advanced-rendering
+	:is(
+		.library-workspace,
+		.browse-filters,
+		.browse-results,
+		.preview-panel,
+		.skins-container,
+		.instance-dock,
+		.instance-hero,
+		.instance-health-strip,
+		.instance-content-card,
+		.instance-quick-panel,
+		.settings-cinematic .modal-body
+	) {
+	background-color: #111625 !important;
 	backdrop-filter: none !important;
 }
 
@@ -143,11 +195,22 @@
 	}
 }
 
+html,
 body {
 	position: fixed;
+	inset: 0;
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
+	background: transparent;
+}
+
+#app {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	border-radius: 18px;
+	background: #070910;
 }
 
 * {

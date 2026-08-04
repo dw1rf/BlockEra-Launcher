@@ -17,11 +17,8 @@ import { trackEvent } from '@/helpers/analytics'
 import { login as login_flow, set_default_user } from '@/helpers/auth.js'
 import { install } from '@/helpers/profile.js'
 import { cancel_directory_change } from '@/helpers/settings.ts'
+import { applyMigrationFix, restartApp } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
-
-// This code is modified by AstralRinth
-import { applyMigrationFix } from '@/helpers/utils.js'
-import { restartApp } from '@/helpers/utils.js'
 
 const { handleError } = injectNotificationManager()
 
@@ -158,24 +155,23 @@ async function copyToClipboard(text) {
 }
 
 async function onApplyMigrationFix(eol) {
-  console.log(`[AR] • Attempting to apply migration ${eol.toUpperCase()} fix`)
-  try {
-    const result = await applyMigrationFix(eol)
-    migrationFixSuccess.value = result === true
-    console.log(`[AR] • Successfully applied migration ${eol.toUpperCase()} fix`, result)
-  } catch (err) {
-    console.error(`[AR] • Failed to apply migration fix:`, err)
-    migrationFixSuccess.value = false
-  } finally {
-    migrationFixCallbackModel.value?.show?.()
-    if (migrationFixSuccess.value === true) {
-      setTimeout(async () => {
-        await restartApp()
-      }, 3000)
-    }
-  }
+	console.log(`[AR] • Attempting to apply migration ${eol.toUpperCase()} fix`)
+	try {
+		const result = await applyMigrationFix(eol)
+		migrationFixSuccess.value = result === true
+		console.log(`[AR] • Successfully applied migration ${eol.toUpperCase()} fix`, result)
+	} catch (err) {
+		console.error(`[AR] • Failed to apply migration fix:`, err)
+		migrationFixSuccess.value = false
+	} finally {
+		migrationFixCallbackModel.value?.show?.()
+		if (migrationFixSuccess.value === true) {
+			setTimeout(async () => {
+				await restartApp()
+			}, 3000)
+		}
+	}
 }
-
 </script>
 
 <template>
@@ -341,80 +337,100 @@ async function onApplyMigrationFix(eol) {
 						/>
 					</button>
 					<Collapsible :collapsed="errorCollapsed">
-						<pre class="m-0 px-4 py-3 bg-bg rounded-none whitespace-pre-wrap break-words overflow-x-auto max-w-full"
-							>{{ debugInfo }}</pre>
+						<pre
+							class="m-0 px-4 py-3 bg-bg rounded-none whitespace-pre-wrap break-words overflow-x-auto max-w-full"
+							>{{ debugInfo }}</pre
+						>
 					</Collapsible>
 				</div>
 				<template v-if="errorType === 'state_init'">
-        			<h2>⚠️ Migration Issue • Important Notice</h2>
-        			<p>We've detected a problem with our database migration system caused by inconsistent line endings between operating systems (Windows vs. macOS/Linux). This may affect app stability.</p>
-        			<p><strong>What’s happening?</strong> Our migration validator misreads modified migrations when line endings differ (CRLF ↔ LF), which can make the app unusable.</p>
-        			<p><strong>Why?</strong> Git’s automatic line-ending conversions and OS differences can cause these inconsistencies during builds.</p>
-        			<p><strong>What’s next?</strong> We’re working on a permanent fix. In the meantime, you can apply one of the quick fixes below depending on your system.</p>
-        			<h3>Do I need to apply a fix now?</h3>
+					<h2>⚠️ Migration Issue • Important Notice</h2>
+					<p>
+						We've detected a problem with our database migration system caused by inconsistent line
+						endings between operating systems (Windows vs. macOS/Linux). This may affect app
+						stability.
+					</p>
+					<p>
+						<strong>What’s happening?</strong> Our migration validator misreads modified migrations
+						when line endings differ (CRLF ↔ LF), which can make the app unusable.
+					</p>
+					<p>
+						<strong>Why?</strong> Git’s automatic line-ending conversions and OS differences can
+						cause these inconsistencies during builds.
+					</p>
+					<p>
+						<strong>What’s next?</strong> We’re working on a permanent fix. In the meantime, you can
+						apply one of the quick fixes below depending on your system.
+					</p>
+					<h3>Do I need to apply a fix now?</h3>
 					<div>
 						<p class="notice__text">
-							If you're encountering an error while applying migrations, such as "Error while applying migrations: migration XXXXXXXXXX was previously applied but has been modified", or a similar issue with migration, the following actions might help:
+							If you're encountering an error while applying migrations, such as "Error while
+							applying migrations: migration XXXXXXXXXX was previously applied but has been
+							modified", or a similar issue with migration, the following actions might help:
 						</p>
-						<p>If none of the above steps help, you can try saving a copy of the file <code>app.db</code> to a safe location, such as <code>%appdata%\Roaming\BlockEraLauncher</code>
-							on Windows or <code>~/Library/Application Support/BlockEraLauncher</code> on macOS, then deleting the original file and letting the app re-create the database file.
-							Note that this may cause data loss inside the app, so make sure to back up your launcher data before applying this fixes.
+						<p>
+							If none of the above steps help, you can try saving a copy of the file
+							<code>app.db</code> to a safe location, such as
+							<code>%appdata%\Roaming\BlockEraLauncher</code> on Windows or
+							<code>~/Library/Application Support/BlockEraLauncher</code> on macOS, then deleting
+							the original file and letting the app re-create the database file. Note that this may
+							cause data loss inside the app, so make sure to back up your launcher data before
+							applying this fixes.
 						</p>
 					</div>
-        		    <div class="flex justify-between">
-        		      <ol class="flex flex-col gap-3">
-        		        <li>
-        		          <ButtonStyled class="neon-button neon">
-        		            <button
-        		              title="Convert all line endings in migration files to LF (Unix-style: \\n)"
-        		              @click="onApplyMigrationFix('lf')"
-        		            >
-        		            	Apply fix for Unix like systems (Debian, Ubuntu, macOS and others)
-        		            </button>
-        		          </ButtonStyled>
-        		        </li>
-        		        <li>
-        		          <ButtonStyled class="neon-button neon">
-        		            <button
-        		              title="Convert all line endings in migration files to CRLF (Windows-style: \\r\\n)"
-        		              @click="onApplyMigrationFix('crlf')"
-        		            >
-								Apply fix for Windows
-        		            </button>
-        		          </ButtonStyled>
-        		        </li>
-        		      </ol>
-        		    </div>
-        		</template>
+					<div class="flex justify-between">
+						<ol class="flex flex-col gap-3">
+							<li>
+								<ButtonStyled class="neon-button neon">
+									<button
+										title="Convert all line endings in migration files to LF (Unix-style: \\n)"
+										@click="onApplyMigrationFix('lf')"
+									>
+										Apply fix for Unix like systems (Debian, Ubuntu, macOS and others)
+									</button>
+								</ButtonStyled>
+							</li>
+							<li>
+								<ButtonStyled class="neon-button neon">
+									<button
+										title="Convert all line endings in migration files to CRLF (Windows-style: \\r\\n)"
+										@click="onApplyMigrationFix('crlf')"
+									>
+										Apply fix for Windows
+									</button>
+								</ButtonStyled>
+							</li>
+						</ol>
+					</div>
+				</template>
 			</template>
 		</div>
 	</ModalWrapper>
 	<ModalWrapper
-  	  ref="migrationFixCallbackModel"
-  	  header="💡 Migration fix report"
-  	  :closable="closable">
-  	  <div class="modal-body">
-  	    <h2 class="text-lg font-bold text-contrast space-y-2">
-  	      <template v-if="migrationFixSuccess === true">
-  	        <p class="flex items-center gap-2 neon-text">
-  	        	✅ The migration fix has been applied successfully. Please restart the launcher and try to log in to the game :)
-  	        </p>
-  	        <p class="mt-2 text-sm neon-text">
-				If the problem persists, please try the other fix.
-  	        </p>
-  	      </template>
+		ref="migrationFixCallbackModel"
+		header="💡 Migration fix report"
+		:closable="closable"
+	>
+		<div class="modal-body">
+			<h2 class="text-lg font-bold text-contrast space-y-2">
+				<template v-if="migrationFixSuccess === true">
+					<p class="flex items-center gap-2 neon-text">
+						✅ The migration fix has been applied successfully. Please restart the launcher and try
+						to log in to the game :)
+					</p>
+					<p class="mt-2 text-sm neon-text">If the problem persists, please try the other fix.</p>
+				</template>
 
-  	      <template v-else-if="migrationFixSuccess === false">
-  	        <p class="flex items-center gap-2 neon-text">
-  	        	❌ The migration fix failed or had no effect.
-  	        </p>
-  	        <p class="mt-2 text-sm neon-text">
-				If the problem persists, please try the other fix.
-  	        </p>
-  	      </template>
-  	    </h2>
-  	  </div>
-  	</ModalWrapper>
+				<template v-else-if="migrationFixSuccess === false">
+					<p class="flex items-center gap-2 neon-text">
+						❌ The migration fix failed or had no effect.
+					</p>
+					<p class="mt-2 text-sm neon-text">If the problem persists, please try the other fix.</p>
+				</template>
+			</h2>
+		</div>
+	</ModalWrapper>
 </template>
 
 <style>
@@ -433,10 +449,10 @@ async function onApplyMigrationFix(eol) {
 @import '../../../../../packages/assets/styles/neon-text.scss';
 
 code {
-  background: linear-gradient(90deg, #005eff, #00cfff);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+	background: linear-gradient(90deg, #005eff, #00cfff);
+	background-clip: text;
+	-webkit-background-clip: text;
+	color: transparent;
 }
 
 .cta-button {

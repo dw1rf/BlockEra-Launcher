@@ -330,7 +330,7 @@ onBeforeUnmount(() => {
 	left: 0;
 	width: 100%;
 	height: 100px;
-	z-index: 91;
+	z-index: var(--blockera-layer-modal-native, 91);
 
 	&.shown {
 		opacity: 1;
@@ -344,7 +344,7 @@ onBeforeUnmount(() => {
 	left: -5rem;
 	width: calc(100vw + 10rem);
 	height: calc(100vh + 10rem);
-	z-index: 90;
+	z-index: var(--blockera-layer-modal-backdrop, 90);
 	opacity: 0;
 	transition:
 		opacity var(--blockera-motion-fast, 180ms) var(--blockera-ease, ease-out),
@@ -400,7 +400,7 @@ onBeforeUnmount(() => {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 92;
+	z-index: var(--blockera-layer-modal, 92);
 	visibility: hidden;
 	pointer-events: none;
 	transform: translate(

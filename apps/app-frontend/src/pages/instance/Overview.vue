@@ -169,7 +169,8 @@ watch(() => props.instance.path, loadSummary, { immediate: true })
 	padding: 1rem;
 	border: 1px solid var(--blockera-border, rgba(255, 255, 255, 0.08));
 	border-radius: var(--blockera-radius-lg, 0.9rem);
-	background: var(--blockera-surface, rgba(20, 24, 36, 0.9));
+	background: var(--blockera-glass-row, rgba(255, 255, 255, 0.035));
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
 }
 .overview-grid svg {
 	width: 1.25rem;
@@ -193,7 +194,8 @@ watch(() => props.instance.path, loadSummary, { immediate: true })
 	gap: 1rem;
 	padding: 1.15rem;
 	border-radius: var(--blockera-radius-lg, 0.9rem);
-	background: var(--blockera-surface-raised, rgba(28, 31, 46, 0.92));
+	border: 1px solid rgba(231, 220, 255, 0.085);
+	background: var(--blockera-glass-raised, rgba(27, 33, 47, 0.68));
 }
 .overview-status span {
 	color: var(--blockera-accent, #c084fc);

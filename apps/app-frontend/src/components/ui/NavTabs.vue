@@ -81,6 +81,7 @@ watch(() => route.fullPath, pickLink, { immediate: true })
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.55rem 1rem;
+	border: 1px solid transparent;
 	border-radius: var(--blockera-radius-pill, 999px);
 	color: var(--color-base);
 	font-size: 0.875rem;
@@ -102,9 +103,16 @@ watch(() => route.fullPath, pickLink, { immediate: true })
 		transform: scale(0.98);
 	}
 
+	&:focus-visible {
+		outline: none;
+		border-color: var(--blockera-glass-border-active, rgba(192, 132, 252, 0.46));
+		box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.16);
+	}
+
 	&.active {
 		color: #f3e8ff;
 		background: var(--blockera-glass-accent, rgba(126, 44, 220, 0.28));
+		border-color: var(--blockera-glass-border-active, rgba(192, 132, 252, 0.46));
 		box-shadow:
 			inset 0 1px rgba(255, 255, 255, 0.11),
 			0 7px 18px rgba(73, 23, 120, 0.18);
