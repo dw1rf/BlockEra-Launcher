@@ -5,7 +5,8 @@ use crate::event::{
 };
 #[cfg(feature = "tauri")]
 use crate::event::{
-    InfoPayload, LoadingPayload, ProcessPayload, ProfilePayload, WarningPayload,
+    InfoPayload, LoadingPayload, ProcessPayload, ProfilePayload,
+    WarningPayload, WorldBackupPayload,
 };
 use futures::prelude::*;
 use std::time::{Duration, Instant};
@@ -401,6 +402,21 @@ pub async fn emit_profile(
                     event,
                 },
             )
+            .map_err(EventError::from)?;
+    }
+    Ok(())
+}
+
+#[allow(unused_variables)]
+pub async fn emit_world_backup(
+    backup: crate::api::worlds::WorldBackupEvent,
+) -> crate::Result<()> {
+    #[cfg(feature = "tauri")]
+    {
+        let event_state = crate::EventState::get()?;
+        event_state
+            .app
+            .emit("world_backup", WorldBackupPayload { backup })
             .map_err(EventError::from)?;
     }
     Ok(())

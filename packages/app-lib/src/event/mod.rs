@@ -263,6 +263,13 @@ pub struct ProfilePayload {
 }
 
 #[derive(Serialize, Clone)]
+#[cfg(feature = "tauri")]
+pub struct WorldBackupPayload {
+    #[serde(flatten)]
+    pub backup: crate::api::worlds::WorldBackupEvent,
+}
+
+#[derive(Serialize, Clone)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum ProfilePayloadType {
     Created,

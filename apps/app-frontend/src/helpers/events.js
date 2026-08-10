@@ -71,6 +71,10 @@ export async function profile_listener(callback) {
 	return await listen('profile', (event) => callback(event.payload))
 }
 
+export async function world_backup_listener(callback) {
+	return await listen('world_backup', (event) => callback(event.payload))
+}
+
 /// Payload for the 'command' event
 /*
   CommandPayload {

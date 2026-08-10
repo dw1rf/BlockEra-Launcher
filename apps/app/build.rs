@@ -284,7 +284,6 @@ fn main() {
                         "delete_world_backup",
                         "get_world_backup_settings",
                         "set_world_backup_settings",
-                        "run_due_world_backups",
                         "delete_world",
                         "add_server_to_profile",
                         "edit_server_in_profile",

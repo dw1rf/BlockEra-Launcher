@@ -72,13 +72,14 @@ import URLConfirmModal from '@/components/ui/URLConfirmModal.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { debugAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
-import { migrateLegacyWorldBackupSettings, runDueWorldBackups } from '@/helpers/backups'
+import { migrateLegacyWorldBackupSettings } from '@/helpers/backups'
 import { get_user } from '@/helpers/cache.js'
 import { command_listener, info_listener, warning_listener } from '@/helpers/events.js'
 import { useFetch } from '@/helpers/fetch.js'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
 import { navigateHistory as navigateRouterHistory } from '@/helpers/navigation'
 import { list, run } from '@/helpers/profile.js'
+import { getRouteShellKey } from '@/helpers/route-shell-key'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_opening_command, initialize_state } from '@/helpers/state'
 import { getRemote, updateState } from '@/helpers/update.js'
@@ -181,7 +182,6 @@ onMounted(async () => {
 
 onUnmounted(async () => {
 	if (updateCheckInterval) window.clearInterval(updateCheckInterval)
-	if (backupSchedulerInterval) window.clearInterval(backupSchedulerInterval)
 	document.querySelector('body').removeEventListener('click', handleClick)
 	window.removeEventListener('auxclick', handleAuxClick, { capture: true })
 })
@@ -268,8 +268,6 @@ async function setupApp() {
 	themeStore.featureFlags = feature_flags
 	stateInitialized.value = true
 	await migrateLegacyWorldBackupSettings().catch(handleError)
-	void checkScheduledWorldBackups()
-	backupSchedulerInterval = window.setInterval(() => void checkScheduledWorldBackups(), 60 * 1000)
 
 	isMaximized.value = await getCurrentWindow().isMaximized()
 
@@ -457,7 +455,7 @@ function navigateHistory(direction) {
 	navigateRouterHistory(router, direction)
 }
 
-const routeViewKey = computed(() => route.fullPath)
+const routeViewKey = computed(() => getRouteShellKey(route))
 const cinematicShell = computed(
 	() =>
 		route.path === '/' ||
@@ -593,28 +591,6 @@ const appUpdateDownload = {
 }
 
 let updateCheckInterval
-let backupSchedulerInterval
-let backupSchedulerRunning = false
-
-async function checkScheduledWorldBackups() {
-	if (backupSchedulerRunning) return
-	backupSchedulerRunning = true
-	try {
-		const batches = await runDueWorldBackups()
-		const failures = batches.reduce((total, batch) => total + batch.failures.length, 0)
-		if (failures > 0) {
-			addNotification({
-				title: 'Резервные копии',
-				text: `Не удалось создать копий: ${failures}`,
-				type: 'warning',
-			})
-		}
-	} catch (error) {
-		console.warn('Scheduled world backup check failed', error)
-	} finally {
-		backupSchedulerRunning = false
-	}
-}
 
 function handleClick(e) {
 	let target = e.target

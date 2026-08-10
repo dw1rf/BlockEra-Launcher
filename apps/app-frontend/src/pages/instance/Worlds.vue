@@ -40,7 +40,10 @@
 				Повторить
 			</button>
 		</div>
-		<div v-if="worlds.length > 0" class="flex flex-col gap-4">
+		<div v-if="!worldsLoaded" class="worlds-local-skeleton" aria-label="Загрузка миров">
+			<span></span><span></span><span></span>
+		</div>
+		<div v-else-if="worlds.length > 0" class="flex flex-col gap-4">
 			<div class="flex flex-wrap gap-2 items-center">
 				<div class="iconified-input flex-grow">
 					<SearchIcon />
@@ -156,7 +159,10 @@
 				</ButtonStyled>
 			</div>
 			<p v-if="backupStatus" class="backup-status">{{ backupStatus }}</p>
-			<div v-if="worldBackups.length" class="backup-list">
+			<div v-if="!backupListLoaded" class="backup-list backup-list-skeleton">
+				<span></span><span></span>
+			</div>
+			<div v-else-if="worldBackups.length" class="backup-list">
 				<article v-for="backup in worldBackups" :key="backup.id" class="backup-row">
 					<div>
 						<strong>{{ backup.world }}</strong>
@@ -204,7 +210,7 @@ import {
 import type { Version } from '@modrinth/utils'
 import { platform } from '@tauri-apps/plugin-os'
 import dayjs from 'dayjs'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import type ContextMenu from '@/components/ui/ContextMenu.vue'
@@ -220,7 +226,7 @@ import {
 	restoreWorldBackup,
 	type WorldBackup,
 } from '@/helpers/backups'
-import { profile_listener } from '@/helpers/events'
+import { profile_listener, world_backup_listener } from '@/helpers/events'
 import { get_game_versions } from '@/helpers/tags'
 import type { GameInstance } from '@/helpers/types'
 import { openProfileFolder } from '@/helpers/utils'
@@ -286,10 +292,12 @@ const filters = ref<string[]>([])
 const searchFilter = ref('')
 
 const refreshingAll = ref(false)
+const worldsLoaded = ref(false)
 const backingUp = ref(false)
 const backupLabel = ref('Создать бэкап')
 const backupStatus = ref('')
 const worldBackups = ref<WorldBackup[]>([])
+const backupListLoaded = ref(false)
 const restoringBackup = ref<string>()
 const deletingBackup = ref<string>()
 const hadNoWorlds = ref(true)
@@ -341,6 +349,7 @@ async function refreshBackupList() {
 		handleError(error instanceof Error ? error : new Error(String(error)))
 		return []
 	})
+	backupListLoaded.value = true
 }
 
 function formatBackupDate(value: string) {
@@ -392,27 +401,9 @@ const MAX_LINUX_REFRESHES = 3
 const isLinux = platform() === 'linux'
 const linuxRefreshCount = ref(0)
 
-const protocolVersion = ref<ProtocolVersion | null>(
-	await get_profile_protocol_version(instance.value.path),
-)
-
-const unlistenProfile = await profile_listener(async (e: ProfileEvent) => {
-	if (e.profile_path_id !== instance.value.path) return
-
-	console.info(`Handling profile event '${e.event}' for profile: ${e.profile_path_id}`)
-
-	if (e.event === 'servers_updated') {
-		if (isLinux && linuxRefreshCount.value >= MAX_LINUX_REFRESHES) return
-		if (isLinux) linuxRefreshCount.value++
-
-		await refreshAllWorlds()
-	}
-
-	await handleDefaultProfileUpdateEvent(worlds.value, instance.value.path, e)
-})
-
-await refreshAllWorlds()
-await refreshBackupList()
+const protocolVersion = ref<ProtocolVersion | null>(null)
+let unlistenProfile = () => {}
+let unlistenBackups = () => {}
 
 async function refreshServer(address: string) {
 	if (!serverData.value[address]) {
@@ -431,9 +422,10 @@ async function refreshAllWorlds() {
 
 	refreshingAll.value = true
 
-	worlds.value = await refreshWorlds(instance.value.path).finally(
-		() => (refreshingAll.value = false),
-	)
+	worlds.value = await refreshWorlds(instance.value.path).finally(() => {
+		refreshingAll.value = false
+		worldsLoaded.value = true
+	})
 	refreshServers(worlds.value, serverData.value, protocolVersion.value)
 
 	const hasNoWorlds = worlds.value.length === 0
@@ -543,7 +535,7 @@ function worldsMatch(world: World, other: World | undefined) {
 	return false
 }
 
-const gameVersions = ref<GameVersion[]>(await get_game_versions().catch(() => []))
+const gameVersions = ref<GameVersion[]>([])
 const supportsServerQuickPlay = computed(() =>
 	hasServerQuickPlaySupport(gameVersions.value, instance.value.game_version),
 )
@@ -641,6 +633,41 @@ async function proceedDeleteWorld() {
 
 onUnmounted(() => {
 	unlistenProfile()
+	unlistenBackups()
+})
+
+onMounted(async () => {
+	void Promise.all([
+		get_profile_protocol_version(instance.value.path)
+			.then((value) => (protocolVersion.value = value))
+			.catch(() => {}),
+		get_game_versions()
+			.then((versions) => (gameVersions.value = versions))
+			.catch(() => {}),
+		refreshAllWorlds(),
+		refreshBackupList(),
+	])
+	unlistenProfile = await profile_listener(async (event: ProfileEvent) => {
+		if (event.profile_path_id !== instance.value.path) return
+		if (event.event === 'servers_updated') {
+			if (isLinux && linuxRefreshCount.value >= MAX_LINUX_REFRESHES) return
+			if (isLinux) linuxRefreshCount.value++
+			await refreshAllWorlds()
+		}
+		await handleDefaultProfileUpdateEvent(worlds.value, instance.value.path, event)
+	})
+	unlistenBackups = await world_backup_listener((event) => {
+		if (event.profile !== instance.value.path) return
+		backingUp.value = event.state === 'started'
+		if (event.state === 'completed') {
+			backupStatus.value = `Резервная копия «${event.world}» создана.`
+			void refreshBackupList()
+		} else if (event.state === 'cancelled') {
+			backupStatus.value = 'Автобэкап отменён перед запуском игры.'
+		} else if (event.state === 'failed') {
+			backupStatus.value = event.error || 'Не удалось создать резервную копию.'
+		}
+	})
 })
 
 const messages = defineMessages({
@@ -660,6 +687,25 @@ const messages = defineMessages({
 </script>
 
 <style scoped lang="scss">
+.worlds-local-skeleton,
+.backup-list-skeleton {
+	display: grid;
+	gap: 10px;
+}
+
+.worlds-local-skeleton span,
+.backup-list-skeleton span {
+	display: block;
+	height: 82px;
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.045);
+}
+
+.worlds-local-skeleton {
+	min-height: 300px;
+}
+
 .world-launch-error {
 	display: flex;
 	align-items: center;

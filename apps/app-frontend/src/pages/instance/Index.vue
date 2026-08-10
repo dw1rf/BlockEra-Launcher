@@ -94,11 +94,7 @@
 				</nav>
 				<RouterView v-slot="{ Component }" :key="instance.path">
 					<template v-if="Component">
-						<Suspense
-							:key="instance.path"
-							@pending="loadingBar.startLoading()"
-							@resolve="loadingBar.stopLoading()"
-						>
+						<Suspense :key="instance.path">
 							<component
 								:is="Component"
 								:instance="instance"
@@ -111,7 +107,9 @@
 								@stop="() => stopInstance('InstanceSubpage')"
 							></component>
 							<template #fallback>
-								<LoadingIndicator />
+								<div class="local-section-skeleton" aria-label="Загрузка раздела">
+									<span></span><span></span><span></span>
+								</div>
 							</template>
 						</Suspense>
 					</template>
@@ -179,6 +177,14 @@
 			<template #filter_update><UpdatedIcon />Select Updatable</template>
 		</ContextMenu>
 	</div>
+	<div v-else class="blockera-instance instance-shell" aria-label="Загрузка сборки">
+		<section class="instance-hero shell-block"></section>
+		<section class="instance-health-strip shell-block"></section>
+		<div class="instance-layout">
+			<main class="instance-content-card shell-block"></main>
+			<aside class="instance-quick-panel shell-block"></aside>
+		</div>
+	</div>
 </template>
 <script setup>
 import {
@@ -201,11 +207,11 @@ import {
 	UpdatedIcon,
 	XIcon,
 } from '@modrinth/assets'
-import { injectNotificationManager, LoadingIndicator } from '@modrinth/ui'
+import { injectNotificationManager } from '@modrinth/ui'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import ContextMenu from '@/components/ui/ContextMenu.vue'
@@ -219,7 +225,7 @@ import {
 	setWorldBackupSettings,
 } from '@/helpers/backups'
 import { get_project, get_version_many } from '@/helpers/cache.js'
-import { process_listener, profile_listener } from '@/helpers/events'
+import { process_listener, profile_listener, world_backup_listener } from '@/helpers/events'
 import { formatJavaLabel } from '@/helpers/java-label'
 import { get_by_profile_path } from '@/helpers/process'
 import {
@@ -233,7 +239,7 @@ import {
 import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
 import { useSelectedInstance } from '@/store/selected-instance'
-import { useBreadcrumbs, useLoading } from '@/store/state'
+import { useBreadcrumbs } from '@/store/state'
 
 dayjs.extend(duration)
 dayjs.extend(relativeTime)
@@ -259,13 +265,7 @@ const playing = ref(false)
 const loading = ref(false)
 const repairing = ref(false)
 const optimalJavaLabel = ref('Определяем…')
-const backupSettings = ref(
-	await migrateLegacyWorldBackupSettings().catch(() => ({
-		enabled: false,
-		intervalMinutes: 60,
-		retentionPerWorld: 5,
-	})),
-)
+const backupSettings = ref({ enabled: false, intervalMinutes: 60, retentionPerWorld: 5 })
 const automaticBackups = ref(backupSettings.value.enabled)
 const creatingBackup = ref(false)
 const backupActionStatus = ref('')
@@ -273,14 +273,11 @@ const latestBackupAt = ref(null)
 
 const backupSummaryLabel = computed(() => {
 	if (latestBackupAt.value) return `Последний: ${dayjs(latestBackupAt.value).fromNow()}`
-	return automaticBackups.value ? 'Каждый час, до 5 копий' : 'Автобэкап выключен'
+	return automaticBackups.value ? 'После игры, до 5 копий' : 'Автобэкап выключен'
 })
 const nextBackupLabel = computed(() => {
 	if (!automaticBackups.value) return 'Выключены'
-	if (!latestBackupAt.value) return 'Следующий: при ближайшей проверке'
-	return `Следующий: ${dayjs(latestBackupAt.value)
-		.add(backupSettings.value.intervalMinutes, 'minute')
-		.fromNow()}`
+	return 'После выхода из игры, не чаще раза в час'
 })
 
 async function refreshBackupStatus() {
@@ -291,8 +288,20 @@ async function refreshBackupStatus() {
 
 async function fetchInstance() {
 	instance.value = await get(route.params.id).catch(handleError)
-	if (instance.value?.path) selectedInstanceStore.setSelectedInstance(instance.value.path)
-	await refreshBackupStatus()
+	if (!instance.value?.path) return
+	selectedInstanceStore.setSelectedInstance(instance.value.path)
+	breadcrumbs.setName(
+		'Instance',
+		instance.value.name.length > 40
+			? instance.value.name.substring(0, 40) + '...'
+			: instance.value.name,
+	)
+	breadcrumbs.setContext({ name: instance.value.name, link: route.path, query: route.query })
+	void refreshBackupStatus()
+	void updatePlayState()
+	void get_optimal_jre_key(route.params.id)
+		.then((optimalJava) => (optimalJavaLabel.value = formatJavaLabel(optimalJava)))
+		.catch(() => (optimalJavaLabel.value = 'Не определена'))
 
 	if (!offline.value && instance.value.linked_data && instance.value.linked_data.project_id) {
 		get_project(instance.value.linked_data.project_id, 'must_revalidate')
@@ -309,10 +318,6 @@ async function fetchInstance() {
 				}
 			})
 	}
-
-	await updatePlayState()
-	const optimalJava = await get_optimal_jre_key(route.params.id).catch(() => null)
-	optimalJavaLabel.value = formatJavaLabel(optimalJava)
 }
 
 async function updatePlayState() {
@@ -321,12 +326,11 @@ async function updatePlayState() {
 	playing.value = runningProcesses.length > 0
 }
 
-await fetchInstance()
 watch(
 	() => route.params.id,
 	async () => {
 		if (route.params.id && route.path.startsWith('/instance')) {
-			await fetchInstance()
+			void fetchInstance()
 		}
 	},
 )
@@ -351,21 +355,6 @@ const tabs = computed(() => [
 		href: `${basePath.value}/logs`,
 	},
 ])
-
-breadcrumbs.setName(
-	'Instance',
-	instance.value.name.length > 40
-		? instance.value.name.substring(0, 40) + '...'
-		: instance.value.name,
-)
-
-breadcrumbs.setContext({
-	name: instance.value.name,
-	link: route.path,
-	query: route.query,
-})
-
-const loadingBar = useLoading()
 
 const options = ref(null)
 
@@ -542,22 +531,43 @@ const handleOptionsClick = async (args) => {
 	}
 }
 
-const unlistenProfiles = await profile_listener(async (event) => {
-	if (event.profile_path_id === route.params.id) {
+let unlistenProfiles = () => {}
+let unlistenProcesses = () => {}
+let unlistenBackups = () => {}
+
+onMounted(async () => {
+	void fetchInstance()
+	void migrateLegacyWorldBackupSettings()
+		.then((settings) => {
+			backupSettings.value = settings
+			automaticBackups.value = settings.enabled
+		})
+		.catch(() => {})
+	unlistenProfiles = await profile_listener(async (event) => {
+		if (event.profile_path_id !== route.params.id) return
 		if (event.event === 'removed') {
-			await router.push({
-				path: '/',
-			})
+			await router.push({ path: '/' })
 			return
 		}
 		instance.value = await get(route.params.id).catch(handleError)
-	}
-})
-
-const unlistenProcesses = await process_listener((e) => {
-	if (e.event === 'finished' && e.profile_path_id === route.params.id) {
-		playing.value = false
-	}
+	})
+	unlistenProcesses = await process_listener((event) => {
+		if (event.event === 'finished' && event.profile_path_id === route.params.id) {
+			playing.value = false
+		}
+	})
+	unlistenBackups = await world_backup_listener((event) => {
+		if (event.profile !== instance.value?.path) return
+		creatingBackup.value = event.state === 'started'
+		if (event.state === 'completed') {
+			backupActionStatus.value = `Готово · ${((event.size ?? 0) / 1024 / 1024).toFixed(1)} МБ`
+			void refreshBackupStatus()
+		} else if (event.state === 'cancelled') {
+			backupActionStatus.value = 'Отменено перед запуском игры'
+		} else if (event.state === 'failed') {
+			backupActionStatus.value = event.error || 'Не удалось создать бэкап'
+		}
+	})
 })
 
 const settingsModal = ref()
@@ -576,7 +586,7 @@ watch(
 )
 
 const timePlayed = computed(() => {
-	return instance.value.recent_time_played + instance.value.submitted_time_played
+	return (instance.value?.recent_time_played ?? 0) + (instance.value?.submitted_time_played ?? 0)
 })
 
 const timePlayedHumanized = computed(() => {
@@ -598,10 +608,64 @@ const timePlayedHumanized = computed(() => {
 onUnmounted(() => {
 	unlistenProcesses()
 	unlistenProfiles()
+	unlistenBackups()
 })
 </script>
 
 <style scoped lang="scss">
+.blockera-instance {
+	animation: instance-appear 150ms ease-out;
+}
+
+.instance-shell .shell-block,
+.local-section-skeleton span {
+	background: rgba(255, 255, 255, 0.045);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.instance-shell .instance-hero {
+	min-height: 150px;
+}
+
+.instance-shell .instance-health-strip {
+	min-height: 76px;
+}
+
+.instance-shell .instance-content-card {
+	min-height: 460px;
+}
+
+.instance-shell .instance-quick-panel {
+	min-height: 420px;
+}
+
+.local-section-skeleton {
+	display: grid;
+	gap: 12px;
+	padding: 24px;
+}
+
+.local-section-skeleton span {
+	display: block;
+	height: 72px;
+	border-radius: 12px;
+}
+
+@keyframes instance-appear {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.blockera-instance {
+		animation: none;
+	}
+}
+
 .instance-card {
 	display: flex;
 	flex-direction: column;
