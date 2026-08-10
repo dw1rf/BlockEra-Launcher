@@ -137,12 +137,87 @@ fn reqwest_client_builder() -> reqwest::ClientBuilder {
         reqwest::header::HeaderValue::from_str(&crate::launcher_user_agent())
             .unwrap();
     headers.insert(reqwest::header::USER_AGENT, header);
-    reqwest::Client::builder()
+    let mut builder = reqwest::Client::builder()
         .connect_timeout(time::Duration::from_secs(15))
         .read_timeout(time::Duration::from_secs(30))
         .timeout(time::Duration::from_secs(10 * 60))
         .tcp_keepalive(Some(time::Duration::from_secs(10)))
-        .default_headers(headers)
+        .default_headers(headers);
+
+    #[cfg(target_os = "windows")]
+    if let Some(proxy_url) = windows_system_proxy_url() {
+        match reqwest::Proxy::all(&proxy_url) {
+            Ok(proxy) => {
+                let no_proxy =
+                    reqwest::NoProxy::from_string("localhost,127.0.0.1,::1");
+                builder = builder.proxy(proxy.no_proxy(no_proxy));
+                tracing::info!("Using the Windows system proxy");
+            }
+            Err(error) => {
+                tracing::warn!(
+                    %error,
+                    "Ignoring an invalid Windows system proxy"
+                );
+            }
+        }
+    }
+
+    builder
+}
+
+fn parse_windows_proxy_server(value: &str) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+
+    let selected = if value.contains('=') {
+        let entries = value.split(';').filter_map(|entry| {
+            let (protocol, address) = entry.split_once('=')?;
+            Some((protocol.trim().to_ascii_lowercase(), address.trim()))
+        });
+        let entries = entries.collect::<Vec<_>>();
+        entries
+            .iter()
+            .find(|(protocol, _)| protocol == "https")
+            .or_else(|| entries.iter().find(|(protocol, _)| protocol == "http"))
+            .map(|(_, address)| *address)?
+    } else {
+        value
+    };
+
+    let normalized = if selected.contains("://") {
+        selected.to_string()
+    } else {
+        format!("http://{selected}")
+    };
+    let parsed = reqwest::Url::parse(&normalized).ok()?;
+    if !matches!(parsed.scheme(), "http" | "https") || parsed.host().is_none() {
+        return None;
+    }
+
+    Some(normalized)
+}
+
+#[cfg(target_os = "windows")]
+fn windows_system_proxy_url() -> Option<String> {
+    use winreg::RegKey;
+    use winreg::enums::HKEY_CURRENT_USER;
+
+    let internet_settings = RegKey::predef(HKEY_CURRENT_USER)
+        .open_subkey(
+            "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+        )
+        .ok()?;
+    let enabled = internet_settings.get_value::<u32, _>("ProxyEnable").ok()?;
+    if enabled == 0 {
+        return None;
+    }
+
+    let server = internet_settings
+        .get_value::<String, _>("ProxyServer")
+        .ok()?;
+    parse_windows_proxy_server(&server)
 }
 
 pub static REQWEST_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
@@ -680,6 +755,31 @@ mod tests {
     use super::*;
     use chrono::{TimeDelta, Utc};
     use tokio::io::AsyncReadExt as _;
+
+    #[test]
+    fn parses_windows_proxy_server_formats() {
+        assert_eq!(
+            parse_windows_proxy_server("http://127.0.0.1:10809"),
+            Some("http://127.0.0.1:10809".to_string())
+        );
+        assert_eq!(
+            parse_windows_proxy_server("127.0.0.1:10809"),
+            Some("http://127.0.0.1:10809".to_string())
+        );
+        assert_eq!(
+            parse_windows_proxy_server(
+                "http=127.0.0.1:8080;https=127.0.0.1:10809"
+            ),
+            Some("http://127.0.0.1:10809".to_string())
+        );
+    }
+
+    #[test]
+    fn rejects_unusable_windows_proxy_values() {
+        assert_eq!(parse_windows_proxy_server(""), None);
+        assert_eq!(parse_windows_proxy_server("socks=127.0.0.1:1080"), None);
+        assert_eq!(parse_windows_proxy_server("file:///proxy"), None);
+    }
 
     #[tokio::test]
     async fn modrinth_connection_errors_are_user_friendly() {
