@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-	automaticWorldBackupsEnabled: vi.fn(() => false),
 	backupProfileWorlds: vi.fn(),
+	getWorldBackupSettings: vi.fn(async () => ({
+		enabled: false,
+		intervalMinutes: 60,
+		retentionPerWorld: 5,
+	})),
 	getVersion: vi.fn(),
 	getProcess: vi.fn(),
 	getProfile: vi.fn(),
@@ -12,8 +16,8 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/helpers/backups', () => ({
-	automaticWorldBackupsEnabled: mocks.automaticWorldBackupsEnabled,
 	backupProfileWorlds: mocks.backupProfileWorlds,
+	getWorldBackupSettings: mocks.getWorldBackupSettings,
 }))
 vi.mock('@/helpers/cache', () => ({ get_version: mocks.getVersion }))
 vi.mock('@/helpers/process', () => ({ get_by_profile_path: mocks.getProcess }))
@@ -31,7 +35,11 @@ import { runInstanceUpdate } from './instance-update'
 describe('runInstanceUpdate', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		mocks.automaticWorldBackupsEnabled.mockReturnValue(false)
+		mocks.getWorldBackupSettings.mockResolvedValue({
+			enabled: false,
+			intervalMinutes: 60,
+			retentionPerWorld: 5,
+		})
 		mocks.getProfile.mockResolvedValue({ install_stage: 'installed' })
 		mocks.getProcess.mockResolvedValue([])
 		mocks.getVersion.mockImplementation(async (id: string) => ({

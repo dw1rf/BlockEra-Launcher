@@ -80,7 +80,7 @@
 					</button>
 				</ButtonStyled>
 				<ButtonStyled>
-					<button :disabled="backingUp" @click="backupAllWorlds">
+					<button :disabled="backingUp || playing" @click="backupAllWorlds">
 						<PackageIcon /> {{ backingUp ? 'Создаём копии…' : backupLabel }}
 					</button>
 				</ButtonStyled>
@@ -112,6 +112,7 @@
 							world.type === 'server' ? editServerModal?.show(world) : editWorldModal?.show(world)
 					"
 					@delete="() => promptToRemoveWorld(world)"
+					@backup="() => backupSingleWorld(world)"
 					@open-folder="(world: SingleplayerWorld) => showWorldInFolder(instance.path, world.path)"
 				/>
 			</div>
@@ -142,10 +143,47 @@
 				</ButtonStyled>
 			</div>
 		</div>
+		<section class="backup-library">
+			<div class="backup-library-heading">
+				<div>
+					<span>РЕЗЕРВНЫЕ КОПИИ</span>
+					<h3>Бэкапы миров</h3>
+				</div>
+				<ButtonStyled>
+					<button @click="openProfileFolder(instance.path, 'backups')">
+						<FolderOpenIcon /> Открыть папку
+					</button>
+				</ButtonStyled>
+			</div>
+			<p v-if="backupStatus" class="backup-status">{{ backupStatus }}</p>
+			<div v-if="worldBackups.length" class="backup-list">
+				<article v-for="backup in worldBackups" :key="backup.id" class="backup-row">
+					<div>
+						<strong>{{ backup.world }}</strong>
+						<span
+							>{{ formatBackupDate(backup.createdAt) }} · {{ formatBackupSize(backup.size) }}</span
+						>
+					</div>
+					<div class="backup-actions">
+						<button
+							:disabled="playing || restoringBackup === backup.id"
+							@click="restoreBackup(backup)"
+						>
+							{{ restoringBackup === backup.id ? 'Восстанавливаем…' : 'Восстановить' }}
+						</button>
+						<button :disabled="deletingBackup === backup.id" @click="removeBackup(backup)">
+							Удалить
+						</button>
+					</div>
+				</article>
+			</div>
+			<p v-else class="backup-empty">Резервных копий пока нет.</p>
+		</section>
 	</div>
 </template>
 <script setup lang="ts">
 import {
+	FolderOpenIcon,
 	PackageIcon,
 	PlusIcon,
 	SearchIcon,
@@ -165,6 +203,7 @@ import {
 } from '@modrinth/ui'
 import type { Version } from '@modrinth/utils'
 import { platform } from '@tauri-apps/plugin-os'
+import dayjs from 'dayjs'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -174,9 +213,17 @@ import AddServerModal from '@/components/ui/world/modal/AddServerModal.vue'
 import EditServerModal from '@/components/ui/world/modal/EditServerModal.vue'
 import EditWorldModal from '@/components/ui/world/modal/EditSingleplayerWorldModal.vue'
 import WorldItem from '@/components/ui/world/WorldItem.vue'
+import {
+	backupProfileWorlds,
+	deleteWorldBackup,
+	listWorldBackups,
+	restoreWorldBackup,
+	type WorldBackup,
+} from '@/helpers/backups'
 import { profile_listener } from '@/helpers/events'
 import { get_game_versions } from '@/helpers/tags'
 import type { GameInstance } from '@/helpers/types'
+import { openProfileFolder } from '@/helpers/utils'
 import {
 	backup_world,
 	delete_world,
@@ -241,6 +288,10 @@ const searchFilter = ref('')
 const refreshingAll = ref(false)
 const backingUp = ref(false)
 const backupLabel = ref('Создать бэкап')
+const backupStatus = ref('')
+const worldBackups = ref<WorldBackup[]>([])
+const restoringBackup = ref<string>()
+const deletingBackup = ref<string>()
 const hadNoWorlds = ref(true)
 const startingInstance = ref(false)
 const worldPlaying = ref<World>()
@@ -251,29 +302,88 @@ const worlds = ref<World[]>([])
 
 async function backupAllWorlds() {
 	if (backingUp.value) return
-	const localWorlds = worlds.value.filter(
-		(world): world is SingleplayerWorld => world.type === 'singleplayer',
-	)
+	const localWorlds = worlds.value.filter((world) => world.type === 'singleplayer')
 	if (localWorlds.length === 0) {
 		backupLabel.value = 'Нет миров для копии'
 		return
 	}
 
 	backingUp.value = true
-	let completed = 0
-	for (const world of localWorlds) {
-		try {
-			await backup_world(instance.value.path, world.path)
-			completed += 1
-		} catch (error) {
-			handleError(error instanceof Error ? error : new Error(String(error)))
-		}
+	try {
+		const result = await backupProfileWorlds(instance.value.path, 'manual')
+		backupLabel.value = result.failures.length
+			? `Готово: ${result.count}/${localWorlds.length}`
+			: `Скопировано: ${result.count}`
+		backupStatus.value = result.failures.length
+			? result.failures.map((failure) => `${failure.world}: ${failure.error}`).join('; ')
+			: `Создано копий: ${result.count}`
+		await refreshBackupList()
+	} catch (error) {
+		handleError(error instanceof Error ? error : new Error(String(error)))
+	} finally {
+		backingUp.value = false
 	}
-	backupLabel.value =
-		completed === localWorlds.length
-			? `Скопировано: ${completed}`
-			: `Готово: ${completed}/${localWorlds.length}`
-	backingUp.value = false
+}
+
+async function backupSingleWorld(world: World) {
+	if (world.type !== 'singleplayer' || world.locked) return
+	try {
+		await backup_world(instance.value.path, world.path)
+		backupStatus.value = `Резервная копия мира «${world.name}» создана.`
+		await refreshBackupList()
+	} catch (error) {
+		handleError(error instanceof Error ? error : new Error(String(error)))
+	}
+}
+
+async function refreshBackupList() {
+	worldBackups.value = await listWorldBackups(instance.value.path).catch((error) => {
+		handleError(error instanceof Error ? error : new Error(String(error)))
+		return []
+	})
+}
+
+function formatBackupDate(value: string) {
+	return dayjs(value).format('DD.MM.YYYY HH:mm')
+}
+
+function formatBackupSize(bytes: number) {
+	if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} КБ`
+	return `${(bytes / 1024 / 1024).toFixed(1)} МБ`
+}
+
+async function restoreBackup(backup: WorldBackup) {
+	if (
+		playing.value ||
+		!window.confirm(
+			`Восстановить мир «${backup.world}» из этой копии? Текущее состояние будет сохранено отдельно.`,
+		)
+	)
+		return
+	restoringBackup.value = backup.id
+	try {
+		await restoreWorldBackup(instance.value.path, backup.id)
+		backupStatus.value = `Мир «${backup.world}» восстановлен.`
+		await Promise.all([refreshAllWorlds(), refreshBackupList()])
+	} catch (error) {
+		handleError(error instanceof Error ? error : new Error(String(error)))
+	} finally {
+		restoringBackup.value = undefined
+	}
+}
+
+async function removeBackup(backup: WorldBackup) {
+	if (!window.confirm(`Удалить резервную копию мира «${backup.world}»?`)) return
+	deletingBackup.value = backup.id
+	try {
+		await deleteWorldBackup(instance.value.path, backup.id)
+		backupStatus.value = 'Резервная копия удалена.'
+		await refreshBackupList()
+	} catch (error) {
+		handleError(error instanceof Error ? error : new Error(String(error)))
+	} finally {
+		deletingBackup.value = undefined
+	}
 }
 const serverData = ref<Record<string, ServerData>>({})
 
@@ -302,6 +412,7 @@ const unlistenProfile = await profile_listener(async (e: ProfileEvent) => {
 })
 
 await refreshAllWorlds()
+await refreshBackupList()
 
 async function refreshServer(address: string) {
 	if (!serverData.value[address]) {
@@ -587,6 +698,70 @@ const messages = defineMessages({
 	:deep(button) {
 		border-radius: 10px;
 	}
+}
+
+.backup-library {
+	margin-top: 1.25rem;
+	padding: 1rem;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.025);
+}
+.backup-library-heading,
+.backup-row,
+.backup-actions {
+	display: flex;
+	align-items: center;
+}
+.backup-library-heading,
+.backup-row {
+	justify-content: space-between;
+	gap: 1rem;
+}
+.backup-library-heading span {
+	color: #b469f5;
+	font-size: 10px;
+	font-weight: 850;
+	letter-spacing: 0.12em;
+}
+.backup-library-heading h3 {
+	margin: 0.2rem 0 0;
+}
+.backup-list {
+	display: grid;
+	gap: 0.5rem;
+	margin-top: 0.85rem;
+}
+.backup-row {
+	padding: 0.75rem;
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 10px;
+	background: rgba(7, 10, 17, 0.45);
+}
+.backup-row > div:first-child {
+	display: grid;
+	gap: 0.2rem;
+}
+.backup-row span,
+.backup-status,
+.backup-empty {
+	color: var(--color-secondary);
+	font-size: 0.85rem;
+}
+.backup-actions {
+	gap: 0.4rem;
+}
+.backup-actions button {
+	padding: 0.45rem 0.7rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.05);
+	color: inherit;
+}
+.backup-status {
+	margin: 0.75rem 0 0;
+}
+.backup-empty {
+	margin: 0.9rem 0 0;
 }
 
 .blockera-worlds-empty {

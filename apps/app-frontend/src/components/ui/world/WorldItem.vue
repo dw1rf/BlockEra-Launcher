@@ -51,7 +51,7 @@ const formatRelativeTime = useRelativeTime()
 const router = useRouter()
 
 const emit = defineEmits<{
-	(e: 'play' | 'play-instance' | 'update' | 'stop' | 'refresh' | 'edit' | 'delete'): void
+	(e: 'play' | 'play-instance' | 'update' | 'stop' | 'refresh' | 'edit' | 'delete' | 'backup'): void
 	(e: 'open-folder', world: SingleplayerWorld): void
 }>()
 
@@ -396,6 +396,13 @@ const messages = defineMessages({
 								action: () => (world.type === 'singleplayer' ? emit('open-folder', world) : {}),
 							},
 							{
+								id: 'backup',
+								shown: world.type === 'singleplayer' && !instancePath,
+								disabled: locked,
+								tooltip: locked ? formatMessage(messages.worldInUse) : undefined,
+								action: () => emit('backup'),
+							},
+							{
 								divider: true,
 								shown: !!instancePath,
 							},
@@ -444,6 +451,10 @@ const messages = defineMessages({
 						<template #open-folder>
 							<FolderOpenIcon aria-hidden="true" />
 							{{ formatMessage(commonMessages.openFolderButton) }}
+						</template>
+						<template #backup>
+							<ClipboardCopyIcon aria-hidden="true" />
+							Сделать бэкап
 						</template>
 						<template #copy-address>
 							<ClipboardCopyIcon aria-hidden="true" />

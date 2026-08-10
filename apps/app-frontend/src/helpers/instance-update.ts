@@ -1,4 +1,4 @@
-import { automaticWorldBackupsEnabled, backupProfileWorlds } from '@/helpers/backups'
+import { backupProfileWorlds, getWorldBackupSettings } from '@/helpers/backups'
 import { get_version } from '@/helpers/cache'
 import { get_by_profile_path } from '@/helpers/process'
 import { get, get_projects, update_project } from '@/helpers/profile'
@@ -78,9 +78,10 @@ export async function runInstanceUpdate(
 		detail: 'Проверка выполняется установщиком при записи файлов.',
 	})
 
-	if (options.backup ?? automaticWorldBackupsEnabled()) {
+	const shouldBackup = options.backup ?? (await getWorldBackupSettings()).enabled
+	if (shouldBackup) {
 		try {
-			const backup = await backupProfileWorlds(instancePath)
+			const backup = await backupProfileWorlds(instancePath, 'pre_update')
 			if (backup.failures.length > 0)
 				throw new Error(`не удалось скопировать миров: ${backup.failures.length}`)
 			steps.push({
