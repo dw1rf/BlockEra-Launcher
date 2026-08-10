@@ -149,6 +149,7 @@ impl ProcessManager {
             profile_path.to_string(),
             post_exit_command,
             metadata.uuid,
+            metadata.start_time,
         ));
 
         self.processes.insert(process.metadata.uuid, process);
@@ -641,6 +642,7 @@ impl Process {
         profile_path: String,
         post_exit_command: Option<String>,
         uuid: Uuid,
+        session_started_at: DateTime<Utc>,
     ) -> crate::Result<()> {
         async fn update_playtime(
             last_updated_playtime: &mut DateTime<Utc>,
@@ -702,6 +704,23 @@ impl Process {
 
         // Now fully complete- update playtime one last time
         update_playtime(&mut last_updated_playtime, &profile_path, true).await;
+
+        let backup_profile = profile_path.clone();
+        tokio::spawn(async move {
+            if let Err(error) =
+                crate::api::worlds::backup_due_worlds_after_session(
+                    &backup_profile,
+                    session_started_at,
+                )
+                .await
+            {
+                tracing::warn!(
+                    profile = backup_profile,
+                    %error,
+                    "Automatic world backup after Minecraft exit failed"
+                );
+            }
+        });
 
         // Publish play time update
         // Allow failure, it will be stored locally and sent next time

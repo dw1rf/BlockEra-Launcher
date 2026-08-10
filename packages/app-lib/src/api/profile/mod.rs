@@ -650,6 +650,9 @@ async fn run_credentials(
     credentials: &Credentials,
     quick_play_type: QuickPlayType,
 ) -> crate::Result<ProcessMetadata> {
+    // A new game launch has priority over background compression from the
+    // previous session. The writer checks cancellation between 1 MiB blocks.
+    crate::api::worlds::cancel_automatic_world_backup().await;
     let state = State::get().await?;
     let settings = Settings::get(&state.pool).await?;
     let profile = get(path).await?.ok_or_else(|| {
@@ -927,7 +930,7 @@ pub async fn create_mrpack_json(
         .collect::<crate::Result<Vec<PackFile>>>()?;
 
     files.sort_by(|a, b| a.path.cmp(&b.path));
-    
+
     Ok(PackFormat {
         game: "minecraft".to_string(),
         format_version: 1,

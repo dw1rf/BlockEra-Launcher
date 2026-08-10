@@ -69,7 +69,3 @@ export async function restoreWorldBackup(profile: string, backupId: string): Pro
 export async function deleteWorldBackup(profile: string, backupId: string): Promise<void> {
 	await invoke('plugin:worlds|delete_world_backup', { profile, backupId })
 }
-
-export async function runDueWorldBackups(): Promise<WorldBackupSummary[]> {
-	return await invoke('plugin:worlds|run_due_world_backups')
-}

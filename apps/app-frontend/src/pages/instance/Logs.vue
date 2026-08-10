@@ -166,7 +166,6 @@ const currentLiveLogCursor = ref(0)
 const emptyText = ['No live game detected.', 'Start your game to proceed.']
 
 const logs = ref([])
-await setLogs()
 
 const logsColored = true
 
@@ -517,27 +516,29 @@ interval.value = setInterval(async () => {
 	}
 }, 250)
 
-const unlistenProcesses = await process_listener(async (e) => {
-	if (e.event === 'launched') {
-		currentLiveLog.value = ''
-		currentLiveLogCursor.value = 0
-		selectedLogIndex.value = 0
-	}
-	if (e.event === 'finished') {
-		currentLiveLog.value = ''
-		currentLiveLogCursor.value = 0
-		userScrolled.value = false
-		await setLogs()
-		selectedLogIndex.value = 1
-	}
-})
+let unlistenProcesses = () => {}
 
-onMounted(() => {
-	logContainer.value.$el.addEventListener('scroll', handleUserScroll)
+onMounted(async () => {
+	void setLogs()
+	unlistenProcesses = await process_listener(async (event) => {
+		if (event.event === 'launched') {
+			currentLiveLog.value = ''
+			currentLiveLogCursor.value = 0
+			selectedLogIndex.value = 0
+		}
+		if (event.event === 'finished') {
+			currentLiveLog.value = ''
+			currentLiveLogCursor.value = 0
+			userScrolled.value = false
+			await setLogs()
+			selectedLogIndex.value = 1
+		}
+	})
+	logContainer.value?.$el.addEventListener('scroll', handleUserScroll)
 })
 
 onBeforeUnmount(() => {
-	logContainer.value.$el.removeEventListener('scroll', handleUserScroll)
+	logContainer.value?.$el.removeEventListener('scroll', handleUserScroll)
 })
 onUnmounted(() => {
 	clearInterval(interval.value)

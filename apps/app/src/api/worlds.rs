@@ -28,7 +28,6 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             delete_world_backup,
             get_world_backup_settings,
             set_world_backup_settings,
-            run_due_world_backups,
             delete_world,
             add_server_to_profile,
             edit_server_in_profile,
@@ -189,11 +188,6 @@ pub async fn set_world_backup_settings(
 ) -> Result<()> {
     worlds::set_world_backup_settings(settings).await?;
     Ok(())
-}
-
-#[tauri::command]
-pub async fn run_due_world_backups() -> Result<Vec<BackupBatchResult>> {
-    Ok(worlds::run_due_world_backups().await?)
 }
 
 #[tauri::command]

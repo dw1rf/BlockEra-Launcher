@@ -13,28 +13,29 @@ pub use crate::util::server_ping::{
 };
 use crate::util::{io, server_ping};
 use crate::{ErrorKind, Result, State, launcher};
-use async_walkdir::WalkDir;
-use async_zip::{Compression, ZipEntryBuilder};
 use chrono::{DateTime, Local, TimeDelta, TimeZone, Utc};
 use either::Either;
 use enumset::{EnumSet, EnumSetType};
 use fs4::tokio::AsyncFileExt;
-use futures::StreamExt;
 use quartz_nbt::{NbtCompound, NbtTag};
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::cmp::Reverse;
-use std::io::Cursor;
+use std::collections::HashSet;
+use std::io::{Cursor, Read, Write};
 use std::path::{Component, Path, PathBuf};
-use std::sync::LazyLock;
+use std::sync::{
+    Arc, LazyLock,
+    atomic::{AtomicBool, Ordering},
+};
 use tokio::io::AsyncWriteExt;
+use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinSet;
-use tokio_util::compat::FuturesAsyncWriteCompatExt;
 use url::Url;
 
 const BACKUP_MANIFEST_PATH: &str = ".blockera-backup.json";
-const BACKUP_FORMAT_VERSION: u32 = 1;
+const BACKUP_FORMAT_VERSION: u32 = 2;
 const MAX_RESTORE_ENTRIES: usize = 100_000;
 const MAX_RESTORE_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 
@@ -46,6 +47,28 @@ pub enum WorldBackupReason {
     PreUpdate,
     PreRepair,
     PreRestore,
+}
+
+impl WorldBackupReason {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Manual => "manual",
+            Self::Scheduled => "scheduled",
+            Self::PreUpdate => "pre_update",
+            Self::PreRepair => "pre_repair",
+            Self::PreRestore => "pre_restore",
+        }
+    }
+
+    fn from_str(value: &str) -> Self {
+        match value {
+            "scheduled" => Self::Scheduled,
+            "pre_update" => Self::PreUpdate,
+            "pre_repair" => Self::PreRepair,
+            "pre_restore" => Self::PreRestore,
+            _ => Self::Manual,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
@@ -102,6 +125,47 @@ pub struct BackupBatchResult {
     pub total_bytes: u64,
     pub backups: Vec<WorldBackup>,
     pub failures: Vec<WorldBackupFailure>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldBackupEvent {
+    pub profile: String,
+    pub world: String,
+    pub state: WorldBackupEventState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum WorldBackupEventState {
+    Started,
+    Completed,
+    Cancelled,
+    Failed,
+}
+
+static BACKUP_SEMAPHORE: LazyLock<Arc<Semaphore>> =
+    LazyLock::new(|| Arc::new(Semaphore::new(1)));
+static AUTOMATIC_BACKUP: LazyLock<Mutex<Option<AutomaticBackupControl>>> =
+    LazyLock::new(|| Mutex::new(None));
+
+struct AutomaticBackupControl {
+    cancelled: Arc<AtomicBool>,
+}
+
+struct BackupOperationGuard {
+    _permit: OwnedSemaphorePermit,
+    lock_file: tokio::fs::File,
+}
+
+impl Drop for BackupOperationGuard {
+    fn drop(&mut self) {
+        let _ = self.lock_file.unlock();
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -607,6 +671,48 @@ fn validate_world_identifier(world: &str) -> Result<()> {
     Ok(())
 }
 
+async fn acquire_backup_operation() -> Result<BackupOperationGuard> {
+    let permit = Arc::clone(&BACKUP_SEMAPHORE)
+        .acquire_owned()
+        .await
+        .map_err(|_| ErrorKind::OtherError("Backup worker stopped".into()))?;
+    let state = State::get().await?;
+    let lock_path = state.directories.settings_dir.join("world-backup.lock");
+    let lock_file = tokio::fs::File::options()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(&lock_path)
+        .await?;
+    if !lock_file.try_lock_exclusive()? {
+        return Err(ErrorKind::InputError(
+            "Another world backup is already running".to_string(),
+        )
+        .into());
+    }
+    Ok(BackupOperationGuard {
+        _permit: permit,
+        lock_file,
+    })
+}
+
+pub async fn cancel_automatic_world_backup() {
+    let cancelled = AUTOMATIC_BACKUP
+        .lock()
+        .await
+        .as_ref()
+        .map(|control| Arc::clone(&control.cancelled));
+    if let Some(cancelled) = cancelled {
+        cancelled.store(true, Ordering::Release);
+        // Taking the permit guarantees the blocking writer observed the flag,
+        // removed its .part file and released the inter-process lock.
+        if let Ok(permit) = Arc::clone(&BACKUP_SEMAPHORE).acquire_owned().await
+        {
+            drop(permit);
+        }
+    }
+}
+
 pub async fn backup_world(instance: &Path, world: &str) -> Result<u64> {
     let profile = instance
         .file_name()
@@ -644,7 +750,7 @@ fn verify_backup_archive(path: &Path, world: &str) -> Result<()> {
         std::io::Read::read_to_string(&mut entry, &mut value)?;
         serde_json::from_str::<WorldBackupManifest>(&value)?
     };
-    if manifest.format_version != BACKUP_FORMAT_VERSION
+    if !matches!(manifest.format_version, 1 | BACKUP_FORMAT_VERSION)
         || manifest.world != world
     {
         return Err(ErrorKind::InputError(
@@ -682,11 +788,99 @@ fn verify_backup_archive(path: &Path, world: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn backup_world_archive(
+fn write_backup_archive_sync(
+    world_dir: &Path,
+    part_path: &Path,
+    profile: &str,
+    world: &str,
+    reason: WorldBackupReason,
+    cancelled: Option<&AtomicBool>,
+) -> Result<DateTime<Utc>> {
+    let file = std::fs::File::create(part_path)?;
+    let mut writer = zip::ZipWriter::new(file);
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .large_file(true);
+    let mut pending = vec![world_dir.to_path_buf()];
+    let mut buffer = vec![0_u8; 1024 * 1024];
+
+    while let Some(directory) = pending.pop() {
+        for entry in std::fs::read_dir(&directory)? {
+            if cancelled.is_some_and(|flag| flag.load(Ordering::Acquire)) {
+                return Err(ErrorKind::InputError(
+                    "Automatic world backup was cancelled".to_string(),
+                )
+                .into());
+            }
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_dir() {
+                pending.push(path);
+                continue;
+            }
+            if entry.file_name() == "session.lock" {
+                continue;
+            }
+            let relative = path.strip_prefix(world_dir)?;
+            let zip_name = format!(
+                "{world}/{}",
+                relative.display().to_string().replace('\\', "/")
+            );
+            writer.start_file(zip_name, options).map_err(|error| {
+                ErrorKind::InputError(format!(
+                    "Unable to write backup entry: {error}"
+                ))
+            })?;
+            let mut source = std::fs::File::open(&path)?;
+            loop {
+                if cancelled.is_some_and(|flag| flag.load(Ordering::Acquire)) {
+                    return Err(ErrorKind::InputError(
+                        "Automatic world backup was cancelled".to_string(),
+                    )
+                    .into());
+                }
+                let read = source.read(&mut buffer)?;
+                if read == 0 {
+                    break;
+                }
+                writer.write_all(&buffer[..read])?;
+            }
+        }
+    }
+
+    let completed_at = Utc::now();
+    let manifest = WorldBackupManifest {
+        format_version: BACKUP_FORMAT_VERSION,
+        profile: profile.to_string(),
+        world: world.to_string(),
+        created_at: completed_at,
+        reason,
+    };
+    writer
+        .start_file(BACKUP_MANIFEST_PATH, options)
+        .map_err(|error| {
+            ErrorKind::InputError(format!(
+                "Unable to write backup manifest: {error}"
+            ))
+        })?;
+    writer.write_all(&serde_json::to_vec(&manifest)?)?;
+    writer
+        .finish()
+        .map_err(|error| {
+            ErrorKind::InputError(format!(
+                "Unable to finish backup archive: {error}"
+            ))
+        })?
+        .sync_all()?;
+    Ok(completed_at)
+}
+
+async fn backup_world_archive_locked(
     instance: &Path,
     profile: &str,
     world: &str,
     reason: WorldBackupReason,
+    cancelled: Option<Arc<AtomicBool>>,
 ) -> Result<WorldBackup> {
     validate_world_identifier(world)?;
     let world_dir = get_world_dir(instance, world);
@@ -695,7 +889,6 @@ pub async fn backup_world_archive(
 
     io::create_dir_all(&backups_dir).await?;
 
-    let created_at = Utc::now();
     let name_base = {
         let formatted_time = Local::now().format("%Y-%m-%d_%H-%M-%S");
         format!("{formatted_time}_{world}")
@@ -710,65 +903,23 @@ pub async fn backup_world_archive(
             .unwrap_or("backup.zip"),
         uuid::Uuid::new_v4()
     ));
-    let manifest = WorldBackupManifest {
-        format_version: BACKUP_FORMAT_VERSION,
-        profile: profile.to_string(),
-        world: world.to_string(),
-        created_at,
-        reason,
-    };
-
+    let world_dir_for_writer = world_dir.clone();
+    let part_path_for_writer = part_path.clone();
+    let profile_for_writer = profile.to_string();
+    let world_for_writer = world.to_string();
+    let cancel_for_writer = cancelled.clone();
     let write_result = async {
-        let writer = tokio::fs::File::create(&part_path).await?;
-        let mut writer =
-            async_zip::tokio::write::ZipFileWriter::with_tokio(writer);
-        let manifest_data = serde_json::to_vec(&manifest)?;
-        writer
-            .write_entry_whole(
-                ZipEntryBuilder::new(
-                    BACKUP_MANIFEST_PATH.into(),
-                    Compression::Deflate,
-                ),
-                &manifest_data,
+        let created_at = tokio::task::spawn_blocking(move || {
+            write_backup_archive_sync(
+                &world_dir_for_writer,
+                &part_path_for_writer,
+                &profile_for_writer,
+                &world_for_writer,
+                reason,
+                cancel_for_writer.as_deref(),
             )
-            .await?;
-
-        let mut walker = WalkDir::new(&world_dir);
-        while let Some(entry) = walker.next().await {
-            let entry = entry.map_err(|e| io::IOError::IOPathError {
-                path: e.path().unwrap().to_string_lossy().to_string(),
-                source: e.into_io().unwrap(),
-            })?;
-            if !entry.file_type().await?.is_file()
-                || entry.file_name() == "session.lock"
-            {
-                continue;
-            }
-            let zip_filename = format!(
-                "{world}/{}",
-                entry
-                    .path()
-                    .strip_prefix(&world_dir)?
-                    .display()
-                    .to_string()
-                    .replace('\\', "/")
-            );
-            let mut stream = writer
-                .write_entry_stream(
-                    ZipEntryBuilder::new(
-                        zip_filename.into(),
-                        Compression::Deflate,
-                    )
-                    .build(),
-                )
-                .await?
-                .compat_write();
-            let mut source = tokio::fs::File::open(entry.path()).await?;
-            tokio::io::copy(&mut source, &mut stream).await?;
-            stream.into_inner().close().await?;
-        }
-
-        writer.close().await?;
+        })
+        .await??;
         let verify_path = part_path.clone();
         let verify_world = world.to_string();
         tokio::task::spawn_blocking(move || {
@@ -776,16 +927,19 @@ pub async fn backup_world_archive(
         })
         .await??;
         tokio::fs::rename(&part_path, &output_path).await?;
-        Ok::<(), crate::Error>(())
+        Ok::<DateTime<Utc>, crate::Error>(created_at)
     }
     .await;
 
-    if let Err(error) = write_result {
-        let _ = tokio::fs::remove_file(&part_path).await;
-        return Err(error);
-    }
+    let created_at = match write_result {
+        Ok(created_at) => created_at,
+        Err(error) => {
+            let _ = tokio::fs::remove_file(&part_path).await;
+            return Err(error);
+        }
+    };
 
-    Ok(WorldBackup {
+    let backup = WorldBackup {
         id: output_path
             .file_name()
             .unwrap_or_default()
@@ -797,7 +951,74 @@ pub async fn backup_world_archive(
         size: io::metadata(&output_path).await?.len(),
         reason,
         path: output_path,
+    };
+    if let Err(error) =
+        upsert_backup_index(&backup, BACKUP_FORMAT_VERSION).await
+    {
+        let _ = tokio::fs::remove_file(&backup.path).await;
+        return Err(error);
+    }
+    Ok(backup)
+}
+
+pub async fn backup_world_archive(
+    instance: &Path,
+    profile: &str,
+    world: &str,
+    reason: WorldBackupReason,
+) -> Result<WorldBackup> {
+    let _operation = acquire_backup_operation().await?;
+    emit_backup_event(
+        profile,
+        world,
+        WorldBackupEventState::Started,
+        None,
+        None,
+    )
+    .await;
+    let result =
+        backup_world_archive_locked(instance, profile, world, reason, None)
+            .await;
+    match &result {
+        Ok(backup) => {
+            emit_backup_event(
+                profile,
+                world,
+                WorldBackupEventState::Completed,
+                Some(backup.size),
+                None,
+            )
+            .await;
+        }
+        Err(error) => {
+            emit_backup_event(
+                profile,
+                world,
+                WorldBackupEventState::Failed,
+                None,
+                Some(error.to_string()),
+            )
+            .await;
+        }
+    }
+    result
+}
+
+async fn emit_backup_event(
+    profile: &str,
+    world: &str,
+    state: WorldBackupEventState,
+    size: Option<u64>,
+    error: Option<String>,
+) {
+    let _ = crate::event::emit::emit_world_backup(WorldBackupEvent {
+        profile: profile.to_string(),
+        world: world.to_string(),
+        state,
+        size,
+        error,
     })
+    .await;
 }
 
 pub async fn get_world_backup_settings() -> Result<WorldBackupSettings> {
@@ -841,66 +1062,80 @@ pub async fn set_world_backup_settings(
     Ok(())
 }
 
-fn read_backup_metadata(
+fn indexed_backup_from_file(
     path: PathBuf,
-    fallback_profile: String,
+    profile: &str,
 ) -> Option<WorldBackup> {
-    let file = std::fs::File::open(&path).ok()?;
-    let size = file.metadata().ok()?.len();
-    let mut archive = zip::ZipArchive::new(file).ok()?;
-    let manifest =
-        archive
-            .by_name(BACKUP_MANIFEST_PATH)
-            .ok()
-            .and_then(|mut entry| {
-                let mut value = String::new();
-                std::io::Read::read_to_string(&mut entry, &mut value).ok()?;
-                serde_json::from_str::<WorldBackupManifest>(&value).ok()
-            });
+    static BACKUP_NAME: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"^(?<date>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_(?<world>.+?)(?: \(\d+\))?\.zip$",
+        )
+        .expect("valid backup filename regex")
+    });
     let id = path.file_name()?.to_string_lossy().into_owned();
-    if let Some(manifest) = manifest {
-        if manifest.format_version != BACKUP_FORMAT_VERSION {
-            return None;
-        }
-        return Some(WorldBackup {
-            id,
-            profile: manifest.profile,
-            world: manifest.world,
-            created_at: manifest.created_at,
-            size,
-            reason: manifest.reason,
-            path,
-        });
-    }
-
-    let legacy = Regex::new(
-        r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_(?<world>.+?)(?: \(\d+\))?\.zip$",
+    let captures = BACKUP_NAME.captures(&id)?;
+    let world = captures.name("world")?.as_str().to_string();
+    let metadata = std::fs::metadata(&path).ok()?;
+    let created_at = chrono::NaiveDateTime::parse_from_str(
+        captures.name("date")?.as_str(),
+        "%Y-%m-%d_%H-%M-%S",
     )
-    .ok()?;
-    let world = legacy.captures(&id)?.name("world")?.as_str().to_string();
-    let modified = std::fs::metadata(&path).ok()?.modified().ok()?;
+    .ok()
+    .and_then(|value| Local.from_local_datetime(&value).single())
+    .map(|value| value.with_timezone(&Utc))
+    .or_else(|| metadata.modified().ok().map(DateTime::<Utc>::from))?;
     Some(WorldBackup {
         id,
-        profile: fallback_profile,
+        profile: profile.to_string(),
         world,
-        created_at: DateTime::<Utc>::from(modified),
-        size,
+        created_at,
+        size: metadata.len(),
         reason: WorldBackupReason::Manual,
         path,
     })
 }
 
-pub async fn list_world_backups(
-    instance: &Path,
-    profile: &str,
-    world: Option<&str>,
-) -> Result<Vec<WorldBackup>> {
-    if let Some(world) = world {
-        validate_world_identifier(world)?;
-    }
+async fn upsert_backup_index(
+    backup: &WorldBackup,
+    format_version: u32,
+) -> Result<()> {
+    let state = State::get().await?;
+    let conflict = if format_version == 0 {
+        "DO NOTHING"
+    } else {
+        "DO UPDATE SET world = excluded.world, created_at = excluded.created_at, \
+         size = excluded.size, reason = excluded.reason, format_version = excluded.format_version"
+    };
+    sqlx::query(&format!(
+        "INSERT INTO world_backups (profile_path, id, world, created_at, size, reason, format_version) \
+         VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(profile_path, id) {conflict}"
+    ))
+    .bind(&backup.profile)
+    .bind(&backup.id)
+    .bind(&backup.world)
+    .bind(backup.created_at.timestamp())
+    .bind(backup.size as i64)
+    .bind(backup.reason.as_str())
+    .bind(format_version as i64)
+    .execute(&state.pool)
+    .await?;
+    Ok(())
+}
+
+async fn remove_backup_index(profile: &str, id: &str) -> Result<()> {
+    let state = State::get().await?;
+    sqlx::query("DELETE FROM world_backups WHERE profile_path = ? AND id = ?")
+        .bind(profile)
+        .bind(id)
+        .execute(&state.pool)
+        .await?;
+    Ok(())
+}
+
+async fn reconcile_backup_index(instance: &Path, profile: &str) -> Result<()> {
     let backups_dir = instance.join("backups");
-    let profile = profile.to_string();
-    let mut backups = tokio::task::spawn_blocking(move || {
+    let scan_profile = profile.to_string();
+    let scanned = tokio::task::spawn_blocking(move || {
         let Ok(entries) = std::fs::read_dir(backups_dir) else {
             return Vec::new();
         };
@@ -912,15 +1147,84 @@ pub async fn list_world_backups(
                     extension.eq_ignore_ascii_case("zip")
                 })
             })
-            .filter_map(|path| read_backup_metadata(path, profile.clone()))
+            .filter_map(|path| indexed_backup_from_file(path, &scan_profile))
             .collect::<Vec<_>>()
     })
     .await?;
-    if let Some(world) = world {
-        backups.retain(|backup| backup.world == world);
+    let present = scanned
+        .iter()
+        .map(|backup| backup.id.clone())
+        .collect::<HashSet<_>>();
+    for backup in &scanned {
+        upsert_backup_index(backup, 0).await?;
     }
-    backups.sort_by_key(|backup| Reverse(backup.created_at));
-    Ok(backups)
+    let state = State::get().await?;
+    let rows =
+        sqlx::query("SELECT id FROM world_backups WHERE profile_path = ?")
+            .bind(profile)
+            .fetch_all(&state.pool)
+            .await?;
+    for row in rows {
+        let id: String = row.try_get("id")?;
+        if !present.contains(&id) {
+            remove_backup_index(profile, &id).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn list_world_backups(
+    instance: &Path,
+    profile: &str,
+    world: Option<&str>,
+) -> Result<Vec<WorldBackup>> {
+    if let Some(world) = world {
+        validate_world_identifier(world)?;
+    }
+    reconcile_backup_index(instance, profile).await?;
+    let state = State::get().await?;
+    let rows = if let Some(world) = world {
+        sqlx::query(
+            "SELECT id, world, created_at, size, reason FROM world_backups \
+             WHERE profile_path = ? AND world = ? ORDER BY created_at DESC",
+        )
+        .bind(profile)
+        .bind(world)
+        .fetch_all(&state.pool)
+        .await?
+    } else {
+        sqlx::query(
+            "SELECT id, world, created_at, size, reason FROM world_backups \
+             WHERE profile_path = ? ORDER BY created_at DESC",
+        )
+        .bind(profile)
+        .fetch_all(&state.pool)
+        .await?
+    };
+    rows.into_iter()
+        .map(|row| {
+            let id: String = row.try_get("id")?;
+            let timestamp: i64 = row.try_get("created_at")?;
+            let created_at =
+                Utc.timestamp_opt(timestamp, 0).single().ok_or_else(|| {
+                    ErrorKind::InputError(
+                        "Backup index contains an invalid timestamp"
+                            .to_string(),
+                    )
+                })?;
+            Ok(WorldBackup {
+                path: instance.join("backups").join(&id),
+                id,
+                profile: profile.to_string(),
+                world: row.try_get("world")?,
+                created_at,
+                size: row.try_get::<i64, _>("size")? as u64,
+                reason: WorldBackupReason::from_str(
+                    row.try_get::<String, _>("reason")?.as_str(),
+                ),
+            })
+        })
+        .collect()
 }
 
 async fn prune_world_backups(
@@ -931,7 +1235,8 @@ async fn prune_world_backups(
 ) -> Result<()> {
     let backups = list_world_backups(instance, profile, Some(world)).await?;
     for backup in backups.into_iter().skip(retention) {
-        io::remove_file(backup.path).await?;
+        io::remove_file(&backup.path).await?;
+        remove_backup_index(profile, &backup.id).await?;
     }
     Ok(())
 }
@@ -991,6 +1296,7 @@ pub async fn delete_world_backup(profile: &str, backup_id: &str) -> Result<()> {
             ErrorKind::InputError("Backup was not found".to_string())
         })?;
     io::remove_file(backup.path).await?;
+    remove_backup_index(profile, backup_id).await?;
     Ok(())
 }
 
@@ -1108,13 +1414,45 @@ pub async fn restore_world_backup(
         .ok_or_else(|| {
             ErrorKind::InputError("Backup was not found".to_string())
         })?;
-    let safety = backup_world_archive(
+    let _operation = acquire_backup_operation().await?;
+    emit_backup_event(
+        profile,
+        &backup.world,
+        WorldBackupEventState::Started,
+        None,
+        None,
+    )
+    .await;
+    let safety = match backup_world_archive_locked(
         &instance,
         profile,
         &backup.world,
         WorldBackupReason::PreRestore,
+        None,
     )
-    .await?;
+    .await
+    {
+        Ok(safety) => safety,
+        Err(error) => {
+            emit_backup_event(
+                profile,
+                &backup.world,
+                WorldBackupEventState::Failed,
+                None,
+                Some(error.to_string()),
+            )
+            .await;
+            return Err(error);
+        }
+    };
+    emit_backup_event(
+        profile,
+        &backup.world,
+        WorldBackupEventState::Completed,
+        Some(safety.size),
+        None,
+    )
+    .await;
     let saves_dir = instance.join("saves");
     let world = backup.world.clone();
     let backup_path = backup.path.clone();
@@ -1140,78 +1478,163 @@ pub async fn restore_world_backup(
     result
 }
 
-pub async fn run_due_world_backups() -> Result<Vec<BackupBatchResult>> {
+pub async fn backup_due_worlds_after_session(
+    profile: &str,
+    session_started_at: DateTime<Utc>,
+) -> Result<BackupBatchResult> {
     let settings = get_world_backup_settings().await?;
     if !settings.enabled {
-        return Ok(Vec::new());
+        return Ok(BackupBatchResult::default());
     }
+    if !crate::process::get_by_profile_path(profile)
+        .await?
+        .is_empty()
+    {
+        return Ok(BackupBatchResult::default());
+    }
+
+    let instance = get_full_path(profile).await?;
+    let operation = match acquire_backup_operation().await {
+        Ok(operation) => operation,
+        Err(error) => {
+            tracing::info!(profile, %error, "Skipping automatic backup because another operation is active");
+            return Ok(BackupBatchResult::default());
+        }
+    };
+    let existing = list_world_backups(&instance, profile, None).await?;
+    let worlds = get_profile_worlds(profile).await?;
+    let cancelled = Arc::new(AtomicBool::new(false));
+    *AUTOMATIC_BACKUP.lock().await = Some(AutomaticBackupControl {
+        cancelled: Arc::clone(&cancelled),
+    });
     let cutoff =
         Utc::now() - TimeDelta::minutes(settings.interval_minutes as i64);
-    let mut batches = Vec::new();
-    for profile in crate::profile::list().await? {
-        if !crate::process::get_by_profile_path(&profile.path)
-            .await?
-            .is_empty()
+    let mut candidates = Vec::new();
+    for world in worlds {
+        let WorldDetails::Singleplayer { path, .. } = world.details else {
+            continue;
+        };
+        let level_dat = instance.join("saves").join(&path).join("level.dat");
+        let modified = match tokio::fs::metadata(&level_dat)
+            .await
+            .and_then(|metadata| metadata.modified())
         {
+            Ok(modified) => DateTime::<Utc>::from(modified),
+            Err(_) => continue,
+        };
+        if !world_changed_during_session(modified, session_started_at) {
             continue;
         }
-        let instance = get_full_path(&profile.path).await?;
-        let existing =
-            list_world_backups(&instance, &profile.path, None).await?;
-        let worlds = get_profile_worlds(&profile.path).await?;
-        let mut batch = BackupBatchResult::default();
-        for world in worlds {
-            let WorldDetails::Singleplayer { path, .. } = world.details else {
-                continue;
-            };
-            let last = existing
-                .iter()
-                .filter(|backup| backup.world == path)
-                .map(|backup| backup.created_at)
-                .max();
-            if last.is_some_and(|created_at| created_at > cutoff) {
-                continue;
-            }
-            match backup_world_archive(
-                &instance,
-                &profile.path,
-                &path,
-                WorldBackupReason::Scheduled,
-            )
-            .await
-            {
-                Ok(backup) => {
-                    batch.count += 1;
-                    batch.total_bytes =
-                        batch.total_bytes.saturating_add(backup.size);
-                    batch.backups.push(backup);
-                    if let Err(error) = prune_world_backups(
-                        &instance,
-                        &profile.path,
-                        &path,
-                        settings.retention_per_world as usize,
-                    )
-                    .await
-                    {
-                        batch.failures.push(WorldBackupFailure {
-                            world: world.name.clone(),
-                            error: format!(
-                                "Backup created, but cleanup failed: {error}"
-                            ),
-                        });
-                    }
-                }
-                Err(error) => batch.failures.push(WorldBackupFailure {
-                    world: world.name,
-                    error: error.to_string(),
-                }),
-            }
+        let last = existing
+            .iter()
+            .filter(|backup| backup.world == path)
+            .map(|backup| backup.created_at)
+            .max();
+        if !backup_is_due(last, cutoff) {
+            continue;
         }
-        if batch.count > 0 || !batch.failures.is_empty() {
-            batches.push(batch);
+        candidates.push((world.name, path));
+    }
+
+    if candidates.is_empty() {
+        *AUTOMATIC_BACKUP.lock().await = None;
+        drop(operation);
+        return Ok(BackupBatchResult::default());
+    }
+    let mut batch = BackupBatchResult::default();
+    for (world_name, path) in candidates {
+        if cancelled.load(Ordering::Acquire) {
+            break;
+        }
+        emit_backup_event(
+            profile,
+            &path,
+            WorldBackupEventState::Started,
+            None,
+            None,
+        )
+        .await;
+        match backup_world_archive_locked(
+            &instance,
+            profile,
+            &path,
+            WorldBackupReason::Scheduled,
+            Some(Arc::clone(&cancelled)),
+        )
+        .await
+        {
+            Ok(backup) => {
+                batch.count += 1;
+                batch.total_bytes =
+                    batch.total_bytes.saturating_add(backup.size);
+                emit_backup_event(
+                    profile,
+                    &path,
+                    WorldBackupEventState::Completed,
+                    Some(backup.size),
+                    None,
+                )
+                .await;
+                batch.backups.push(backup);
+                if let Err(error) = prune_world_backups(
+                    &instance,
+                    profile,
+                    &path,
+                    settings.retention_per_world as usize,
+                )
+                .await
+                {
+                    batch.failures.push(WorldBackupFailure {
+                        world: world_name.clone(),
+                        error: format!(
+                            "Backup created, but cleanup failed: {error}"
+                        ),
+                    });
+                }
+            }
+            Err(_error) if cancelled.load(Ordering::Acquire) => {
+                emit_backup_event(
+                    profile,
+                    &path,
+                    WorldBackupEventState::Cancelled,
+                    None,
+                    None,
+                )
+                .await;
+            }
+            Err(error) => {
+                emit_backup_event(
+                    profile,
+                    &path,
+                    WorldBackupEventState::Failed,
+                    None,
+                    Some(error.to_string()),
+                )
+                .await;
+                batch.failures.push(WorldBackupFailure {
+                    world: world_name,
+                    error: error.to_string(),
+                });
+            }
         }
     }
-    Ok(batches)
+    *AUTOMATIC_BACKUP.lock().await = None;
+    drop(operation);
+    Ok(batch)
+}
+
+fn world_changed_during_session(
+    modified_at: DateTime<Utc>,
+    session_started_at: DateTime<Utc>,
+) -> bool {
+    modified_at >= session_started_at
+}
+
+fn backup_is_due(
+    last_successful: Option<DateTime<Utc>>,
+    cutoff: DateTime<Utc>,
+) -> bool {
+    last_successful.is_none_or(|created_at| created_at <= cutoff)
 }
 
 fn find_available_name(dir: &Path, file_name: &str, extension: &str) -> String {
@@ -1557,8 +1980,14 @@ pub async fn get_server_status(
 
 #[cfg(test)]
 mod backup_tests {
-    use super::{restore_backup_sync, validate_world_identifier};
+    use super::{
+        WorldBackupReason, backup_is_due, indexed_backup_from_file,
+        restore_backup_sync, validate_world_identifier,
+        world_changed_during_session, write_backup_archive_sync,
+    };
+    use chrono::{TimeDelta, Utc};
     use std::io::{Read, Write};
+    use std::sync::atomic::AtomicBool;
 
     #[test]
     fn world_and_backup_identifiers_cannot_escape_the_profile() {
@@ -1567,6 +1996,64 @@ mod backup_tests {
         assert!(validate_world_identifier("../world").is_err());
         assert!(validate_world_identifier("nested/world").is_err());
         assert!(validate_world_identifier("C:\\world").is_err());
+    }
+
+    #[test]
+    fn legacy_backup_index_uses_filename_and_file_metadata_without_opening_zip()
+    {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("2026-08-10_18-11-00_Big World.zip");
+        let file = std::fs::File::create(&path).expect("create marker");
+        file.set_len(2 * 1024 * 1024 * 1024)
+            .expect("create sparse corrupt archive");
+
+        let backup = indexed_backup_from_file(path, "industrial-era")
+            .expect("indexed backup");
+        assert_eq!(backup.world, "Big World");
+        assert_eq!(backup.profile, "industrial-era");
+        assert_eq!(backup.size, 2 * 1024 * 1024 * 1024);
+        assert_eq!(backup.reason, WorldBackupReason::Manual);
+    }
+
+    #[test]
+    fn session_filter_only_accepts_worlds_modified_after_launch() {
+        let started = Utc::now();
+        assert!(!world_changed_during_session(
+            started - TimeDelta::seconds(1),
+            started
+        ));
+        assert!(world_changed_during_session(started, started));
+        assert!(world_changed_during_session(
+            started + TimeDelta::seconds(1),
+            started
+        ));
+    }
+
+    #[test]
+    fn backup_interval_is_measured_from_last_success() {
+        let cutoff = Utc::now() - TimeDelta::minutes(60);
+        assert!(backup_is_due(None, cutoff));
+        assert!(backup_is_due(Some(cutoff), cutoff));
+        assert!(!backup_is_due(Some(cutoff + TimeDelta::seconds(1)), cutoff));
+    }
+
+    #[test]
+    fn automatic_writer_observes_cancellation_before_archiving() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let world = temp.path().join("World");
+        std::fs::create_dir_all(&world).expect("world dir");
+        std::fs::write(world.join("level.dat"), b"level").expect("level.dat");
+        let part = temp.path().join("backup.part");
+        let cancelled = AtomicBool::new(true);
+        let result = write_backup_archive_sync(
+            &world,
+            &part,
+            "profile",
+            "World",
+            WorldBackupReason::Scheduled,
+            Some(&cancelled),
+        );
+        assert!(result.is_err());
     }
 
     #[test]
