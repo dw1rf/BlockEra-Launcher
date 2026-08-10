@@ -5,15 +5,30 @@ use crate::event::{
 };
 #[cfg(feature = "tauri")]
 use crate::event::{
-    LoadingPayload, ProcessPayload, ProfilePayload, WarningPayload, InfoPayload
+    InfoPayload, LoadingPayload, ProcessPayload, ProfilePayload, WarningPayload,
 };
 use futures::prelude::*;
+use std::time::{Duration, Instant};
 #[cfg(feature = "tauri")]
 use tauri::{Emitter, Manager};
 use uuid::Uuid;
 
 #[cfg(feature = "cli")]
 const CLI_PROGRESS_BAR_TOTAL: u64 = 1000;
+const SPEED_SAMPLE_INTERVAL: Duration = Duration::from_millis(250);
+const SPEED_SMOOTHING_FACTOR: f64 = 0.35;
+
+fn smoothed_download_speed(
+    previous: Option<f64>,
+    transferred_bytes: u64,
+    elapsed: Duration,
+) -> f64 {
+    let sampled_speed = transferred_bytes as f64 / elapsed.as_secs_f64();
+    previous.map_or(sampled_speed, |previous| {
+        previous * (1.0 - SPEED_SMOOTHING_FACTOR)
+            + sampled_speed * SPEED_SMOOTHING_FACTOR
+    })
+}
 
 /*
    Events are a way we can communicate with the Tauri frontend from the Rust backend.
@@ -70,7 +85,11 @@ pub async fn init_loading_unsafe(
             message: title.to_string(),
             total,
             current: 0.0,
+            downloaded_bytes: 0,
+            bytes_per_second: None,
             last_sent: 0.0,
+            speed_window_started: Instant::now(),
+            speed_window_bytes: 0,
             bar_type,
             #[cfg(feature = "cli")]
             cli_progress_bar: {
@@ -123,7 +142,11 @@ pub async fn edit_loading(
         bar.total = total;
         bar.message = title.to_string();
         bar.current = 0.0;
+        bar.downloaded_bytes = 0;
+        bar.bytes_per_second = None;
         bar.last_sent = 0.0;
+        bar.speed_window_started = Instant::now();
+        bar.speed_window_bytes = 0;
         #[cfg(feature = "cli")]
         {
             bar.cli_progress_bar.reset(); // indicatif::ProgressBar::new(CLI_PROGRESS_BAR_TOTAL as u64);
@@ -145,6 +168,18 @@ pub fn emit_loading(
     increment_frac: f64,
     message: Option<&str>,
 ) -> crate::Result<()> {
+    emit_loading_with_bytes(key, increment_frac, 0, message)
+}
+
+/// Updates a loading bar with both logical progress and actual transferred bytes.
+/// Byte samples from concurrent downloads are aggregated into a smoothed speed.
+#[tracing::instrument(level = "debug")]
+pub fn emit_loading_with_bytes(
+    key: &LoadingBarId,
+    increment_frac: f64,
+    transferred_bytes: u64,
+    message: Option<&str>,
+) -> crate::Result<()> {
     let event_state = crate::EventState::get()?;
 
     let Some(mut loading_bar) = event_state.loading_bars.get_mut(&key.0) else {
@@ -153,9 +188,46 @@ pub fn emit_loading(
 
     // Tick up loading bar
     loading_bar.current += increment_frac;
+    let message_changed =
+        message.is_some_and(|value| value != loading_bar.message);
+    if let Some(message) = message {
+        loading_bar.message = message.to_string();
+    }
+
+    let mut speed_sampled = false;
+    if transferred_bytes > 0 {
+        if loading_bar.downloaded_bytes == 0 {
+            loading_bar.speed_window_started = Instant::now();
+        }
+        loading_bar.downloaded_bytes = loading_bar
+            .downloaded_bytes
+            .saturating_add(transferred_bytes);
+        loading_bar.speed_window_bytes = loading_bar
+            .speed_window_bytes
+            .saturating_add(transferred_bytes);
+
+        let elapsed = loading_bar.speed_window_started.elapsed();
+        if elapsed >= SPEED_SAMPLE_INTERVAL {
+            loading_bar.bytes_per_second = Some(smoothed_download_speed(
+                loading_bar.bytes_per_second,
+                loading_bar.speed_window_bytes,
+                elapsed,
+            ));
+            loading_bar.speed_window_started = Instant::now();
+            loading_bar.speed_window_bytes = 0;
+            speed_sampled = true;
+        }
+    } else if message_changed {
+        loading_bar.bytes_per_second = None;
+        loading_bar.speed_window_started = Instant::now();
+        loading_bar.speed_window_bytes = 0;
+    }
     let display_frac = loading_bar.current / loading_bar.total;
 
-    if f64::abs(display_frac - loading_bar.last_sent) > 0.005 {
+    if f64::abs(display_frac - loading_bar.last_sent) > 0.005
+        || message_changed
+        || speed_sampled
+    {
         // Emit event to indicatif progress bar
         #[cfg(feature = "cli")]
         {
@@ -182,11 +254,11 @@ pub fn emit_loading(
                     } else {
                         Some(display_frac)
                     },
-                    message: message
-                        .unwrap_or(&loading_bar.message)
-                        .to_string(),
+                    message: loading_bar.message.clone(),
                     event: loading_bar.bar_type.clone(),
                     loader_uuid: loading_bar.loading_bar_uuid,
+                    downloaded_bytes: loading_bar.downloaded_bytes,
+                    bytes_per_second: loading_bar.bytes_per_second,
                 },
             )
             .map_err(EventError::from)?;
@@ -198,6 +270,31 @@ pub fn emit_loading(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn download_speed_uses_all_bytes_in_the_window() {
+        let speed = smoothed_download_speed(
+            None,
+            3 * 1024 * 1024,
+            Duration::from_secs(3),
+        );
+        assert_eq!(speed, 1024.0 * 1024.0);
+    }
+
+    #[test]
+    fn download_speed_smooths_new_samples() {
+        let speed = smoothed_download_speed(
+            Some(1024.0),
+            3 * 1024,
+            Duration::from_secs(1),
+        );
+        assert!((speed - 1740.8).abs() < f64::EPSILON * 2048.0);
+    }
 }
 
 // emit_warning(message)

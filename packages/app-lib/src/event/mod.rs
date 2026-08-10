@@ -4,7 +4,7 @@ use ariadne::users::UserStatus;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, time::Instant};
 #[cfg(feature = "tauri")]
 use tauri::Emitter;
 use tokio::sync::OnceCell;
@@ -75,8 +75,14 @@ pub struct LoadingBar {
     pub message: String,
     pub total: f64,
     pub current: f64,
+    pub downloaded_bytes: u64,
+    pub bytes_per_second: Option<f64>,
     #[serde(skip)]
     pub last_sent: f64,
+    #[serde(skip)]
+    pub speed_window_started: Instant,
+    #[serde(skip)]
+    pub speed_window_bytes: u64,
     pub bar_type: LoadingBarType,
     #[cfg(feature = "cli")]
     #[serde(skip)]
@@ -109,6 +115,8 @@ impl Drop for LoadingBarId {
                                 message: "Completed".to_string(),
                                 event,
                                 loader_uuid,
+                                downloaded_bytes: bar.downloaded_bytes,
+                                bytes_per_second: bar.bytes_per_second,
                             },
                         );
                         tracing::trace!(
@@ -192,6 +200,8 @@ pub struct LoadingPayload {
     pub loader_uuid: Uuid,
     pub fraction: Option<f64>, // by convention, if optional, it means the loading is done
     pub message: String,
+    pub downloaded_bytes: u64,
+    pub bytes_per_second: Option<f64>,
 }
 
 #[derive(Serialize, Clone)]

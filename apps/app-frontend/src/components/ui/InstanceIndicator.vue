@@ -2,6 +2,9 @@
 import { GameIcon, LeftArrowIcon } from '@modrinth/assets'
 import { ButtonStyled } from '@modrinth/ui'
 import { formatCategory } from '@modrinth/utils'
+import { useRouter } from 'vue-router'
+
+import { navigateHistory } from '@/helpers/navigation'
 
 type Instance = {
 	game_version: string
@@ -11,9 +14,15 @@ type Instance = {
 	name: string
 }
 
-defineProps<{
+const props = defineProps<{
 	instance: Instance
 }>()
+
+const router = useRouter()
+
+function backToInstance() {
+	navigateHistory(router, 'back', `/instance/${encodeURIComponent(props.instance.path)}/content`)
+}
 </script>
 
 <template>
@@ -36,9 +45,7 @@ defineProps<{
 			</span>
 		</router-link>
 		<ButtonStyled>
-			<router-link :to="`/instance/${encodeURIComponent(instance.path)}`">
-				<LeftArrowIcon /> Back to instance
-			</router-link>
+			<button type="button" @click="backToInstance"><LeftArrowIcon /> Back to instance</button>
 		</ButtonStyled>
 	</div>
 </template>

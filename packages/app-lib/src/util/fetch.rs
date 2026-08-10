@@ -2,7 +2,7 @@
 use super::io::{self, IOError};
 use crate::ErrorKind;
 use crate::event::LoadingBarId;
-use crate::event::emit::emit_loading;
+use crate::event::emit::{emit_loading, emit_loading_with_bytes};
 use bytes::Bytes;
 use chrono::{DateTime, TimeDelta, Utc};
 use parking_lot::Mutex;
@@ -263,6 +263,48 @@ where
     Ok(value)
 }
 
+fn is_modrinth_url(url: &str) -> bool {
+    url.starts_with(env!("MODRINTH_API_URL"))
+        || url.starts_with(env!("MODRINTH_API_URL_V3"))
+        || url.starts_with("https://api.modrinth.com/")
+        || url.starts_with("https://cdn.modrinth.com/")
+}
+
+fn map_modrinth_error(url: &str, error: crate::Error) -> crate::Error {
+    if !is_modrinth_url(url) {
+        return error;
+    }
+
+    let user_error = match error.raw.as_ref() {
+        ErrorKind::ApiIsDownError => {
+            Some(ErrorKind::ModrinthServiceUnavailable)
+        }
+        ErrorKind::FetchError(fetch_error)
+            if fetch_error
+                .status()
+                .is_some_and(|status| status.is_server_error()) =>
+        {
+            Some(ErrorKind::ModrinthServiceUnavailable)
+        }
+        ErrorKind::FetchError(fetch_error)
+            if fetch_error.is_connect()
+                || fetch_error.is_timeout()
+                || (!fetch_error.is_builder()
+                    && fetch_error.status().is_none()) =>
+        {
+            Some(ErrorKind::ModrinthConnectionError)
+        }
+        _ => None,
+    };
+
+    if let Some(user_error) = user_error {
+        tracing::warn!(url, technical_error = %error, "Modrinth request failed");
+        user_error.into()
+    } else {
+        error
+    }
+}
+
 /// Downloads a file with retry and checksum functionality
 #[tracing::instrument(skip(json_body, semaphore))]
 #[allow(clippy::too_many_arguments)]
@@ -275,6 +317,42 @@ pub async fn fetch_advanced(
     loading_bar: Option<(&LoadingBarId, f64)>,
     semaphore: &FetchSemaphore,
     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite>,
+) -> crate::Result<Bytes> {
+    let is_api_url = url.starts_with(env!("MODRINTH_API_URL"))
+        || url.starts_with(env!("MODRINTH_API_URL_V3"));
+    let credentials = if header
+        .as_ref()
+        .is_none_or(|(name, _)| !name.eq_ignore_ascii_case("authorization"))
+        && (url.starts_with("https://cdn.modrinth.com") || is_api_url)
+    {
+        crate::state::ModrinthCredentials::get_active(exec).await?
+    } else {
+        None
+    };
+    fetch_advanced_once(
+        method,
+        url,
+        sha1,
+        json_body,
+        header,
+        loading_bar,
+        semaphore,
+        credentials,
+    )
+    .await
+    .map_err(|error| map_modrinth_error(url, error))
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn fetch_advanced_once(
+    method: Method,
+    url: &str,
+    sha1: Option<&str>,
+    json_body: Option<serde_json::Value>,
+    header: Option<(&str, &str)>,
+    loading_bar: Option<(&LoadingBarId, f64)>,
+    semaphore: &FetchSemaphore,
+    credentials: Option<crate::state::ModrinthCredentials>,
 ) -> crate::Result<Bytes> {
     let _permit = semaphore.0.acquire().await?;
 
@@ -302,16 +380,6 @@ pub async fn fetch_advanced(
     let is_api_url = url.starts_with(env!("MODRINTH_API_URL"))
         || url.starts_with(env!("MODRINTH_API_URL_V3"));
 
-    let creds = if header
-        .as_ref()
-        .is_none_or(|x| &*x.0.to_lowercase() != "authorization")
-        && (url.starts_with("https://cdn.modrinth.com") || is_api_url)
-    {
-        crate::state::ModrinthCredentials::get_active(exec).await?
-    } else {
-        None
-    };
-
     for attempt in 1..=(FETCH_ATTEMPTS + 1) {
         if is_api_url && GLOBAL_FETCH_FENCE.is_blocked() {
             return Err(ErrorKind::ApiIsDownError.into());
@@ -332,7 +400,7 @@ pub async fn fetch_advanced(
             req = req.header(header.0, header.1);
         }
 
-        if let Some(ref creds) = creds {
+        if let Some(ref creds) = credentials {
             req = req.header("Authorization", &creds.session);
         }
 
@@ -358,6 +426,9 @@ pub async fn fetch_advanced(
                     || resp.status().is_server_error()
                 {
                     let backup_error = resp.error_for_status_ref().unwrap_err();
+                    if resp.status().is_server_error() {
+                        return Err(backup_error.into());
+                    }
                     if let Ok(error) = resp.json().await {
                         return Err(ErrorKind::LabrinthError(error).into());
                     }
@@ -366,35 +437,37 @@ pub async fn fetch_advanced(
 
                 let bytes = if let Some((bar, total)) = &loading_bar {
                     let length = resp.content_length();
-                    if let Some(total_size) = length {
-                        use futures::StreamExt;
-                        let mut stream = resp.bytes_stream();
-                        let mut bytes = Vec::new();
-                        let mut stream_error = None;
-                        while let Some(item) = stream.next().await {
-                            let chunk = match item {
-                                Ok(chunk) => chunk,
-                                Err(error) => {
-                                    stream_error = Some(error);
-                                    break;
-                                }
-                            };
-                            bytes.extend_from_slice(&chunk);
-                            emit_loading(
-                                bar,
-                                (chunk.len() as f64 / total_size as f64)
-                                    * total,
-                                None,
-                            )?;
-                        }
+                    use futures::StreamExt;
+                    let mut stream = resp.bytes_stream();
+                    let mut bytes = Vec::new();
+                    let mut stream_error = None;
+                    while let Some(item) = stream.next().await {
+                        let chunk = match item {
+                            Ok(chunk) => chunk,
+                            Err(error) => {
+                                stream_error = Some(error);
+                                break;
+                            }
+                        };
+                        bytes.extend_from_slice(&chunk);
+                        let progress = length.map_or(0.0, |total_size| {
+                            (chunk.len() as f64 / total_size as f64) * total
+                        });
+                        emit_loading_with_bytes(
+                            bar,
+                            progress,
+                            chunk.len() as u64,
+                            None,
+                        )?;
+                    }
 
-                        if let Some(error) = stream_error {
-                            Err(error)
-                        } else {
-                            Ok(bytes::Bytes::from(bytes))
-                        }
+                    if let Some(error) = stream_error {
+                        Err(error)
                     } else {
-                        resp.bytes().await
+                        if length.is_none() {
+                            emit_loading(bar, *total, None)?;
+                        }
+                        Ok(bytes::Bytes::from(bytes))
                     }
                 } else {
                     resp.bytes().await
@@ -606,6 +679,82 @@ pub async fn sha1_async(bytes: Bytes) -> crate::Result<String> {
 mod tests {
     use super::*;
     use chrono::{TimeDelta, Utc};
+    use tokio::io::AsyncReadExt as _;
+
+    #[tokio::test]
+    async fn modrinth_connection_errors_are_user_friendly() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind test listener");
+        let address = listener.local_addr().expect("test listener address");
+        drop(listener);
+
+        let error = REQWEST_CLIENT
+            .get(format!("http://{address}/file"))
+            .send()
+            .await
+            .expect_err("closed local port should reject the request");
+        let mapped = map_modrinth_error(
+            "https://cdn.modrinth.com/data/project/file.jar",
+            error.into(),
+        );
+
+        assert!(matches!(
+            mapped.raw.as_ref(),
+            ErrorKind::ModrinthConnectionError
+        ));
+    }
+
+    #[tokio::test]
+    async fn modrinth_server_errors_are_distinct_from_rate_limits() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind test listener");
+        let address = listener.local_addr().expect("test listener address");
+        let server = tokio::spawn(async move {
+            let (mut stream, _) =
+                listener.accept().await.expect("accept request");
+            let mut request = [0_u8; 1024];
+            let _ = stream.read(&mut request).await.expect("read request");
+            stream
+                .write_all(
+                    b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .await
+                .expect("write response");
+            stream.shutdown().await.expect("close response");
+        });
+
+        let error = REQWEST_CLIENT
+            .get(format!("http://{address}/api"))
+            .send()
+            .await
+            .expect("receive response")
+            .error_for_status()
+            .expect_err("503 should be an error");
+        server.await.expect("test server task");
+        let mapped = map_modrinth_error(
+            "https://api.modrinth.com/v2/search",
+            error.into(),
+        );
+
+        assert!(matches!(
+            mapped.raw.as_ref(),
+            ErrorKind::ModrinthServiceUnavailable
+        ));
+
+        let rate_limit: crate::Error =
+            ErrorKind::LabrinthError(crate::error::LabrinthError {
+                error: "rate_limit".to_string(),
+                description: "Too many requests".to_string(),
+            })
+            .into();
+        let mapped = map_modrinth_error(
+            "https://api.modrinth.com/v2/search",
+            rate_limit,
+        );
+        assert!(matches!(mapped.raw.as_ref(), ErrorKind::LabrinthError(_)));
+    }
 
     #[test]
     fn test_fence_block_after_4_fails() {

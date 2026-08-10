@@ -78,7 +78,9 @@
 				>
 			</div>
 			<div>
-				<PackageIcon /><span><small>БЭКАПЫ</small><strong>Перед важными действиями</strong></span>
+				<PackageIcon /><span
+					><small>БЭКАПЫ</small><strong>{{ backupSummaryLabel }}</strong></span
+				>
 			</div>
 		</section>
 
@@ -122,7 +124,11 @@
 				<button
 					v-for="folder in quickFolders"
 					:key="folder.id"
-					@click="openProfileFolder(instance.path, folder.id)"
+					@click="
+						folder.id === 'backups'
+							? router.push(`/instance/${encodeURIComponent(instance.path)}/worlds`)
+							: openProfileFolder(instance.path, folder.id)
+					"
 				>
 					<FolderOpenIcon /><span
 						><strong>{{ folder.label }}</strong
@@ -132,8 +138,17 @@
 				<button class="backup-toggle" @click="toggleAutomaticBackups">
 					<span class="toggle-indicator" :class="{ enabled: automaticBackups }"></span>
 					<span
-						><strong>Автоматические бэкапы</strong
-						><small>{{ automaticBackups ? 'Включены' : 'Выключены' }}</small></span
+						><strong>Автоматические бэкапы</strong><small>{{ nextBackupLabel }}</small></span
+					>
+				</button>
+				<button
+					class="quick-backup"
+					:disabled="creatingBackup || playing"
+					@click="createManualBackup"
+				>
+					<PackageIcon /><span
+						><strong>{{ creatingBackup ? 'Создаём бэкап…' : 'Сделать бэкап' }}</strong
+						><small>{{ backupActionStatus || 'Все одиночные миры сборки' }}</small></span
 					>
 				</button>
 				<button class="quick-repair" :disabled="repairing" @click="repairInstance">
@@ -198,9 +213,10 @@ import ExportModal from '@/components/ui/ExportModal.vue'
 import InstanceSettingsModal from '@/components/ui/modal/InstanceSettingsModal.vue'
 import { trackEvent } from '@/helpers/analytics'
 import {
-	automaticWorldBackupsEnabled,
 	backupProfileWorlds,
-	setAutomaticWorldBackups,
+	listWorldBackups,
+	migrateLegacyWorldBackupSettings,
+	setWorldBackupSettings,
 } from '@/helpers/backups'
 import { get_project, get_version_many } from '@/helpers/cache.js'
 import { process_listener, profile_listener } from '@/helpers/events'
@@ -243,11 +259,40 @@ const playing = ref(false)
 const loading = ref(false)
 const repairing = ref(false)
 const optimalJavaLabel = ref('Определяем…')
-const automaticBackups = ref(automaticWorldBackupsEnabled())
+const backupSettings = ref(
+	await migrateLegacyWorldBackupSettings().catch(() => ({
+		enabled: false,
+		intervalMinutes: 60,
+		retentionPerWorld: 5,
+	})),
+)
+const automaticBackups = ref(backupSettings.value.enabled)
+const creatingBackup = ref(false)
+const backupActionStatus = ref('')
+const latestBackupAt = ref(null)
+
+const backupSummaryLabel = computed(() => {
+	if (latestBackupAt.value) return `Последний: ${dayjs(latestBackupAt.value).fromNow()}`
+	return automaticBackups.value ? 'Каждый час, до 5 копий' : 'Автобэкап выключен'
+})
+const nextBackupLabel = computed(() => {
+	if (!automaticBackups.value) return 'Выключены'
+	if (!latestBackupAt.value) return 'Следующий: при ближайшей проверке'
+	return `Следующий: ${dayjs(latestBackupAt.value)
+		.add(backupSettings.value.intervalMinutes, 'minute')
+		.fromNow()}`
+})
+
+async function refreshBackupStatus() {
+	if (!instance.value?.path) return
+	const backups = await listWorldBackups(instance.value.path).catch(() => [])
+	latestBackupAt.value = backups[0]?.createdAt ?? null
+}
 
 async function fetchInstance() {
 	instance.value = await get(route.params.id).catch(handleError)
 	if (instance.value?.path) selectedInstanceStore.setSelectedInstance(instance.value.path)
+	await refreshBackupStatus()
 
 	if (!offline.value && instance.value.linked_data && instance.value.linked_data.project_id) {
 		get_project(instance.value.linked_data.project_id, 'must_revalidate')
@@ -357,7 +402,7 @@ const repairInstance = async () => {
 	repairing.value = true
 	if (automaticBackups.value) {
 		try {
-			const backup = await backupProfileWorlds(instance.value.path)
+			const backup = await backupProfileWorlds(instance.value.path, 'pre_repair')
 			if (
 				backup.failures.length > 0 &&
 				!window.confirm(
@@ -378,9 +423,36 @@ const repairInstance = async () => {
 	repairing.value = false
 }
 
-function toggleAutomaticBackups() {
-	automaticBackups.value = !automaticBackups.value
-	setAutomaticWorldBackups(automaticBackups.value)
+async function toggleAutomaticBackups() {
+	const previous = automaticBackups.value
+	automaticBackups.value = !previous
+	backupSettings.value.enabled = automaticBackups.value
+	try {
+		await setWorldBackupSettings(backupSettings.value)
+	} catch (error) {
+		automaticBackups.value = previous
+		backupSettings.value.enabled = previous
+		handleError(error)
+	}
+}
+
+async function createManualBackup() {
+	if (creatingBackup.value || playing.value) return
+	creatingBackup.value = true
+	backupActionStatus.value = ''
+	try {
+		const result = await backupProfileWorlds(instance.value.path, 'manual')
+		backupActionStatus.value =
+			result.failures.length > 0
+				? `Создано ${result.count}, ошибок: ${result.failures.length}`
+				: `Создано: ${result.count} · ${(result.totalBytes / 1024 / 1024).toFixed(1)} МБ`
+		await refreshBackupStatus()
+	} catch (error) {
+		backupActionStatus.value = 'Не удалось создать бэкап'
+		handleError(error)
+	} finally {
+		creatingBackup.value = false
+	}
 }
 
 const quickFolders = [

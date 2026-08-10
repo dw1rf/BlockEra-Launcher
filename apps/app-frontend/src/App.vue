@@ -49,7 +49,6 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { type } from '@tauri-apps/plugin-os'
 import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state'
-import { $fetch } from 'ofetch'
 import { computed, nextTick, onMounted, onUnmounted, provide, ref } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
@@ -73,10 +72,12 @@ import URLConfirmModal from '@/components/ui/URLConfirmModal.vue'
 import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
 import { debugAnalytics, optOutAnalytics, trackEvent } from '@/helpers/analytics'
 import { check_reachable } from '@/helpers/auth.js'
+import { migrateLegacyWorldBackupSettings, runDueWorldBackups } from '@/helpers/backups'
 import { get_user } from '@/helpers/cache.js'
 import { command_listener, info_listener, warning_listener } from '@/helpers/events.js'
 import { useFetch } from '@/helpers/fetch.js'
 import { cancelLogin, get as getCreds, login, logout } from '@/helpers/mr_auth.ts'
+import { navigateHistory as navigateRouterHistory } from '@/helpers/navigation'
 import { list, run } from '@/helpers/profile.js'
 import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
 import { get_opening_command, initialize_state } from '@/helpers/state'
@@ -175,13 +176,14 @@ onMounted(async () => {
 	updateCheckInterval = window.setInterval(() => void getRemote(false), 30 * 60 * 1000)
 
 	document.querySelector('body').addEventListener('click', handleClick)
-	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
+	window.addEventListener('auxclick', handleAuxClick, { capture: true })
 })
 
 onUnmounted(async () => {
 	if (updateCheckInterval) window.clearInterval(updateCheckInterval)
+	if (backupSchedulerInterval) window.clearInterval(backupSchedulerInterval)
 	document.querySelector('body').removeEventListener('click', handleClick)
-	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
+	window.removeEventListener('auxclick', handleAuxClick, { capture: true })
 })
 
 const { formatMessage } = useVIntl()
@@ -265,6 +267,9 @@ async function setupApp() {
 	themeStore.devMode = developer_mode
 	themeStore.featureFlags = feature_flags
 	stateInitialized.value = true
+	await migrateLegacyWorldBackupSettings().catch(handleError)
+	void checkScheduledWorldBackups()
+	backupSchedulerInterval = window.setInterval(() => void checkScheduledWorldBackups(), 60 * 1000)
 
 	isMaximized.value = await getCurrentWindow().isMaximized()
 
@@ -409,24 +414,17 @@ function handleWindowDrag(event) {
 
 const router = useRouter()
 const route = useRoute()
-const renderRoute = ref(true)
 const projectReturnPath = ref(null)
 
-router.beforeEach(async (to, from) => {
+router.beforeEach((to, from) => {
 	const enteringProject = to.path.startsWith('/project/') && !from.path.startsWith('/project/')
 	if (enteringProject) {
 		projectReturnPath.value = from.matched.length > 0 ? from.fullPath : null
-	}
-
-	if (to.fullPath !== from.fullPath) {
-		renderRoute.value = false
-		await nextTick()
 	}
 	return true
 })
 
 router.afterEach((to, from, failure) => {
-	renderRoute.value = true
 	if (!failure && to.fullPath !== from.fullPath) {
 		settingsModal.value?.hide()
 		void nextTick(() => document.querySelector('.app-viewport')?.scrollTo(0, 0))
@@ -447,25 +445,19 @@ const projectTypeFallback = computed(() => {
 })
 
 function closeActiveProject() {
-	if (projectReturnPath.value) {
-		void router.replace(projectReturnPath.value)
-		return
-	}
-
-	if (route.query.i) {
-		void router.replace(`/instance/${encodeURIComponent(String(route.query.i))}/content`)
-		return
-	}
-
-	void router.replace(`/browse/${projectTypeFallback.value}`)
+	const fallback = projectReturnPath.value
+		? projectReturnPath.value
+		: route.query.i
+			? `/instance/${encodeURIComponent(String(route.query.i))}/content`
+			: `/browse/${projectTypeFallback.value}`
+	navigateRouterHistory(router, 'back', fallback)
 }
 
-const routeViewKey = computed(() => {
-	const rootPath = route.matched[0]?.path ?? route.path
-	const entityId =
-		rootPath === '/project/:id' || rootPath === '/instance/:id' ? route.params.id : ''
-	return `${rootPath}:${String(entityId ?? '')}`
-})
+function navigateHistory(direction) {
+	navigateRouterHistory(router, direction)
+}
+
+const routeViewKey = computed(() => route.fullPath)
 const cinematicShell = computed(
 	() =>
 		route.path === '/' ||
@@ -601,6 +593,28 @@ const appUpdateDownload = {
 }
 
 let updateCheckInterval
+let backupSchedulerInterval
+let backupSchedulerRunning = false
+
+async function checkScheduledWorldBackups() {
+	if (backupSchedulerRunning) return
+	backupSchedulerRunning = true
+	try {
+		const batches = await runDueWorldBackups()
+		const failures = batches.reduce((total, batch) => total + batch.failures.length, 0)
+		if (failures > 0) {
+			addNotification({
+				title: 'Резервные копии',
+				text: `Не удалось создать копий: ${failures}`,
+				type: 'warning',
+			})
+		}
+	} catch (error) {
+		console.warn('Scheduled world backup check failed', error)
+	} finally {
+		backupSchedulerRunning = false
+	}
+}
 
 function handleClick(e) {
 	let target = e.target
@@ -624,6 +638,13 @@ function handleClick(e) {
 }
 
 function handleAuxClick(e) {
+	if (e.button === 3 || e.button === 4) {
+		e.preventDefault()
+		e.stopPropagation()
+		navigateHistory(e.button === 3 ? 'back' : 'forward')
+		return
+	}
+
 	// disables middle click -> new tab
 	if (e.button === 1) {
 		e.preventDefault()
@@ -721,7 +742,8 @@ async function processPendingSurveys() {
 
 	let surveys = []
 	try {
-		surveys = await $fetch('https://api.modrinth.com/v2/surveys')
+		const surveyResponse = await useFetch('https://api.modrinth.com/v2/surveys', 'surveys', true)
+		if (surveyResponse?.ok) surveys = await surveyResponse.json()
 	} catch (e) {
 		console.error('Error fetching surveys:', e)
 	}
@@ -901,7 +923,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 						v-tooltip="'Назад'"
 						class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
 						aria-label="Назад"
-						@click="router.back()"
+						@click="navigateHistory('back')"
 					>
 						<LeftArrowIcon />
 					</button>
@@ -909,7 +931,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 						v-tooltip="'Вперёд'"
 						class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
 						aria-label="Вперёд"
-						@click="router.forward()"
+						@click="navigateHistory('forward')"
 					>
 						<RightArrowIcon />
 					</button>
@@ -1132,11 +1154,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			>
 				{{ formatMessage(messages.authUnreachableBody) }}
 			</Admonition>
-			<div v-if="!renderRoute" class="route-loading-state" role="status" aria-live="polite">
-				<span class="route-loading-spinner" aria-hidden="true"></span>
-				<span>Загружаем раздел…</span>
-			</div>
-			<RouterView v-else v-slot="{ Component }">
+			<RouterView v-slot="{ Component }">
 				<template v-if="Component">
 					<Suspense
 						:key="routeViewKey"
@@ -1858,10 +1876,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 
 	.window-controls {
 		display: flex !important;
-	}
-
-	.info-card {
-		right: 8rem;
 	}
 
 	.profile-card {

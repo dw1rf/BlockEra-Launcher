@@ -6,7 +6,8 @@ use theseus::prelude::ProcessMetadata;
 use theseus::profile::{QuickPlayType, get_full_path};
 use theseus::server_address::ServerAddress;
 use theseus::worlds::{
-    DisplayStatus, ProtocolVersion, ServerPackStatus, ServerStatus, World,
+    BackupBatchResult, DisplayStatus, ProtocolVersion, ServerPackStatus,
+    ServerStatus, World, WorldBackup, WorldBackupReason, WorldBackupSettings,
     WorldType, WorldWithProfile,
 };
 use theseus::{profile, worlds};
@@ -21,6 +22,13 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             rename_world,
             reset_world_icon,
             backup_world,
+            backup_profile_worlds,
+            list_world_backups,
+            restore_world_backup,
+            delete_world_backup,
+            get_world_backup_settings,
+            set_world_backup_settings,
+            run_due_world_backups,
             delete_world,
             add_server_to_profile,
             edit_server_in_profile,
@@ -136,6 +144,56 @@ pub async fn reset_world_icon(instance: &str, world: &str) -> Result<()> {
 pub async fn backup_world(instance: &str, world: &str) -> Result<u64> {
     let instance = get_full_path(instance).await?;
     Ok(worlds::backup_world(&instance, world).await?)
+}
+
+#[tauri::command]
+pub async fn backup_profile_worlds(
+    profile: &str,
+    reason: WorldBackupReason,
+) -> Result<BackupBatchResult> {
+    Ok(worlds::backup_profile_worlds(profile, reason).await?)
+}
+
+#[tauri::command]
+pub async fn list_world_backups(
+    profile: &str,
+    world: Option<&str>,
+) -> Result<Vec<WorldBackup>> {
+    let instance = get_full_path(profile).await?;
+    Ok(worlds::list_world_backups(&instance, profile, world).await?)
+}
+
+#[tauri::command]
+pub async fn restore_world_backup(
+    profile: &str,
+    backup_id: &str,
+) -> Result<()> {
+    worlds::restore_world_backup(profile, backup_id).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_world_backup(profile: &str, backup_id: &str) -> Result<()> {
+    worlds::delete_world_backup(profile, backup_id).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_world_backup_settings() -> Result<WorldBackupSettings> {
+    Ok(worlds::get_world_backup_settings().await?)
+}
+
+#[tauri::command]
+pub async fn set_world_backup_settings(
+    settings: WorldBackupSettings,
+) -> Result<()> {
+    worlds::set_world_backup_settings(settings).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn run_due_world_backups() -> Result<Vec<BackupBatchResult>> {
+    Ok(worlds::run_due_world_backups().await?)
 }
 
 #[tauri::command]
