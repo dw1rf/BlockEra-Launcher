@@ -8,6 +8,15 @@ export type ReleaseNote = {
 
 export const releaseNotes: ReleaseNote[] = [
 	{
+		version: '0.10.2735',
+		date: '10 августа 2026',
+		highlights: [],
+		fixes: [
+			'Каталог, страницы модов и загрузки Modrinth теперь используют системный прокси Windows, если он включён. Это устраняет тайм-ауты, когда сайт открывается в браузере, но лаунчер не может подключиться напрямую.',
+		],
+		improvements: [],
+	},
+	{
 		version: '0.10.2734',
 		date: '10 августа 2026',
 		highlights: [

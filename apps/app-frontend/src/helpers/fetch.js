@@ -1,6 +1,3 @@
-import { getVersion } from '@tauri-apps/api/app'
-import { fetch } from '@tauri-apps/plugin-http'
-
 export const MODRINTH_CONNECTION_ERROR =
 	'Не удалось подключиться к Modrinth. Проверьте интернет-соединение или повторите попытку позже.'
 export const MODRINTH_SERVICE_ERROR =
@@ -22,15 +19,12 @@ function isAbortError(error) {
 }
 
 export const blockeraFetch = async (url, options = {}) => {
-	const version = await getVersion()
-	const headers = new Headers(options.headers ?? {})
-	if (!headers.has('User-Agent')) {
-		headers.set('User-Agent', `modrinth/theseus/${version} (support@modrinth.com)`)
-	}
-	const requestOptions = { ...options, headers }
-
 	try {
-		return await fetch(url, requestOptions)
+		// WebView2 uses the Windows networking configuration, including the
+		// per-user system proxy used by browsers. The Tauri HTTP plugin bypasses
+		// that configuration and times out on networks where Modrinth is only
+		// reachable through the Windows proxy.
+		return await globalThis.fetch(url, options)
 	} catch (error) {
 		if (isAbortError(error) || !isModrinthUrl(url)) throw error
 		console.error('[BlockEra] Не удалось выполнить прямой запрос к Modrinth:', error)

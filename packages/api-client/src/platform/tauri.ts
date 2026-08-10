@@ -19,7 +19,7 @@ interface HttpError extends Error {
 }
 
 /**
- * Tauri platform client using Tauri v2 HTTP plugin
+ * Tauri platform client using the WebView networking stack
  *
  * Extends XHRUploadClient to provide upload with progress tracking.
  *
@@ -54,10 +54,6 @@ export class TauriModrinthClient extends XHRUploadClient {
 
 	protected async executeRequest<T>(url: string, options: RequestOptions): Promise<T> {
 		try {
-			// Dynamically import Tauri HTTP plugin
-			// This allows the package to be used in non-Tauri environments
-			const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http')
-
 			let body: BodyInit | null | undefined = undefined
 			if (options.body) {
 				if (typeof options.body === 'object' && !(options.body instanceof FormData)) {
@@ -73,10 +69,19 @@ export class TauriModrinthClient extends XHRUploadClient {
 				fullUrl = `${url}?${queryParams}`
 			}
 
-			const response = await tauriFetch(fullUrl, {
+			const headers = new Headers(options.headers)
+			// User-Agent is controlled by WebView2. Removing the configured desktop
+			// value prevents it from becoming a forbidden browser header.
+			headers.delete('user-agent')
+
+			// WebView2 honors the per-user Windows proxy. The Tauri HTTP plugin uses
+			// a separate Rust client and can time out while the same URL works in the
+			// user's browser.
+			const response = await globalThis.fetch(fullUrl, {
 				method: options.method ?? 'GET',
-				headers: options.headers,
+				headers,
 				body,
+				signal: options.signal,
 			})
 
 			if (!response.ok) {
