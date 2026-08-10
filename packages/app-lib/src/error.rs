@@ -68,6 +68,14 @@ pub enum ErrorKind {
     #[error("Too many API errors; temporarily blocked")]
     ApiIsDownError,
 
+    #[error(
+        "Не удалось подключиться к Modrinth. Проверьте интернет-соединение или повторите попытку позже."
+    )]
+    ModrinthConnectionError,
+
+    #[error("Сервис Modrinth временно недоступен. Повторите попытку позже.")]
+    ModrinthServiceUnavailable,
+
     #[error("{0}")]
     LabrinthError(LabrinthError),
 

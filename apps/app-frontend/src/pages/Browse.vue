@@ -24,6 +24,11 @@ import type Instance from '@/components/ui/Instance.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import NavTabs from '@/components/ui/NavTabs.vue'
 import SearchCard from '@/components/ui/SearchCard.vue'
+import {
+	blockeraFetch,
+	MODRINTH_CONNECTION_ERROR,
+	MODRINTH_SERVICE_ERROR,
+} from '@/helpers/fetch.js'
 import { get as getInstance, get_projects as getInstanceProjects } from '@/helpers/profile.js'
 import { get_categories, get_game_versions, get_loaders } from '@/helpers/tags'
 import { useBreadcrumbs } from '@/store/breadcrumbs'
@@ -423,19 +428,20 @@ async function fetchSearchResults(params: string, requestId: number): Promise<Se
 	const timeout = new Promise<never>((_, reject) => {
 		timeoutId = setTimeout(() => {
 			controller.abort()
-			reject(new Error('Сервер каталога не ответил за 15 секунд.'))
+			reject(new Error(MODRINTH_CONNECTION_ERROR))
 		}, SEARCH_TIMEOUT_MS)
 	})
 
 	try {
 		const response = await Promise.race([
-			fetch(`https://api.modrinth.com/v2/search${params}`, {
+			blockeraFetch(`https://api.modrinth.com/v2/search${params}`, {
 				method: 'GET',
 				headers: { Accept: 'application/json' },
 				signal: controller.signal,
 			}).then(async (response) => {
 				if (!response.ok) {
-					throw new Error(`Сервер каталога вернул ошибку ${response.status}.`)
+					if (response.status >= 500) throw new Error(MODRINTH_SERVICE_ERROR)
+					throw new Error(`Modrinth вернул ошибку ${response.status}.`)
 				}
 				return (await response.json()) as SearchResults
 			}),
@@ -444,7 +450,7 @@ async function fetchSearchResults(params: string, requestId: number): Promise<Se
 		return response
 	} catch (error) {
 		if (controller.signal.aborted && requestId === searchRequestId) {
-			throw new Error('Сервер каталога не ответил за 15 секунд.')
+			throw new Error(MODRINTH_CONNECTION_ERROR)
 		}
 		throw error
 	} finally {

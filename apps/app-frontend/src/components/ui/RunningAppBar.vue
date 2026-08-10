@@ -4,10 +4,11 @@
 			<button
 				v-if="activeLoadingBar"
 				ref="infoButton"
+				v-tooltip.bottom="downloadStatusLabel(activeLoadingBar)"
 				type="button"
 				class="download-status-button"
 				:aria-expanded="showCard"
-				:aria-label="`Загрузка: ${loadingTitle(activeLoadingBar)}, ${loadingProgress(activeLoadingBar)}%`"
+				:aria-label="downloadStatusLabel(activeLoadingBar)"
 				:style="{
 					'--download-progress': loadingProgress(activeLoadingBar) / 100,
 				}"
@@ -23,9 +24,10 @@
 					<small>ЗАГРУЗКА</small>
 					<strong>{{ loadingTitle(activeLoadingBar) }}</strong>
 				</span>
-				<span class="download-percent"
-					>{{ loadingProgress(activeLoadingBar) }}%</span
-				>
+				<span class="download-metrics">
+					<strong>{{ loadingProgress(activeLoadingBar) }}%</strong>
+					<small>{{ formatDownloadSpeed(activeLoadingBar.bytes_per_second) }}</small>
+				</span>
 				<span class="download-track" aria-hidden="true"><span /></span>
 			</button>
 			<div v-if="!props.compact && offline" class="status">
@@ -60,12 +62,7 @@
 				>
 					<StopCircleIcon />
 				</Button>
-				<Button
-					v-tooltip="'View logs'"
-					icon-only
-					class="icon-button"
-					@click="goToTerminal()"
-				>
+				<Button v-tooltip="'View logs'" icon-only class="icon-button" @click="goToTerminal()">
 					<TerminalSquareIcon />
 				</Button>
 			</div>
@@ -74,30 +71,35 @@
 				<span class="running-text"> No instances running </span>
 			</div>
 		</div>
-		<transition name="download">
-			<Card
-				v-if="showCard === true && currentLoadingBars.length > 0"
-				ref="card"
-				class="info-card"
-				role="status"
-				aria-live="polite"
-			>
-				<div
-					v-for="loadingBar in currentLoadingBars"
-					:key="loadingBar.id"
-					class="info-text"
+		<Teleport to="#teleports">
+			<transition name="download">
+				<Card
+					v-if="showCard === true && currentLoadingBars.length > 0"
+					ref="card"
+					class="info-card"
+					:style="cardPosition"
+					role="status"
+					aria-live="polite"
 				>
-					<h3 class="info-title">
-						{{ loadingTitle(loadingBar) }}
-					</h3>
-					<ProgressBar :progress="loadingProgress(loadingBar)" />
-					<div class="row">
-						{{ loadingProgress(loadingBar) }}%
-						{{ loadingBar.message }}
+					<div
+						v-for="loadingBar in currentLoadingBars"
+						:key="loadingBar.loading_bar_uuid"
+						class="info-text"
+					>
+						<h3 class="info-title">
+							{{ loadingTitle(loadingBar) }}
+						</h3>
+						<ProgressBar :progress="loadingProgress(loadingBar)" />
+						<div class="download-details">
+							<strong>{{ loadingProgress(loadingBar) }}%</strong>
+							<span>{{ formatDownloadSpeed(loadingBar.bytes_per_second) }}</span>
+							<span>{{ formatDownloadBytes(loadingBar.downloaded_bytes) }}</span>
+						</div>
+						<div class="download-message">{{ loadingBar.message }}</div>
 					</div>
-				</div>
-			</Card>
-		</transition>
+				</Card>
+			</transition>
+		</Teleport>
 		<transition name="download">
 			<Card
 				v-if="showProfiles === true && currentProcesses.length > 0"
@@ -110,9 +112,7 @@
 					class="profile-button"
 					@click="selectProcess(process)"
 				>
-					<div class="text">
-						<span class="circle running" /> {{ process.profile.name }}
-					</div>
+					<div class="text"><span class="circle running" /> {{ process.profile.name }}</div>
 					<Button
 						v-tooltip="'Stop instance'"
 						icon-only
@@ -144,16 +144,18 @@ import {
 	UnplugIcon,
 } from '@modrinth/assets'
 import { Button, Card, injectNotificationManager } from '@modrinth/ui'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import ProgressBar from '@/components/ui/ProgressBar.vue'
 import { trackEvent } from '@/helpers/analytics'
-import { loading_listener, process_listener } from '@/helpers/events'
 import {
-	get_all as getRunningProcesses,
-	kill as killProcess,
-} from '@/helpers/process'
+	calculateDownloadPopoverPosition,
+	formatDownloadBytes,
+	formatDownloadSpeed,
+} from '@/helpers/download-progress'
+import { loading_listener, process_listener } from '@/helpers/events'
+import { get_all as getRunningProcesses, kill as killProcess } from '@/helpers/process'
 import { get_many } from '@/helpers/profile.js'
 import { progress_bars_list } from '@/helpers/state.js'
 
@@ -171,6 +173,7 @@ const profiles = ref(null)
 const infoButton = ref(null)
 const profileButton = ref(null)
 const showCard = ref(false)
+const cardPosition = ref({})
 
 const showProfiles = ref(false)
 
@@ -179,18 +182,13 @@ const selectedProcess = ref()
 
 const refresh = async () => {
 	const processes = await getRunningProcesses().catch(handleError)
-	const profiles = await get_many(processes.map((x) => x.profile_path)).catch(
-		handleError,
-	)
+	const profiles = await get_many(processes.map((x) => x.profile_path)).catch(handleError)
 
 	currentProcesses.value = processes.map((x) => ({
 		profile: profiles.find((prof) => x.profile_path === prof.path),
 		...x,
 	}))
-	if (
-		!selectedProcess.value ||
-		!currentProcesses.value.includes(selectedProcess.value)
-	) {
+	if (!selectedProcess.value || !currentProcesses.value.includes(selectedProcess.value)) {
 		selectedProcess.value = currentProcesses.value[0]
 	}
 }
@@ -225,9 +223,7 @@ const stop = async (process) => {
 }
 
 const goToTerminal = (path) => {
-	router.push(
-		`/instance/${encodeURIComponent(path ?? selectedProcess.value.profile.path)}/logs`,
-	)
+	router.push(`/instance/${encodeURIComponent(path ?? selectedProcess.value.profile.path)}/logs`)
 }
 
 const currentLoadingBars = ref([])
@@ -240,14 +236,32 @@ const loadingProgress = (loadingBar) => {
 	return Math.min(100, Math.max(0, Math.floor((100 * current) / total)))
 }
 
-const loadingTitle = (loadingBar) =>
-	loadingBar?.title || loadingBar?.message || 'Подготовка файлов'
+const loadingTitle = (loadingBar) => loadingBar?.title || loadingBar?.message || 'Подготовка файлов'
+
+const downloadStatusLabel = (loadingBar) =>
+	`Загрузка: ${loadingTitle(loadingBar)}, ${loadingProgress(loadingBar)}%, ${formatDownloadSpeed(loadingBar?.bytes_per_second)}`
+
+const updateCardPosition = () => {
+	const button = infoButton.value
+	if (!button) return
+
+	const position = calculateDownloadPopoverPosition(
+		button.getBoundingClientRect(),
+		window.innerWidth,
+		window.innerHeight,
+	)
+
+	cardPosition.value = {
+		top: `${position.top}px`,
+		left: `${position.left}px`,
+		width: `${position.width}px`,
+		maxHeight: `${position.maxHeight}px`,
+	}
+}
 
 const refreshInfo = async () => {
 	const currentLoadingBarCount = currentLoadingBars.value.length
-	currentLoadingBars.value = Object.values(
-		await progress_bars_list().catch(handleError),
-	)
+	currentLoadingBars.value = Object.values(await progress_bars_list().catch(handleError))
 		.map((x) => {
 			if (x.bar_type.type === 'java_download') {
 				x.title = 'Загрузка Java ' + x.bar_type.version
@@ -275,11 +289,10 @@ const refreshInfo = async () => {
 
 	if (currentLoadingBars.value.length === 0) {
 		showCard.value = false
-	} else if (
-		!props.compact &&
-		currentLoadingBarCount < currentLoadingBars.value.length
-	) {
+	} else if (!props.compact && currentLoadingBarCount < currentLoadingBars.value.length) {
 		showCard.value = true
+		await nextTick()
+		updateCardPosition()
 	}
 }
 
@@ -322,6 +335,10 @@ const toggleCard = async () => {
 	showCard.value = !showCard.value
 	showProfiles.value = false
 	await refreshInfo()
+	if (showCard.value) {
+		await nextTick()
+		updateCardPosition()
+	}
 }
 
 const toggleProfiles = async () => {
@@ -333,11 +350,15 @@ const toggleProfiles = async () => {
 onMounted(() => {
 	window.addEventListener('click', handleClickOutsideCard)
 	window.addEventListener('click', handleClickOutsideProfile)
+	window.addEventListener('resize', updateCardPosition)
+	window.addEventListener('scroll', updateCardPosition, true)
 })
 
 onBeforeUnmount(() => {
 	window.removeEventListener('click', handleClickOutsideCard)
 	window.removeEventListener('click', handleClickOutsideProfile)
+	window.removeEventListener('resize', updateCardPosition)
+	window.removeEventListener('scroll', updateCardPosition, true)
 	unlistenProcess()
 	unlistenLoading()
 })
@@ -371,11 +392,7 @@ onBeforeUnmount(() => {
 	padding: 0.42rem 0.72rem;
 	border: 1px solid rgba(177, 94, 255, 0.28);
 	border-radius: 0.75rem;
-	background: linear-gradient(
-		135deg,
-		rgba(126, 46, 208, 0.2),
-		rgba(26, 19, 43, 0.78)
-	);
+	background: linear-gradient(135deg, rgba(126, 46, 208, 0.2), rgba(26, 19, 43, 0.78));
 	box-shadow: 0 8px 24px rgba(70, 20, 115, 0.16);
 	color: #f5effb;
 	font: inherit;
@@ -450,11 +467,24 @@ onBeforeUnmount(() => {
 	white-space: nowrap;
 }
 
-.download-percent {
+.download-metrics {
+	display: flex;
 	flex: 0 0 auto;
+	flex-direction: column;
+	align-items: flex-end;
 	color: #d9b5ff;
+}
+
+.download-metrics strong {
 	font-size: 0.67rem;
 	font-weight: 800;
+}
+
+.download-metrics small {
+	margin-top: 0.08rem;
+	color: #aeb5c4;
+	font-size: 0.56rem;
+	font-weight: 700;
 }
 
 .download-track {
@@ -488,7 +518,7 @@ onBeforeUnmount(() => {
 }
 
 .compact .download-status-copy,
-.compact .download-percent,
+.compact .download-metrics,
 .compact .download-track {
 	display: none;
 }
@@ -496,10 +526,8 @@ onBeforeUnmount(() => {
 .compact .download-status-icon {
 	background:
 		linear-gradient(rgba(20, 14, 34, 0.96), rgba(20, 14, 34, 0.96)) padding-box,
-		conic-gradient(
-			#a947f2 calc(var(--download-progress) * 1turn),
-			rgba(255, 255, 255, 0.1) 0
-		) border-box;
+		conic-gradient(#a947f2 calc(var(--download-progress) * 1turn), rgba(255, 255, 255, 0.1) 0)
+			border-box;
 	border: 2px solid transparent;
 }
 
@@ -576,11 +604,8 @@ onBeforeUnmount(() => {
 }
 
 .info-card {
-	position: absolute;
-	top: calc(100% + 0.65rem);
-	right: 0;
-	z-index: 9;
-	width: min(20rem, calc(100vw - 1.5rem));
+	position: fixed;
+	z-index: var(--blockera-layer-popover, 120);
 	max-height: min(24rem, calc(100vh - 6rem));
 	padding: 0.85rem;
 	border-radius: 1rem;
@@ -686,6 +711,32 @@ onBeforeUnmount(() => {
 	font-size: 0.68rem;
 }
 
+.download-details {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 0.65rem;
+	color: #b7bfce;
+	font-size: 0.7rem;
+}
+
+.download-details strong {
+	color: #d9b5ff;
+}
+
+.download-details span:last-child {
+	margin-left: auto;
+}
+
+.download-message {
+	max-width: 100%;
+	overflow: hidden;
+	color: #9da3b1;
+	font-size: 0.68rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .profile-button {
 	display: flex;
 	flex-direction: row;
@@ -738,7 +789,7 @@ onBeforeUnmount(() => {
 	}
 
 	.download-status-copy,
-	.download-percent {
+	.download-metrics {
 		display: none;
 	}
 }
