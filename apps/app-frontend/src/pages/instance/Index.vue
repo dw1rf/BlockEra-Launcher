@@ -141,7 +141,7 @@
 				</button>
 				<button
 					class="quick-backup"
-					:disabled="creatingBackup || playing"
+					:disabled="creatingBackup"
 					@click="createManualBackup"
 				>
 					<PackageIcon /><span
@@ -273,11 +273,11 @@ const latestBackupAt = ref(null)
 
 const backupSummaryLabel = computed(() => {
 	if (latestBackupAt.value) return `Последний: ${dayjs(latestBackupAt.value).fromNow()}`
-	return automaticBackups.value ? 'После игры, до 5 копий' : 'Автобэкап выключен'
+	return automaticBackups.value ? 'Во время игры, до 5 копий' : 'Автобэкап выключен'
 })
 const nextBackupLabel = computed(() => {
 	if (!automaticBackups.value) return 'Выключены'
-	return 'После выхода из игры, не чаще раза в час'
+	return 'Во время игры, не чаще раза в час'
 })
 
 async function refreshBackupStatus() {
@@ -426,7 +426,7 @@ async function toggleAutomaticBackups() {
 }
 
 async function createManualBackup() {
-	if (creatingBackup.value || playing.value) return
+	if (creatingBackup.value) return
 	creatingBackup.value = true
 	backupActionStatus.value = ''
 	try {

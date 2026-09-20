@@ -884,13 +884,14 @@ async fn backup_world_archive_locked(
 ) -> Result<WorldBackup> {
     validate_world_identifier(world)?;
     let world_dir = get_world_dir(instance, world);
-    let _lock = get_world_session_lock(&world_dir).await?;
     let backups_dir = instance.join("backups");
 
     io::create_dir_all(&backups_dir).await?;
 
     let name_base = {
-        let formatted_time = Local::now().format("%Y-%m-%d_%H-%M-%S");
+        // Milliseconds make successive live snapshots visibly distinct. The
+        // availability suffix below remains the final collision guard.
+        let formatted_time = Local::now().format("%Y-%m-%d_%H-%M-%S-%3f");
         format!("{formatted_time}_{world}")
     };
     let output_path =
@@ -1478,17 +1479,58 @@ pub async fn restore_world_backup(
     result
 }
 
+pub async fn backup_worlds_while_session_is_running(
+    profile: &str,
+    process_id: uuid::Uuid,
+    session_started_at: DateTime<Utc>,
+) {
+    let mut ticker =
+        tokio::time::interval(tokio::time::Duration::from_secs(60));
+    // interval ticks immediately once; only start checking after Minecraft has
+    // had time to load and save the world at least once.
+    ticker.tick().await;
+
+    loop {
+        ticker.tick().await;
+        let Ok(state) = State::get().await else {
+            break;
+        };
+        if state.process_manager.get(process_id).is_none() {
+            break;
+        }
+        if let Err(error) =
+            backup_due_worlds_for_session(profile, session_started_at, false)
+                .await
+        {
+            tracing::warn!(
+                profile,
+                %error,
+                "Automatic world backup during Minecraft session failed"
+            );
+        }
+    }
+}
+
 pub async fn backup_due_worlds_after_session(
     profile: &str,
     session_started_at: DateTime<Utc>,
+) -> Result<BackupBatchResult> {
+    backup_due_worlds_for_session(profile, session_started_at, true).await
+}
+
+async fn backup_due_worlds_for_session(
+    profile: &str,
+    session_started_at: DateTime<Utc>,
+    require_stopped: bool,
 ) -> Result<BackupBatchResult> {
     let settings = get_world_backup_settings().await?;
     if !settings.enabled {
         return Ok(BackupBatchResult::default());
     }
-    if !crate::process::get_by_profile_path(profile)
-        .await?
-        .is_empty()
+    if require_stopped
+        && !crate::process::get_by_profile_path(profile)
+            .await?
+            .is_empty()
     {
         return Ok(BackupBatchResult::default());
     }
@@ -1981,9 +2023,10 @@ pub async fn get_server_status(
 #[cfg(test)]
 mod backup_tests {
     use super::{
-        WorldBackupReason, backup_is_due, indexed_backup_from_file,
-        restore_backup_sync, validate_world_identifier,
-        world_changed_during_session, write_backup_archive_sync,
+        WorldBackupReason, backup_is_due, find_available_name,
+        indexed_backup_from_file, restore_backup_sync,
+        validate_world_identifier, world_changed_during_session,
+        write_backup_archive_sync,
     };
     use chrono::{TimeDelta, Utc};
     use std::io::{Read, Write};
@@ -2035,6 +2078,19 @@ mod backup_tests {
         assert!(backup_is_due(None, cutoff));
         assert!(backup_is_due(Some(cutoff), cutoff));
         assert!(!backup_is_due(Some(cutoff + TimeDelta::seconds(1)), cutoff));
+    }
+
+    #[test]
+    fn every_snapshot_gets_a_new_archive_name() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let base = "2026-09-20_20-00-00-000_My World";
+        let first = find_available_name(temp.path(), base, ".zip");
+        std::fs::write(temp.path().join(&first), b"first")
+            .expect("first backup");
+        let second = find_available_name(temp.path(), base, ".zip");
+
+        assert_ne!(first, second);
+        assert_eq!(second, "2026-09-20_20-00-00-000_My World (1).zip");
     }
 
     #[test]

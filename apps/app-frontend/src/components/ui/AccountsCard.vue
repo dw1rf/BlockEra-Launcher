@@ -363,12 +363,17 @@ function getAccountType(account) {
 
 // This code is modified by AstralRinth
 function showOfflineLoginModal() {
-	addOfflineModal.value?.show()
+	switchModal(accountManagerModal, addOfflineModal)
 }
 
 // This code is modified by AstralRinth
 function showElyByLoginModal() {
-	addElyByModal.value?.show()
+	switchModal(accountManagerModal, addElyByModal)
+}
+
+function switchModal(from, to) {
+	from.value?.hide()
+	nextTick(() => requestAnimationFrame(() => to.value?.show()))
 }
 
 // This code is modified by AstralRinth
@@ -461,7 +466,7 @@ async function addElyByProfile() {
 				json_data.error === 'ForbiddenOperationException' &&
 				json_data.errorMessage?.includes('two factor')
 			) {
-				requestElyByTwoFactorCodeModal.value?.show()
+				switchModal(addElyByModal, requestElyByTwoFactorCodeModal)
 				return
 			}
 

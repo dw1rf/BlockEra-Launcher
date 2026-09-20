@@ -154,6 +154,18 @@ impl ProcessManager {
 
         self.processes.insert(process.metadata.uuid, process);
 
+        let backup_profile = profile_path.to_string();
+        let backup_process = metadata.uuid;
+        let backup_session_started_at = metadata.start_time;
+        tokio::spawn(async move {
+            crate::api::worlds::backup_worlds_while_session_is_running(
+                &backup_profile,
+                backup_process,
+                backup_session_started_at,
+            )
+            .await;
+        });
+
         emit_process(
             profile_path,
             metadata.uuid,
