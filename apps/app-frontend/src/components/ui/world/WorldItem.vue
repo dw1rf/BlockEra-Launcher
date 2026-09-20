@@ -398,8 +398,6 @@ const messages = defineMessages({
 							{
 								id: 'backup',
 								shown: world.type === 'singleplayer' && !instancePath,
-								disabled: locked,
-								tooltip: locked ? formatMessage(messages.worldInUse) : undefined,
 								action: () => emit('backup'),
 							},
 							{

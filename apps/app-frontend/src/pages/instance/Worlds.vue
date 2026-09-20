@@ -83,7 +83,7 @@
 					</button>
 				</ButtonStyled>
 				<ButtonStyled>
-					<button :disabled="backingUp || playing" @click="backupAllWorlds">
+					<button :disabled="backingUp" @click="backupAllWorlds">
 						<PackageIcon /> {{ backingUp ? 'Создаём копии…' : backupLabel }}
 					</button>
 				</ButtonStyled>
@@ -334,7 +334,7 @@ async function backupAllWorlds() {
 }
 
 async function backupSingleWorld(world: World) {
-	if (world.type !== 'singleplayer' || world.locked) return
+	if (world.type !== 'singleplayer') return
 	try {
 		await backup_world(instance.value.path, world.path)
 		backupStatus.value = `Резервная копия мира «${world.name}» создана.`
