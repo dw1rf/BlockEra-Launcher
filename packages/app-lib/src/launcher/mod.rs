@@ -202,7 +202,7 @@ pub async fn get_loader_version_from_profile(
     loader: ModLoader,
     loader_version: Option<&str>,
 ) -> crate::Result<Option<LoaderVersion>> {
-    if loader == ModLoader::Vanilla {
+    if matches!(loader, ModLoader::Vanilla | ModLoader::Horizon) {
         return Ok(None);
     }
 
@@ -244,6 +244,14 @@ pub async fn install_minecraft(
     existing_loading_bar: Option<LoadingBarId>,
     repairing: bool,
 ) -> crate::Result<()> {
+    if profile.loader == ModLoader::Horizon {
+        return crate::horizon::install(
+            profile,
+            existing_loading_bar,
+            repairing,
+        )
+        .await;
+    }
     let loading_bar = init_or_edit_loading(
         existing_loading_bar,
         LoadingBarType::MinecraftDownload {

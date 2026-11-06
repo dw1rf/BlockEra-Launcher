@@ -88,6 +88,16 @@ const titleMessage = defineMessage({
 			</span>
 		</template>
 
-		<TabbedModal :tabs="tabs.map((tab) => ({ ...tab, props }))" />
+		<TabbedModal
+			:tabs="
+				tabs
+					.filter(
+						(tab) =>
+							instance.loader !== 'horizon' ||
+							![JavaSettings, HooksSettings, WindowSettings].includes(tab.content),
+					)
+					.map((tab) => ({ ...tab, props }))
+			"
+		/>
 	</ModalWrapper>
 </template>

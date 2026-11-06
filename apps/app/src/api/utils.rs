@@ -134,6 +134,8 @@ pub async fn create_desktop_shortcut(
 pub enum ProfileFolder {
     Root,
     Mods,
+    HorizonMods,
+    HorizonNativeMods,
     ResourcePacks,
     ShaderPacks,
     Saves,
@@ -253,6 +255,8 @@ pub async fn open_profile_folder<R: Runtime>(
     match folder {
         ProfileFolder::Root => {}
         ProfileFolder::Mods => path.push("mods"),
+        ProfileFolder::HorizonMods => path.push("horizon-mods"),
+        ProfileFolder::HorizonNativeMods => path.push("horizon-native-mods"),
         ProfileFolder::ResourcePacks => path.push("resourcepacks"),
         ProfileFolder::ShaderPacks => path.push("shaderpacks"),
         ProfileFolder::Saves => path.push("saves"),

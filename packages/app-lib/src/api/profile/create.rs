@@ -80,7 +80,11 @@ pub async fn profile_create(
         game_version,
         protocol_version: None,
         loader: modloader,
-        loader_version: loader.map(|x| x.id),
+        loader_version: if modloader == ModLoader::Horizon {
+            loader_version
+        } else {
+            loader.map(|x| x.id)
+        },
         groups: Vec::new(),
         linked_data,
         external_pack: None,

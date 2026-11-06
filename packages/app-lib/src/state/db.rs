@@ -173,3 +173,83 @@ pub(crate) async fn apply_migration_fix(eol: &str) -> crate::Result<bool> {
 
     Ok(changed)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn world_backup_migrations_match_previously_shipped_versions() {
+        // These checksums are from the August release, already applied to user databases.
+        let migrator = sqlx::migrate!();
+        for (version, expected) in [
+            (
+                20260810120000,
+                "e582f8560b8a61df6f5d508eed1aa1247a67ea0b7c3f71e8cc8cf9fb36092973f9671ae0bcd8c41347ec390e19078b07",
+            ),
+            (
+                20260810150000,
+                "6cb309a3500c3cc3beea0a7f4e7b9c1cbbdbf8baab600e431a0f89a99a36e058044885e0b5e696f4260ca543d0501898",
+            ),
+        ] {
+            let migration = migrator
+                .iter()
+                .find(|migration| migration.version == version)
+                .unwrap_or_else(|| {
+                    panic!("Previously shipped migration {version} is missing")
+                });
+            let checksum: String = migration
+                .checksum
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect();
+            assert_eq!(checksum, expected, "Migration {version} has changed");
+        }
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        migrator.run(&pool).await.unwrap();
+        sqlx::query("UPDATE world_backup_settings SET enabled = 1, retention_per_world = 9 WHERE id = 0")
+            .execute(&pool).await.unwrap();
+        migrator.run(&pool).await.unwrap();
+        let settings: (i64, i64) = sqlx::query_as("SELECT enabled, retention_per_world FROM world_backup_settings WHERE id = 0")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(settings, (1, 9));
+    }
+
+    #[tokio::test]
+    async fn existing_profiles_default_to_blockera_client_disabled() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        sqlx::query(
+            r#"
+            INSERT INTO profiles (
+                path, install_stage, name, game_version, mod_loader, groups,
+                created, modified, override_extra_launch_args,
+                override_custom_env_vars
+            ) VALUES (
+                'existing', 'installed', 'Existing', '1.21.11', 'fabric',
+                jsonb('[]'), 1, 1, jsonb('null'), jsonb('null')
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let enabled: i64 = sqlx::query_scalar(
+            "SELECT blockera_client_enabled FROM profiles WHERE path = 'existing'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(enabled, 0);
+    }
+}

@@ -1,5 +1,9 @@
 import { invoke } from '@tauri-apps/api/core'
 
+export async function get_horizon_versions() {
+	return await invoke('plugin:metadata|metadata_get_horizon_versions')
+}
+
 /// Gets the game versions from daedalus
 // Returns a VersionManifest
 export async function get_game_versions() {

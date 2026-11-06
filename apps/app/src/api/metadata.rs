@@ -7,8 +7,15 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![
             metadata_get_game_versions,
             metadata_get_loader_versions,
+            metadata_get_horizon_versions,
         ])
         .build()
+}
+
+#[tauri::command]
+pub async fn metadata_get_horizon_versions()
+-> Result<Vec<theseus::horizon::HorizonVersion>> {
+    Ok(theseus::horizon::versions().await?)
 }
 
 /// Gets the game versions from daedalus

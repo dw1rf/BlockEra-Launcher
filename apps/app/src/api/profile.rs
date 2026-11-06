@@ -29,6 +29,11 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             profile_update_managed_modrinth_version,
             profile_repair_managed_modrinth,
             profile_run,
+            profile_horizon_run_offline,
+            profile_horizon_catalog,
+            profile_horizon_mods,
+            profile_horizon_mod_action,
+            profile_horizon_mod_logs,
             profile_kill,
             profile_edit,
             profile_edit_icon,
@@ -36,6 +41,39 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             profile_get_pack_export_candidates,
         ])
         .build()
+}
+
+#[tauri::command]
+pub async fn profile_horizon_run_offline(path: &str) -> Result<ProcessMetadata> {
+    Ok(theseus::horizon::launch_offline(path).await?)
+}
+
+#[tauri::command]
+pub async fn profile_horizon_catalog(path: &str) -> Result<serde_json::Value> {
+    Ok(theseus::horizon::mods::catalog(path).await?)
+}
+
+#[tauri::command]
+pub async fn profile_horizon_mods(path: &str) -> Result<serde_json::Value> {
+    Ok(theseus::horizon::mods::status(path).await?)
+}
+
+#[tauri::command]
+pub async fn profile_horizon_mod_action(
+    path: &str,
+    action: &str,
+    id: Option<&str>,
+    trust_native_code: bool,
+) -> Result<serde_json::Value> {
+    Ok(
+        theseus::horizon::mods::action(path, action, id, trust_native_code)
+            .await?,
+    )
+}
+
+#[tauri::command]
+pub async fn profile_horizon_mod_logs(path: &str) -> Result<String> {
+    Ok(theseus::horizon::mods::logs(path).await?)
 }
 
 // Remove a profile

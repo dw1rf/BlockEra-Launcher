@@ -44,6 +44,15 @@
 					<PlayIcon /> {{ loading ? 'Запуск…' : 'Играть' }}
 				</button>
 				<button
+					v-if="instance.loader === 'horizon' && instance.install_stage === 'installed' && !playing"
+					class="instance-offline"
+					:disabled="loading"
+					title="Запустить без Microsoft-сессии с выбранным именем игрока"
+					@click="startInstance('InstancePageOffline', true)"
+				>
+					Играть офлайн
+				</button>
+				<button
 					class="instance-icon-action"
 					aria-label="Настройки сборки"
 					@click="settingsModal.show()"
@@ -74,7 +83,10 @@
 			</div>
 			<div>
 				<GameIcon /><span
-					><small>JAVA</small><strong>{{ optimalJavaLabel }}</strong></span
+					><small>{{ instance.loader === 'horizon' ? 'КЛИЕНТ' : 'JAVA' }}</small
+					><strong>{{
+						instance.loader === 'horizon' ? 'Horizon · Rust' : optimalJavaLabel
+					}}</strong></span
 				>
 			</div>
 			<div>
@@ -235,6 +247,7 @@ import {
 	get_optimal_jre_key,
 	kill,
 	run,
+	run_horizon_offline,
 } from '@/helpers/profile'
 import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
@@ -358,10 +371,11 @@ const tabs = computed(() => [
 
 const options = ref(null)
 
-const startInstance = async (context) => {
+const startInstance = async (context, offlineMode = false) => {
 	loading.value = true
 	try {
-		await run(route.params.id)
+		if (offlineMode) await run_horizon_offline(route.params.id)
+		else await run(route.params.id)
 		playing.value = true
 	} catch (err) {
 		handleSevereError(err, { profilePath: route.params.id })
@@ -444,14 +458,23 @@ async function createManualBackup() {
 	}
 }
 
-const quickFolders = [
+const quickFolders = computed(() => [
 	{ id: 'root', label: 'Корень сборки', description: 'Все файлы профиля' },
-	{ id: 'mods', label: 'Моды', description: 'Установленные модификации' },
+	...(instance.value?.loader === 'horizon'
+		? [
+				{
+					id: 'horizon_native_mods',
+					label: 'Нативные моды',
+					description: 'Плагины Horizon на Rust',
+				},
+				{ id: 'horizon_mods', label: 'Контентные моды', description: 'Блоки, предметы и данные' },
+			]
+		: [{ id: 'mods', label: 'Моды', description: 'Установленные модификации' }]),
 	{ id: 'resource_packs', label: 'Текстуры', description: 'Наборы ресурсов' },
 	{ id: 'shader_packs', label: 'Шейдеры', description: 'Графические наборы' },
 	{ id: 'saves', label: 'Миры', description: 'Сохранения Minecraft' },
 	{ id: 'backups', label: 'Резервные копии', description: 'Архивы миров' },
-]
+])
 
 const healthState = computed(() => {
 	if (offline.value) return { label: 'Офлайн-режим', tone: 'warning' }
@@ -959,6 +982,7 @@ Button {
 	gap: 9px;
 }
 .instance-play,
+.instance-offline,
 .instance-icon-action {
 	width: auto !important;
 	height: 46px;
@@ -974,6 +998,15 @@ Button {
 		transform 170ms ease,
 		filter 170ms ease,
 		border-color 170ms ease;
+}
+.instance-offline {
+	padding: 0 16px;
+	background: rgba(255, 255, 255, 0.07);
+	font-weight: 700;
+}
+.instance-offline:disabled {
+	opacity: 0.58;
+	cursor: wait;
 }
 .instance-play {
 	min-width: 154px;

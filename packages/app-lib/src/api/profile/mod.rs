@@ -634,8 +634,11 @@ pub async fn run(
     path: &str,
     quick_play_type: QuickPlayType,
 ) -> crate::Result<ProcessMetadata> {
+    if let Some(profile) = get(path).await?
+        && profile.loader == crate::data::ModLoader::Horizon {
+        return crate::horizon::launch(&profile, quick_play_type).await;
+    }
     let state = State::get().await?;
-
     let default_account = Credentials::get_default_credential(&state.pool)
         .await?
         .ok_or_else(|| crate::ErrorKind::NoCredentialsError.as_error())?;
@@ -660,6 +663,10 @@ async fn run_credentials(
             "Tried to run a nonexistent or unloaded profile at path {path}!"
         ))
     })?;
+
+    if profile.loader == crate::data::ModLoader::Horizon {
+        return crate::horizon::launch(&profile, quick_play_type).await;
+    }
 
     let pre_launch_hooks = profile
         .hooks
@@ -831,6 +838,11 @@ pub async fn create_mrpack_json(
     version_id: String,
     description: Option<String>,
 ) -> crate::Result<PackFormat> {
+    if profile.loader == crate::data::ModLoader::Horizon {
+        return Err(crate::ErrorKind::InputError(
+            "Horizon нельзя экспортировать как Java-модпак .mrpack.".to_string(),
+        ).into());
+    }
     // Add loader version to dependencies
     let mut dependencies = HashMap::new();
     match (profile.loader, profile.loader_version.clone()) {

@@ -100,6 +100,7 @@ fn main() {
                     .commands(&[
                         "metadata_get_game_versions",
                         "metadata_get_loader_versions",
+                        "metadata_get_horizon_versions",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
@@ -188,6 +189,11 @@ fn main() {
                         "profile_update_managed_modrinth_version",
                         "profile_repair_managed_modrinth",
                         "profile_run",
+                        "profile_horizon_run_offline",
+                        "profile_horizon_catalog",
+                        "profile_horizon_mods",
+                        "profile_horizon_mod_action",
+                        "profile_horizon_mod_logs",
                         "profile_kill",
                         "profile_edit",
                         "profile_edit_icon",

@@ -68,7 +68,7 @@
 							<span>02</span>
 							<div>
 								<h3>Версия и загрузчик</h3>
-								<p>Можно изменить позже в настройках сборки.</p>
+								<p>Выберите Java Edition или нативный клиент Horizon на Rust.</p>
 							</div>
 						</div>
 						<div class="loader-grid">
@@ -81,8 +81,37 @@
 								<strong>{{ formatLoader(loaderName) }}</strong>
 								<small>{{ loaderDescription(loaderName) }}</small>
 							</button>
+							<button :class="{ active: loader === 'horizon' }" @click="loader = 'horizon'">
+								<strong>Horizon</strong>
+								<small>Нативный клиент · Rust</small>
+							</button>
 						</div>
-						<div class="version-row">
+						<div v-if="loader === 'horizon'" class="horizon-runtime">
+							<p>
+								Установленный Horizon запускается с локальным аккаунтом и без интернета. Для первой
+								загрузки ресурсов нужен Microsoft-аккаунт с Minecraft: Java Edition. Java
+								используется при подготовке ресурсов. Моды Fabric, Forge, NeoForge, Quilt и Blockera
+								Client не поддерживаются.
+							</p>
+							<label class="field-control">
+								<span>Сборка Horizon{{ game_version ? ` · Minecraft ${game_version}` : '' }}</span>
+								<multiselect
+									v-model="horizon_version"
+									:options="horizon_versions"
+									label="name"
+									track-by="id"
+									:loading="horizon_loading"
+									:show-labels="false"
+									:allow-empty="false"
+									placeholder="Выберите сборку Horizon"
+								/>
+							</label>
+							<p v-if="horizon_error" role="alert" class="warning">{{ horizon_error }}</p>
+							<Button v-if="horizon_error" :disabled="horizon_loading" @click="loadHorizonVersions">
+								<UpdatedIcon /> Повторить загрузку
+							</Button>
+						</div>
+						<div v-else class="version-row">
 							<label class="field-control version-select">
 								<span>Версия Minecraft</span>
 								<multiselect
@@ -100,7 +129,7 @@
 								label="Показывать снапшоты"
 							/>
 						</div>
-						<div v-if="loader !== 'vanilla'" class="loader-version-row">
+						<div v-if="loader !== 'vanilla' && loader !== 'horizon'" class="loader-version-row">
 							<span>Версия загрузчика</span>
 							<div class="mini-tabs">
 								<button
@@ -348,7 +377,7 @@ import {
 	import_instance,
 } from '@/helpers/import.js'
 import { instanceBackgroundFor } from '@/helpers/instance-backgrounds'
-import { get_game_versions, get_loader_versions } from '@/helpers/metadata'
+import { get_game_versions, get_horizon_versions, get_loader_versions } from '@/helpers/metadata'
 import { create_profile_and_install_from_file } from '@/helpers/pack.js'
 import { create } from '@/helpers/profile'
 import { get_loaders } from '@/helpers/tags'
@@ -358,6 +387,32 @@ const { handleError } = injectNotificationManager()
 const profile_name = ref('')
 const game_version = ref('')
 const loader = ref('vanilla')
+const horizon_versions = ref([])
+const horizon_version = ref(null)
+const horizon_loading = ref(false)
+const horizon_error = ref('')
+
+async function loadHorizonVersions() {
+	if (horizon_loading.value) return
+	horizon_loading.value = true
+	horizon_error.value = ''
+	try {
+		horizon_versions.value = await get_horizon_versions()
+		horizon_version.value = horizon_versions.value[0] ?? null
+		if (!horizon_version.value)
+			horizon_error.value = 'Нет доступных сборок Horizon для этой платформы.'
+	} catch (error) {
+		horizon_error.value =
+			'Не удалось получить сборки Horizon. Проверьте соединение и повторите загрузку.'
+		handleError(error)
+	} finally {
+		horizon_loading.value = false
+	}
+}
+
+watch(horizon_version, (version) => {
+	if (loader.value === 'horizon') game_version.value = version?.game_version ?? ''
+})
 const loader_version = ref('stable')
 const specified_loader_version = ref('')
 const creating = ref(false)
@@ -370,6 +425,14 @@ const creationBackdrop = computed(() =>
 		profile_name.value.trim() || `${loader.value}-${game_version.value || 'latest'}`,
 	),
 )
+watch(loader, async (value, previous) => {
+	if (value === 'horizon') {
+		game_version.value = horizon_version.value?.game_version ?? ''
+		if (!horizon_versions.value.length) await loadHorizonVersions()
+	} else if (previous === 'horizon') {
+		game_version.value = ''
+	}
+})
 
 function formatLoader(value) {
 	const labels = {
@@ -378,6 +441,7 @@ function formatLoader(value) {
 		forge: 'Forge',
 		neoforge: 'NeoForge',
 		quilt: 'Quilt',
+		horizon: 'Horizon (Rust)',
 	}
 	return labels[value] ?? value
 }
@@ -476,7 +540,7 @@ const [
 loaders.value.unshift('vanilla')
 
 const game_versions = computed(() => {
-	return all_game_versions.value.versions
+	return (all_game_versions?.value?.versions ?? [])
 		.filter((item) => {
 			let defaultVal = item.type === 'release' || showSnapshots.value
 			if (loader.value === 'fabric') {
@@ -498,6 +562,9 @@ const modal = ref(null)
 const curseforgeProfileModal = ref(null)
 
 const check_valid = computed(() => {
+	if (loader.value === 'horizon') {
+		return Boolean(profile_name.value.trim() && horizon_version.value && !horizon_loading.value)
+	}
 	return (
 		profile_name.value.trim() &&
 		game_version.value &&
@@ -509,7 +576,11 @@ const create_instance = async () => {
 	if (creating.value || !check_valid.value) return
 	creating.value = true
 	const loader_version_value =
-		loader_version.value === 'other' ? specified_loader_version.value : loader_version.value
+		loader.value === 'horizon'
+			? horizon_version.value.id
+			: loader_version.value === 'other'
+				? specified_loader_version.value
+				: loader_version.value
 	const loaderVersion = loader.value === 'vanilla' ? null : (loader_version_value ?? 'stable')
 
 	try {
@@ -1125,8 +1196,21 @@ async function retryFailedImports() {
 
 .loader-grid {
 	display: grid;
-	grid-template-columns: repeat(5, minmax(0, 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 0.48rem;
+}
+
+.horizon-runtime {
+	display: grid;
+	gap: 0.75rem;
+	margin-top: 0.85rem;
+}
+
+.horizon-runtime p {
+	margin: 0;
+	color: var(--color-secondary);
+	font-size: 0.82rem;
+	line-height: 1.5;
 }
 
 .loader-grid button {

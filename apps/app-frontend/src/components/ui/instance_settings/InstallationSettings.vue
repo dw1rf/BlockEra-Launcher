@@ -44,7 +44,6 @@ import type {
 	ManifestLoaderVersion,
 } from '../../../helpers/types'
 
-
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 
@@ -655,7 +654,11 @@ const messages = defineMessages({
 				</div>
 			</template>
 		</div>
-		<template v-if="!instance.linked_data || !instance.linked_data.locked">
+		<p v-if="instance.loader === 'horizon'" class="text-secondary">
+			Horizon — нативный клиент на Rust. Для выбора другой сборки создайте новый профиль Horizon.
+			Кнопка восстановления повторно установит клиент и подготовит ресурсы, сохранив ваши миры.
+		</p>
+		<template v-else-if="!instance.linked_data || !instance.linked_data.locked">
 			<h2 class="m-0 mt-4 text-lg font-extrabold text-contrast block">
 				{{ formatMessage(messages.platform) }}
 			</h2>

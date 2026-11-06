@@ -86,6 +86,7 @@ sqlx = { workspace = true, features = [
 sysinfo = { workspace = true, features = ["disk", "system"] }
 tauri = { workspace = true, features = ["unstable"], optional = true }
 tempfile = { workspace = true }
+tar = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = [
   "fs",

@@ -13,6 +13,7 @@ pub mod util; // This code is modified by AstralRinth
 mod api;
 mod error;
 mod event;
+pub mod horizon;
 mod launcher;
 mod logger;
 mod state;

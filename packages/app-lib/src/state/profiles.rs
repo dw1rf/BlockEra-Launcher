@@ -155,6 +155,7 @@ pub struct LinkedData {
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ModLoader {
+    Horizon,
     Vanilla,
     Forge,
     Fabric,
@@ -165,6 +166,7 @@ pub enum ModLoader {
 impl ModLoader {
     pub fn as_str(&self) -> &'static str {
         match *self {
+            Self::Horizon => "horizon",
             Self::Vanilla => "vanilla",
             Self::Forge => "forge",
             Self::Fabric => "fabric",
@@ -175,6 +177,7 @@ impl ModLoader {
 
     pub fn as_meta_str(&self) -> &'static str {
         match *self {
+            Self::Horizon => "horizon",
             Self::Vanilla => "vanilla",
             Self::Forge => "forge",
             Self::Fabric => "fabric",
@@ -185,6 +188,7 @@ impl ModLoader {
 
     pub fn from_string(val: &str) -> Self {
         match val {
+            "horizon" => Self::Horizon,
             "vanilla" => Self::Vanilla,
             "forge" => Self::Forge,
             "fabric" => Self::Fabric,
@@ -1177,6 +1181,14 @@ impl Profile {
             }
         };
 
+        if project_type == ProjectType::Mod
+            && crate::api::profile::get(profile_path).await?
+                .is_some_and(|profile| profile.loader == ModLoader::Horizon)
+        {
+            return Err(crate::ErrorKind::InputError(
+                "Java-моды несовместимы с Horizon. Используйте нативные моды Horizon.".to_string(),
+            ).into());
+        }
         let path = crate::api::profile::get_full_path(profile_path).await?;
         let project_path =
             format!("{}/{}", project_type.get_folder(), file_name);

@@ -4,6 +4,7 @@ use std::process::{Command, exit};
 use std::{env, fs};
 
 fn main() {
+    println!("cargo::rerun-if-changed=migrations");
     println!("cargo::rerun-if-changed=.env");
     println!("cargo::rerun-if-changed=java/gradle");
     println!("cargo::rerun-if-changed=java/src");

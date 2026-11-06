@@ -178,6 +178,10 @@ export async function run(path) {
 	return await invoke('plugin:profile|profile_run', { path })
 }
 
+export async function run_horizon_offline(path) {
+	return await invoke('plugin:profile|profile_horizon_run_offline', { path })
+}
+
 export async function kill(path) {
 	return await invoke('plugin:profile|profile_kill', { path })
 }

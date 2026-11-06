@@ -1,5 +1,6 @@
 <template>
-	<div class="blockera-content-manager">
+	<HorizonContent v-if="instance.loader === 'horizon'" :instance="instance" :playing="playing" />
+	<div v-else class="blockera-content-manager">
 		<div v-if="loadingProjects" class="blockera-empty-state blockera-loading-state">
 			<LoadingIndicator />
 			<h2>Загружаем контент сборки</h2>
@@ -342,6 +343,7 @@ import { TextInputIcon } from '@/assets/icons'
 import AddContentButton from '@/components/ui/AddContentButton.vue'
 import type ContextMenu from '@/components/ui/ContextMenu.vue'
 import ExportModal from '@/components/ui/ExportModal.vue'
+import HorizonContent from '@/components/ui/HorizonContent.vue'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
 import ModpackVersionModal from '@/components/ui/ModpackVersionModal.vue'
 import { trackEvent } from '@/helpers/analytics'
@@ -555,6 +557,7 @@ function getProjectsErrorMessage(error: unknown) {
 let activeProjectsRequest: { active: boolean } | null = null
 
 async function loadProjects(cacheBehaviour?: CacheBehaviour) {
+	if (props.instance.loader === 'horizon') return
 	if (activeProjectsRequest) activeProjectsRequest.active = false
 	const request = { active: true }
 	activeProjectsRequest = request
@@ -922,6 +925,7 @@ let unlisten: (() => void) | undefined
 let unlistenProfiles: (() => void) | undefined
 
 async function registerProjectListeners() {
+	if (props.instance.loader === 'horizon') return
 	unlisten = await getCurrentWebview().onDragDropEvent(async (event) => {
 		if (event.payload.type !== 'drop') return
 

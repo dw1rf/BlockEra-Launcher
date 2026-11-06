@@ -46,7 +46,7 @@ type LinkedData = {
 	locked: boolean
 }
 
-type InstanceLoader = 'vanilla' | 'forge' | 'fabric' | 'quilt' | 'neoforge'
+type InstanceLoader = 'vanilla' | 'forge' | 'fabric' | 'quilt' | 'neoforge' | 'horizon'
 
 type ContentFile = {
 	hash: string
