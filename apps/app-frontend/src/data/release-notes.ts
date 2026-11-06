@@ -8,6 +8,13 @@ export type ReleaseNote = {
 
 export const releaseNotes: ReleaseNote[] = [
 	{
+		version: '0.10.2739',
+		date: '6 ноября 2026',
+		highlights: [],
+		fixes: ['Восстановлено открытие окна «Новая сборка» после добавления Horizon.'],
+		improvements: ['Перед сборкой выполняется проверка инициализации окна и его команды открытия.'],
+	},
+	{
 		version: '0.10.2738',
 		date: '6 ноября 2026',
 		highlights: [

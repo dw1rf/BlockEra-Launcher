@@ -364,7 +364,7 @@ import {
 import { Button, Checkbox, Chips, injectNotificationManager } from '@modrinth/ui'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { open } from '@tauri-apps/plugin-dialog'
-import { computed, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, onUnmounted, ref, shallowRef, watch } from 'vue'
 import Multiselect from 'vue-multiselect'
 
 import CurseForgeProfileImportModal from '@/components/ui/CurseForgeProfileImportModal.vue'
