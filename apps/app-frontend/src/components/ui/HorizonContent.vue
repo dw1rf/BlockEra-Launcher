@@ -1,18 +1,27 @@
 <script setup lang="ts">
-import { DownloadIcon, SearchIcon, UpdatedIcon, XIcon } from '@modrinth/assets'
+import { DownloadIcon, PackageIcon, SearchIcon, UpdatedIcon, XIcon } from '@modrinth/assets'
+import { ProjectPageDescription } from '@modrinth/ui'
 import { invoke } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
+import russianDetails from '@/helpers/horizon-details-ru.json'
+import russianSummaries from '@/helpers/horizon-mods-ru.json'
 import type { GameInstance } from '@/helpers/types'
 
 const props = defineProps<{ instance: GameInstance; playing: boolean }>()
+const { locale, t } = useI18n()
 type Mod = {
 	id: string
 	name: string
 	summary?: string
 	authors?: string[]
 	source: string
+	icon?: string | null
+	description?: string | null
+	license?: string | null
 	kind: string
 	version: string
 	enabled?: boolean
@@ -33,6 +42,35 @@ const state = ref<State>({
 	busy: false,
 })
 const projects = ref<Mod[]>([])
+const failedIcons = ref(new Set<string>())
+const catalogById = computed(() => new Map(projects.value.map((mod) => [mod.id, mod])))
+const detailsModal = useTemplateRef('detailsModal')
+const detailTarget = ref<Mod | null>(null)
+const showOriginal = ref(false)
+const details = computed(() => {
+	const mod = detailTarget.value
+	return mod ? { ...catalogById.value.get(mod.id), ...mod } : null
+})
+const russian = computed(() => locale.value.startsWith('ru'))
+const russianDetail = computed(
+	() =>
+		details.value &&
+		((russianDetails as Record<string, string>)[details.value.id] ||
+			(russianSummaries as Record<string, string>)[details.value.id]),
+)
+const detailText = computed(() =>
+	russian.value && !showOriginal.value && russianDetail.value
+		? russianDetail.value
+		: details.value?.description || details.value?.summary,
+)
+const isSummaryTranslation = computed(
+	() =>
+		!!details.value &&
+		russian.value &&
+		!showOriginal.value &&
+		!!russianDetail.value &&
+		!(details.value.id in russianDetails),
+)
 const search = ref('')
 const filter = ref('all')
 const tab = ref('catalog')
@@ -43,12 +81,14 @@ const log = ref('')
 const showLog = ref(false)
 const confirmBuild = ref(false)
 const trusted = ref(false)
+const retryMismatch = ref(false)
+const versionMismatch = ref<{ base: string; mods: { id: string; revision: string }[] } | null>(null)
 const removeTarget = ref<Mod | null>(null)
 const filtered = computed(() =>
 	(tab.value === 'installed' ? state.value.installed : projects.value).filter(
 		(mod) =>
 			(filter.value === 'all' || mod.kind === filter.value) &&
-			`${mod.name} ${mod.summary ?? ''} ${mod.authors?.join(' ') ?? ''}`
+			`${mod.name} ${mod.summary ?? ''} ${summaryFor(mod) ?? ''} ${mod.authors?.join(' ') ?? ''}`
 				.toLowerCase()
 				.includes(search.value.toLowerCase()),
 	),
@@ -56,13 +96,44 @@ const filtered = computed(() =>
 const nativeMods = computed(() =>
 	state.value.installed.filter((mod) => mod.kind === 'native-mod' && mod.enabled),
 )
+const mismatchedMods = computed(
+	() =>
+		versionMismatch.value?.mods.filter(({ id }) => nativeMods.value.some((mod) => mod.id === id)) ??
+		[],
+)
 const disabled = computed(() => Boolean(busy.value || state.value.busy || props.playing))
 let timer: ReturnType<typeof setInterval> | undefined
 let stateTimer: ReturnType<typeof setInterval> | undefined
 
 function errorMessage(err: unknown) {
-	if (err && typeof err === 'object' && 'message' in err) return String(err.message)
-	return String(err)
+	const message =
+		err && typeof err === 'object' && 'message' in err ? String(err.message) : String(err)
+	return message.replace(/^Error launching Minecraft:\s*/, '')
+}
+
+function summaryFor(mod: Mod) {
+	return (
+		(russian.value ? (russianSummaries as Record<string, string>)[mod.id] : undefined) ||
+		mod.summary ||
+		catalogById.value.get(mod.id)?.summary
+	)
+}
+
+function readVersionMismatch(message: string) {
+	const match = message.match(
+		/Made for other Horizon versions:\s*([^;]+);\s*the build uses\s+([a-f0-9]+)/i,
+	)
+	if (!match) return null
+	const mods = [...match[1].matchAll(/([a-z0-9_]+)\s*(?:→|->)\s*([a-f0-9]+)/gi)].map(
+		([, id, revision]) => ({ id, revision }),
+	)
+	return mods.length ? { base: match[2], mods } : null
+}
+
+function openInstalled() {
+	tab.value = 'installed'
+	filter.value = 'all'
+	search.value = ''
 }
 
 async function refresh() {
@@ -76,6 +147,7 @@ async function refresh() {
 			invoke<State>('plugin:profile|profile_horizon_mods', { path: props.instance.path }),
 		])
 		projects.value = catalog.projects
+		failedIcons.value.clear()
 		state.value = installed
 	} catch (err) {
 		error.value = errorMessage(err)
@@ -97,6 +169,8 @@ async function readLog() {
 async function act(action: string, mod?: Mod) {
 	if (disabled.value) return
 	if (action === 'build' && !trusted.value) return
+	const allowVersionMismatch = action === 'build' && retryMismatch.value
+	if (action === 'build') versionMismatch.value = null
 	busy.value =
 		action === 'build' ? 'Собираем клиент с модами…' : `${mod?.name ?? 'Моды'}: выполняем…`
 	error.value = ''
@@ -111,13 +185,22 @@ async function act(action: string, mod?: Mod) {
 			action,
 			id: mod?.id ?? null,
 			trustNativeCode: action === 'build' && trusted.value,
+			allowVersionMismatch,
 		})
 	} catch (err) {
-		error.value = errorMessage(err)
+		const message = errorMessage(err)
+		if (action === 'build') versionMismatch.value = readVersionMismatch(message)
+		error.value =
+			versionMismatch.value && action === 'build'
+				? ''
+				: action === 'build'
+					? t('blockera.horizon.build-failed')
+					: message
 	} finally {
 		if (timer) clearInterval(timer)
 		busy.value = ''
 		trusted.value = false
+		retryMismatch.value = false
 		await readLog()
 		try {
 			state.value = await invoke<State>('plugin:profile|profile_horizon_mods', {
@@ -132,11 +215,22 @@ async function act(action: string, mod?: Mod) {
 function installed(id: string) {
 	return state.value.installed.find((mod) => mod.id === id)
 }
+function iconFor(mod: Mod) {
+	const icon = catalogById.value.get(mod.id)?.icon
+	return icon && !failedIcons.value.has(icon) ? icon : undefined
+}
+async function showDetails(mod: Mod, event: MouseEvent) {
+	showOriginal.value = false
+	detailTarget.value = mod
+	await nextTick()
+	detailsModal.value?.show(event)
+}
 function openSource(url: string) {
 	if (url.startsWith('https://')) void openUrl(url)
 }
-function openBuildConfirm() {
+function openBuildConfirm(retry = false) {
 	trusted.value = false
+	retryMismatch.value = retry
 	confirmBuild.value = true
 }
 function toggleLog() {
@@ -192,16 +286,33 @@ onUnmounted(() => {
 			<button
 				class="primary"
 				:disabled="disabled || !state.native_enabled"
-				@click="openBuildConfirm"
+				@click="openBuildConfirm()"
 			>
 				Собрать клиент
 			</button>
 		</div>
 		<p v-if="playing" class="note">Остановите игру, чтобы изменить моды или собрать клиент.</p>
 		<p v-if="busy" class="note" role="status">
-			{{ busy }} Прогресс — в журнале ниже. Первый нативный билд может занять 20–30 минут.
+			{{ busy }} Прогресс — в журнале над вкладками. Первый нативный билд может занять 20–30 минут.
 		</p>
 		<p v-if="error" class="error" role="alert">{{ error }}</p>
+		<div v-if="versionMismatch && mismatchedMods.length" class="compatibility-note" role="alert">
+			<strong>{{ t('blockera.horizon.version-mismatch') }}</strong>
+			<p>{{ t('blockera.horizon.version-mismatch-body', { revision: versionMismatch.base }) }}</p>
+			<ul>
+				<li v-for="mod in mismatchedMods" :key="mod.id">
+					{{ installed(mod.id)?.name || mod.id }} · <code>{{ mod.revision }}</code>
+				</li>
+			</ul>
+			<div class="mod-actions">
+				<button type="button" @click="openInstalled">
+					{{ t('blockera.horizon.open-installed') }}
+				</button>
+				<button type="button" :disabled="disabled" @click="openBuildConfirm(true)">
+					{{ t('blockera.horizon.try-build') }}
+				</button>
+			</div>
+		</div>
 		<div class="toolbar">
 			<nav aria-label="Моды Horizon">
 				<button :class="{ active: tab === 'catalog' }" @click="tab = 'catalog'">
@@ -232,11 +343,28 @@ onUnmounted(() => {
 		</p>
 		<div class="mod-grid">
 			<article v-for="mod in filtered" :key="mod.id" class="mod-card">
-				<div class="mod-title">
-					<h3>{{ mod.name }}</h3>
-					<span>{{ mod.kind === 'native-mod' ? 'Rust · нативный' : 'Контентный' }}</span>
-				</div>
-				<p v-if="mod.summary">{{ mod.summary }}</p>
+				<button type="button" class="mod-title" @click="showDetails(mod, $event)">
+					<div class="mod-icon" aria-hidden="true">
+						<img
+							v-if="iconFor(mod)"
+							:src="iconFor(mod)"
+							alt=""
+							width="48"
+							height="48"
+							loading="lazy"
+							decoding="async"
+							referrerpolicy="no-referrer"
+							@error="failedIcons.add(($event.currentTarget as HTMLImageElement).src)"
+						/>
+						<PackageIcon v-else />
+					</div>
+					<div>
+						<h3>{{ mod.name }}</h3>
+						<span v-if="mod.kind === 'mod'">Контентный</span>
+					</div>
+					<span class="details-arrow" aria-hidden="true">↗</span>
+				</button>
+				<p v-if="summaryFor(mod)">{{ summaryFor(mod) }}</p>
 				<small>{{ mod.authors?.join(', ') }} · {{ mod.version }}</small>
 				<div class="mod-actions">
 					<button @click="openSource(mod.source)">Исходный код</button>
@@ -269,12 +397,63 @@ onUnmounted(() => {
 				</div>
 			</article>
 		</div>
-		<div class="log-panel">
-			<button @click="toggleLog">
-				{{ showLog ? 'Скрыть журнал Horizon' : 'Показать журнал Horizon' }}
-			</button>
-			<pre v-if="showLog" aria-live="polite">{{ log }}</pre>
-		</div>
+		<ModalWrapper
+			ref="detailsModal"
+			:header="details?.name"
+			width="min(44rem, 90vw)"
+			:on-hide="() => (detailTarget = null)"
+		>
+			<div v-if="details" class="mod-details">
+				<div class="details-meta">
+					<img
+						v-if="iconFor(details)"
+						:src="iconFor(details)"
+						alt=""
+						width="56"
+						height="56"
+						referrerpolicy="no-referrer"
+						@error="failedIcons.add(($event.currentTarget as HTMLImageElement).src)"
+					/>
+					<div>
+						<strong>{{ details.authors?.join(', ') || 'Horizon' }}</strong>
+						<p>
+							{{ details.version
+							}}<template v-if="details.license"> · {{ details.license }}</template>
+						</p>
+					</div>
+					<button v-if="details.source" class="details-source" @click="openSource(details.source)">
+						Исходный код
+					</button>
+				</div>
+				<div class="details-heading">
+					<h3>{{ $t('blockera.horizon.what-it-adds') }}</h3>
+					<button
+						v-if="russian && russianDetail && (details.description || details.summary)"
+						type="button"
+						@click="showOriginal = !showOriginal"
+					>
+						{{
+							t(
+								showOriginal
+									? 'blockera.horizon.russian-description'
+									: 'blockera.horizon.original-description',
+							)
+						}}
+					</button>
+				</div>
+				<small v-if="isSummaryTranslation">{{ t('blockera.horizon.short-translation') }}</small>
+				<ProjectPageDescription v-if="detailText" :description="detailText" />
+				<p v-else>{{ $t('blockera.horizon.no-description') }}</p>
+			</div>
+		</ModalWrapper>
+		<Teleport defer to="#horizon-log-slot">
+			<div class="log-panel">
+				<button @click="toggleLog">
+					{{ showLog ? 'Скрыть журнал Horizon' : 'Показать журнал Horizon' }}
+				</button>
+				<pre v-if="showLog" aria-live="polite">{{ log }}</pre>
+			</div>
+		</Teleport>
 		<div
 			v-if="confirmBuild"
 			class="confirm-panel"
@@ -283,6 +462,7 @@ onUnmounted(() => {
 			aria-labelledby="native-confirm-title"
 		>
 			<h3 id="native-confirm-title">Сборка клиента с нативными модами</h3>
+			<p v-if="retryMismatch" class="compatibility-note">{{ t('blockera.horizon.retry-note') }}</p>
 			<p>
 				Нативные моды — Rust-код с доступом к вашему компьютеру. Проверьте их исходники. Horizon
 				загрузит отдельный Rust и инструменты сборки; первый билд занимает 20–30 минут и несколько
@@ -331,8 +511,7 @@ onUnmounted(() => {
 .horizon-heading,
 .native-panel,
 .toolbar,
-.mod-actions,
-.mod-title {
+.mod-actions {
 	display: flex;
 	align-items: center;
 	gap: 0.65rem;
@@ -444,6 +623,82 @@ nav {
 .mod-card p {
 	flex: 1;
 }
+.mod-title {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	overflow-wrap: anywhere;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.mod-title:hover h3,
+.mod-title:focus-visible h3 {
+	color: #d9b7ff;
+}
+.details-arrow {
+	margin-left: auto;
+}
+.mod-details {
+	display: grid;
+	gap: 1rem;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.details-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+}
+.details-meta img {
+	object-fit: contain;
+	border-radius: 0.65rem;
+}
+.details-source {
+	margin-left: auto;
+}
+.details-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.65rem;
+}
+.compatibility-note {
+	display: grid;
+	gap: 0.5rem;
+	padding: 0.85rem;
+	border: 1px solid #d9a45d66;
+	border-radius: 0.75rem;
+	background: #35271b;
+	color: #f8dfbe;
+}
+.compatibility-note ul {
+	margin: 0;
+	padding-left: 1.3rem;
+}
+.mod-icon {
+	display: grid;
+	place-items: center;
+	flex: 0 0 48px;
+	width: 48px;
+	height: 48px;
+	border-radius: 0.65rem;
+	overflow: hidden;
+	background: #c289ff12;
+	color: #cba3f7;
+}
+.mod-icon img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+.mod-icon svg {
+	width: 24px;
+	height: 24px;
+}
 .mod-title span {
 	color: #cba3f7;
 	font-size: 0.65rem;
@@ -465,7 +720,11 @@ nav {
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
+.log-panel {
+	padding: 0.75rem 0;
+}
 .log-panel pre {
+	margin: 0.6rem 0 0;
 	max-height: 20rem;
 	overflow: auto;
 	background: #070b13;

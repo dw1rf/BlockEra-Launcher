@@ -122,11 +122,13 @@ export async function add_and_equip_custom_skin(
 	textureBlob: Uint8Array,
 	variant: SkinModel,
 	capeOverride?: Cape,
+	expectedAccount?: string,
 ): Promise<void> {
 	await invoke('plugin:minecraft-skins|add_and_equip_custom_skin', {
 		textureBlob,
 		variant,
 		capeOverride,
+		expectedAccount,
 	})
 }
 

@@ -1378,5 +1378,206 @@
   },
   "blockera.ui.09601a94e3c3": {
     "message": "Done extracting java"
+  },
+  "blockera.horizon.what-it-adds": {
+    "message": "What this mod adds"
+  },
+  "blockera.horizon.no-description": {
+    "message": "The author has not added a description yet."
+  },
+  "blockera.skin-studio.title": {
+    "message": "Skin editor"
+  },
+  "blockera.skin-studio.wardrobe": {
+    "message": "Wardrobe"
+  },
+  "blockera.skin-studio.import": {
+    "message": "Open PNG"
+  },
+  "blockera.skin-studio.export": {
+    "message": "Download PNG"
+  },
+  "blockera.skin-studio.apply": {
+    "message": "Save and equip"
+  },
+  "blockera.skin-studio.saving": {
+    "message": "Saving…"
+  },
+  "blockera.skin-studio.tools": {
+    "message": "Tools"
+  },
+  "blockera.skin-studio.brush": {
+    "message": "Pencil"
+  },
+  "blockera.skin-studio.fill": {
+    "message": "Fill"
+  },
+  "blockera.skin-studio.erase": {
+    "message": "Eraser"
+  },
+  "blockera.skin-studio.sample": {
+    "message": "Eyedropper"
+  },
+  "blockera.skin-studio.rotate": {
+    "message": "Rotate"
+  },
+  "blockera.skin-studio.brush-size": {
+    "message": "Brush size"
+  },
+  "blockera.skin-studio.undo": {
+    "message": "Undo"
+  },
+  "blockera.skin-studio.redo": {
+    "message": "Redo"
+  },
+  "blockera.skin-studio.workspace": {
+    "message": "Skin workspace"
+  },
+  "blockera.skin-studio.split": {
+    "message": "3D + 2D"
+  },
+  "blockera.skin-studio.model": {
+    "message": "Model"
+  },
+  "blockera.skin-studio.texture": {
+    "message": "Texture"
+  },
+  "blockera.skin-studio.rotate-hint": {
+    "message": "Right drag to rotate, wheel to zoom"
+  },
+  "blockera.skin-studio.atlas-label": {
+    "message": "Skin texture. Use arrows to move and Enter to paint."
+  },
+  "blockera.skin-studio.model-view": {
+    "message": "Paintable 3D skin model"
+  },
+  "blockera.skin-studio.parameters": {
+    "message": "Skin settings"
+  },
+  "blockera.skin-studio.classic": {
+    "message": "Classic"
+  },
+  "blockera.skin-studio.slim": {
+    "message": "Slim arms"
+  },
+  "blockera.skin-studio.layer": {
+    "message": "Paint layer"
+  },
+  "blockera.skin-studio.base": {
+    "message": "Base"
+  },
+  "blockera.skin-studio.outer": {
+    "message": "Outer layer"
+  },
+  "blockera.skin-studio.show-outer": {
+    "message": "Show outer layer"
+  },
+  "blockera.skin-studio.grid": {
+    "message": "Pixel grid"
+  },
+  "blockera.skin-studio.templates": {
+    "message": "Templates"
+  },
+  "blockera.skin-studio.steve": {
+    "message": "Steve"
+  },
+  "blockera.skin-studio.blank": {
+    "message": "Blank"
+  },
+  "blockera.skin-studio.original": {
+    "message": "Original skin"
+  },
+  "blockera.skin-studio.standard": {
+    "message": "Default skins"
+  },
+  "blockera.skin-studio.choose": {
+    "message": "Choose a template…"
+  },
+  "blockera.skin-studio.sign-in": {
+    "message": "Sign in to equip the skin. You can still download the PNG."
+  },
+  "blockera.skin-studio.account-changed": {
+    "message": "The active account changed. Reopen the editor from the wardrobe for the intended account."
+  },
+  "blockera.skin-studio.png-size": {
+    "message": "Choose a 64 × 64 or 64 × 32 PNG under 2 MB."
+  },
+  "blockera.skin-studio.load-error": {
+    "message": "Could not load the skin. Try another template or PNG."
+  },
+  "blockera.skin-studio.save-error": {
+    "message": "Could not save the skin. You can download it as a PNG."
+  },
+  "blockera.skin-studio.discard": {
+    "message": "Leave the editor and discard unsaved changes?"
+  },
+  "blockera.skin-studio.loading": {
+    "message": "Loading the model…"
+  },
+  "blockera.skin-studio.preview-unavailable": {
+    "message": "The 3D model is unavailable. You can paint on the texture."
+  },
+  "blockera.skin-studio.saved": {
+    "message": "Skin saved and equipped."
+  },
+  "blockera.skin-studio.body-parts": {
+    "message": "Body parts"
+  },
+  "blockera.skin-studio.head": {
+    "message": "Head"
+  },
+  "blockera.skin-studio.torso": {
+    "message": "Torso"
+  },
+  "blockera.skin-studio.right-arm": {
+    "message": "Right arm"
+  },
+  "blockera.skin-studio.left-arm": {
+    "message": "Left arm"
+  },
+  "blockera.skin-studio.right-leg": {
+    "message": "Right leg"
+  },
+  "blockera.skin-studio.left-leg": {
+    "message": "Left leg"
+  },
+  "blockera.skin-studio.parts-hint": {
+    "message": "Click a part on the diagram to hide or show it."
+  },
+  "blockera.skin-studio.lock-part": {
+    "message": "Paint only on"
+  },
+  "blockera.skin-studio.all-parts": {
+    "message": "All visible parts"
+  },
+  "blockera.skin-studio.show-all-parts": {
+    "message": "Show all parts"
+  },
+  "blockera.horizon.version-mismatch": {
+    "message": "Mods target different Horizon versions"
+  },
+  "blockera.horizon.version-mismatch-body": {
+    "message": "This build selected revision {revision}. Disable the listed mods or try to build them together."
+  },
+  "blockera.horizon.open-installed": {
+    "message": "Open installed mods"
+  },
+  "blockera.horizon.try-build": {
+    "message": "Try building together"
+  },
+  "blockera.horizon.retry-note": {
+    "message": "Horizon will try the newest pinned revision. Compilation will determine whether the mods work together."
+  },
+  "blockera.horizon.build-failed": {
+    "message": "Could not build the Horizon client. See the log above the tabs for details."
+  },
+  "blockera.horizon.original-description": {
+    "message": "Original"
+  },
+  "blockera.horizon.russian-description": {
+    "message": "Russian"
+  },
+  "blockera.horizon.short-translation": {
+    "message": "Russian summary. Full details are available in the original."
   }
 }

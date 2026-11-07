@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
 const INDEX: &str = "https://horizon-rust.github.io/horizon-mods/index.json";
+const ICON_ROOT: &str = "https://horizon-rust.github.io/horizon-mods/icons/";
 const HELPER_VERSION: &str = "0.2.47";
 const MANAGER: &str = ".horizon-manager";
 static MUTATION: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -90,10 +91,19 @@ pub async fn catalog(path: &str) -> crate::Result<Value> {
             if revoked { return None; }
             Some(value!({ "id": project["id"], "name": project["name"], "summary": project["summary"],
                 "authors": project["authors"], "source": project["source"], "kind": project["kind"],
+                "icon": registry_icon(project),
+                "description": project["description"],
                 "version": version["version"], "size": version["file"]["size"], "signed": project.get("key").is_some(),
                 "license": project["license"], "categories": project["categories"] }))
         }).collect();
     Ok(value!({ "projects": projects, "generated": index["generated"] }))
+}
+
+fn registry_icon(project: &Value) -> Option<&str> {
+    let id = project["id"].as_str().filter(|id| valid_id(id))?;
+    let icon = project["icon"].as_str()?;
+    (icon.strip_prefix(ICON_ROOT)?.strip_suffix(".png")? == id)
+        .then_some(icon)
 }
 
 fn compatible(project: &Value, version: &Value, game: &str) -> bool {
@@ -455,6 +465,7 @@ pub async fn action(
     action: &str,
     id: Option<&str>,
     trust_native_code: bool,
+    allow_version_mismatch: bool,
 ) -> crate::Result<Value> {
     let _guard = MUTATION.lock().await;
     let profile = profile(path).await?;
@@ -507,6 +518,7 @@ pub async fn action(
         if action == "build" {
             tokio::fs::write(manager.join("native-dirty"), "").await.map_err(IOError::from)?;
             cmd.arg("native-build").arg("--instance").arg("horizon").arg("--version").arg(&base).arg("--trust-native-code");
+            if allow_version_mismatch { cmd.arg("--allow-version-mismatch"); }
             emit_loading(&bar, 10.0, Some("Компиляция нативных модов. Прогресс доступен в журнале Horizon"))?;
         } else {
             // Mark before an operation: a failed update must not silently run a stale native build.

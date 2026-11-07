@@ -337,6 +337,7 @@ pub async fn add_and_equip_custom_skin(
     texture_blob: Bytes,
     variant: MinecraftSkinVariant,
     cape_override: Option<Cape>,
+    expected_account: Option<uuid::Uuid>,
 ) -> crate::Result<()> {
     let (skin_width, skin_height) = png_util::dimensions(&texture_blob)?;
     if skin_width != 64 || ![32, 64].contains(&skin_height) {
@@ -349,6 +350,12 @@ pub async fn add_and_equip_custom_skin(
     let selected_credentials = Credentials::get_default_credential(&state.pool)
         .await?
         .ok_or(ErrorKind::NoCredentialsError)?;
+    if expected_account.is_some_and(|id| id != selected_credentials.offline_profile.id) {
+        return Err(ErrorKind::InputError(
+            "Аккаунт сменился. Откройте редактор для нужного аккаунта.".into(),
+        )
+        .into());
+    }
 
     if selected_credentials.account_type
         == AccountType::Pirate.as_lowercase_str()

@@ -89,6 +89,7 @@
 
 		<div class="instance-layout">
 			<main class="instance-content-card">
+				<div v-if="instance.loader === 'horizon'" id="horizon-log-slot" />
 				<nav class="instance-tabs" aria-label="Разделы сборки">
 					<router-link v-for="tab in tabs" :key="tab.href" :to="tab.href">{{
 						tab.label

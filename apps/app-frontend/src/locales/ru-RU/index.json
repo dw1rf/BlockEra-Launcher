@@ -1378,5 +1378,206 @@
   },
   "blockera.ui.09601a94e3c3": {
     "message": "Java распакована"
+  },
+  "blockera.horizon.what-it-adds": {
+    "message": "Что добавляет мод"
+  },
+  "blockera.horizon.no-description": {
+    "message": "Автор пока не добавил описание."
+  },
+  "blockera.skin-studio.title": {
+    "message": "Редактор скина"
+  },
+  "blockera.skin-studio.wardrobe": {
+    "message": "Гардероб"
+  },
+  "blockera.skin-studio.import": {
+    "message": "Открыть PNG"
+  },
+  "blockera.skin-studio.export": {
+    "message": "Скачать PNG"
+  },
+  "blockera.skin-studio.apply": {
+    "message": "Сохранить и применить"
+  },
+  "blockera.skin-studio.saving": {
+    "message": "Сохраняем…"
+  },
+  "blockera.skin-studio.tools": {
+    "message": "Инструменты"
+  },
+  "blockera.skin-studio.brush": {
+    "message": "Карандаш"
+  },
+  "blockera.skin-studio.fill": {
+    "message": "Заливка"
+  },
+  "blockera.skin-studio.erase": {
+    "message": "Ластик"
+  },
+  "blockera.skin-studio.sample": {
+    "message": "Пипетка"
+  },
+  "blockera.skin-studio.rotate": {
+    "message": "Поворот"
+  },
+  "blockera.skin-studio.brush-size": {
+    "message": "Размер кисти"
+  },
+  "blockera.skin-studio.undo": {
+    "message": "Отменить мазок"
+  },
+  "blockera.skin-studio.redo": {
+    "message": "Вернуть мазок"
+  },
+  "blockera.skin-studio.workspace": {
+    "message": "Рабочая область скина"
+  },
+  "blockera.skin-studio.split": {
+    "message": "3D + 2D"
+  },
+  "blockera.skin-studio.model": {
+    "message": "Модель"
+  },
+  "blockera.skin-studio.texture": {
+    "message": "Развёртка"
+  },
+  "blockera.skin-studio.rotate-hint": {
+    "message": "Правая кнопка — поворот, колесо — масштаб"
+  },
+  "blockera.skin-studio.atlas-label": {
+    "message": "Развёртка скина. Стрелки перемещают курсор, Enter рисует."
+  },
+  "blockera.skin-studio.model-view": {
+    "message": "Трёхмерная модель для рисования"
+  },
+  "blockera.skin-studio.parameters": {
+    "message": "Настройки скина"
+  },
+  "blockera.skin-studio.classic": {
+    "message": "Классическая"
+  },
+  "blockera.skin-studio.slim": {
+    "message": "Тонкие руки"
+  },
+  "blockera.skin-studio.layer": {
+    "message": "Слой для рисования"
+  },
+  "blockera.skin-studio.base": {
+    "message": "Основа"
+  },
+  "blockera.skin-studio.outer": {
+    "message": "Внешний слой"
+  },
+  "blockera.skin-studio.show-outer": {
+    "message": "Показать внешний слой"
+  },
+  "blockera.skin-studio.grid": {
+    "message": "Сетка пикселей"
+  },
+  "blockera.skin-studio.templates": {
+    "message": "Шаблоны"
+  },
+  "blockera.skin-studio.steve": {
+    "message": "Стив"
+  },
+  "blockera.skin-studio.blank": {
+    "message": "Пустой"
+  },
+  "blockera.skin-studio.original": {
+    "message": "Исходный скин"
+  },
+  "blockera.skin-studio.standard": {
+    "message": "Стандартные скины"
+  },
+  "blockera.skin-studio.choose": {
+    "message": "Выбрать шаблон…"
+  },
+  "blockera.skin-studio.sign-in": {
+    "message": "Войдите в аккаунт, чтобы применить скин. PNG можно скачать сразу."
+  },
+  "blockera.skin-studio.account-changed": {
+    "message": "Аккаунт сменился. Вернитесь в гардероб и откройте редактор для нужного аккаунта."
+  },
+  "blockera.skin-studio.png-size": {
+    "message": "Выберите PNG размером 64 × 64 или 64 × 32 до 2 МБ."
+  },
+  "blockera.skin-studio.load-error": {
+    "message": "Не удалось загрузить скин. Попробуйте другой шаблон или PNG."
+  },
+  "blockera.skin-studio.save-error": {
+    "message": "Не удалось сохранить скин. Можно скачать его как PNG."
+  },
+  "blockera.skin-studio.discard": {
+    "message": "Выйти из редактора без сохранения изменений?"
+  },
+  "blockera.skin-studio.loading": {
+    "message": "Загружаем модель…"
+  },
+  "blockera.skin-studio.preview-unavailable": {
+    "message": "Не удалось открыть 3D-модель. Можно рисовать на развёртке."
+  },
+  "blockera.skin-studio.saved": {
+    "message": "Скин сохранён и применён."
+  },
+  "blockera.skin-studio.body-parts": {
+    "message": "Части тела"
+  },
+  "blockera.skin-studio.head": {
+    "message": "Голова"
+  },
+  "blockera.skin-studio.torso": {
+    "message": "Торс"
+  },
+  "blockera.skin-studio.right-arm": {
+    "message": "Правая рука"
+  },
+  "blockera.skin-studio.left-arm": {
+    "message": "Левая рука"
+  },
+  "blockera.skin-studio.right-leg": {
+    "message": "Правая нога"
+  },
+  "blockera.skin-studio.left-leg": {
+    "message": "Левая нога"
+  },
+  "blockera.skin-studio.parts-hint": {
+    "message": "Нажмите на часть на схеме, чтобы скрыть её или вернуть."
+  },
+  "blockera.skin-studio.lock-part": {
+    "message": "Рисовать только на"
+  },
+  "blockera.skin-studio.all-parts": {
+    "message": "Все видимые части"
+  },
+  "blockera.skin-studio.show-all-parts": {
+    "message": "Показать все части"
+  },
+  "blockera.horizon.version-mismatch": {
+    "message": "Моды рассчитаны на разные версии Horizon"
+  },
+  "blockera.horizon.version-mismatch-body": {
+    "message": "Для сборки выбрана ревизия {revision}. Выключите перечисленные моды или попробуйте собрать их вместе."
+  },
+  "blockera.horizon.open-installed": {
+    "message": "Открыть установленные"
+  },
+  "blockera.horizon.try-build": {
+    "message": "Попробовать собрать вместе"
+  },
+  "blockera.horizon.retry-note": {
+    "message": "Horizon попробует собрать моды на самой новой из закреплённых ревизий. Совместимость станет известна после компиляции."
+  },
+  "blockera.horizon.build-failed": {
+    "message": "Не удалось собрать клиент Horizon. Причина указана в журнале над вкладками."
+  },
+  "blockera.horizon.original-description": {
+    "message": "Оригинал"
+  },
+  "blockera.horizon.russian-description": {
+    "message": "По-русски"
+  },
+  "blockera.horizon.short-translation": {
+    "message": "Краткое описание на русском. Подробности доступны в оригинале."
   }
 }

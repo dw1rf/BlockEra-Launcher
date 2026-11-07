@@ -64,9 +64,10 @@ pub async fn profile_horizon_mod_action(
     action: &str,
     id: Option<&str>,
     trust_native_code: bool,
+    allow_version_mismatch: Option<bool>,
 ) -> Result<serde_json::Value> {
     Ok(
-        theseus::horizon::mods::action(path, action, id, trust_native_code)
+        theseus::horizon::mods::action(path, action, id, trust_native_code, allow_version_mismatch.unwrap_or(false))
             .await?,
     )
 }

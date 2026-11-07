@@ -45,11 +45,13 @@ pub async fn add_and_equip_custom_skin(
     texture_blob: Bytes,
     variant: MinecraftSkinVariant,
     cape_override: Option<Cape>,
+    expected_account: Option<uuid::Uuid>,
 ) -> Result<()> {
     Ok(minecraft_skins::add_and_equip_custom_skin(
         texture_blob,
         variant,
         cape_override,
+        expected_account,
     )
     .await?)
 }

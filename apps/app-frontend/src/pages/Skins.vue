@@ -3,6 +3,7 @@ import {
 	EditIcon,
 	ExcitedRinthbot,
 	LogInIcon,
+	PaintbrushIcon,
 	PlusIcon,
 	SpinnerIcon,
 	TrashIcon,
@@ -26,6 +27,7 @@ import steveSkin from '@/assets/skins/steve.png'
 import type AccountsCard from '@/components/ui/AccountsCard.vue'
 import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
 import SelectCapeModal from '@/components/ui/skin/SelectCapeModal.vue'
+import SkinWorkshop from '@/components/ui/skin/SkinWorkshop.vue'
 import UploadSkinModal from '@/components/ui/skin/UploadSkinModal.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { get_default_user, login as login_flow, users } from '@/helpers/auth'
@@ -60,6 +62,11 @@ const accountsCard = inject('accountsCard') as Ref<typeof AccountsCard>
 const accountRevision = inject<Ref<number>>('accountRevision')
 const currentUser = ref(undefined)
 const currentUserId = ref<string | undefined>(undefined)
+const workshop = ref<{ skin?: Skin; accountId?: string } | null>(null)
+
+function openWorkshop(skin?: Skin) {
+	workshop.value = { skin, accountId: currentUserId.value }
+}
 
 const username = computed(() => currentUser.value?.profile?.name ?? undefined)
 const offlineAccount = computed(() => currentUser.value?.account_type === 'pirate')
@@ -209,6 +216,11 @@ async function onSkinSaved() {
 	await Promise.all([loadCapes(), loadSkins()])
 }
 
+async function onWorkshopSaved() {
+	await onSkinSaved()
+	await accountsCard.value?.refreshValues()
+}
+
 async function loadCurrentUser() {
 	try {
 		const defaultId = await get_default_user()
@@ -315,7 +327,16 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 		@proceed="deleteSkin"
 	/>
 
-	<main class="skin-studio">
+	<SkinWorkshop
+		v-if="workshop"
+		:initial-skin="workshop.skin"
+		:templates="defaultSkins"
+		:account-id="workshop.accountId"
+		:active-account-id="currentUserId"
+		@close="workshop = null"
+		@saved="onWorkshopSaved"
+	/>
+	<main v-else class="skin-studio">
 		<header class="studio-hero">
 			<div>
 				<p class="studio-eyebrow">ПЕРСОНАЛИЗАЦИЯ</p>
@@ -324,9 +345,14 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 					Меняйте скин и плащ, сохраняйте любимые образы и переключайтесь между ними в один клик.
 				</p>
 			</div>
-			<button v-if="currentUser" class="upload-action" @click="openUploadSkinModal">
-				<PlusIcon /> Добавить скин
-			</button>
+			<div class="studio-actions">
+				<button v-if="currentUser" class="upload-action import-action" @click="openUploadSkinModal">
+					<PlusIcon /> Добавить скин
+				</button>
+				<button class="upload-action" @click="openWorkshop(selectedSkin ?? undefined)">
+					<PaintbrushIcon /> {{ $t('blockera.skin-studio.title') }}
+				</button>
+			</div>
 		</header>
 		<div v-if="currentUser && offlineAccount" class="offline-skin-notice">
 			<UpdatedIcon />
@@ -406,7 +432,7 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 						<span>{{ savedSkins.length }} сохранено</span>
 					</div>
 					<div class="skin-card-grid">
-						<SkinLikeTextButton class="skin-card" @click="openUploadSkinModal">
+						<SkinLikeTextButton class="skin-card" @click="openWorkshop()">
 							<template #icon>
 								<PlusIcon class="size-8" />
 							</template>
@@ -423,6 +449,14 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 							@select="changeSkin(skin)"
 						>
 							<template #overlay-buttons>
+								<Button
+									v-tooltip="$t('blockera.skin-studio.title')"
+									:aria-label="$t('blockera.skin-studio.title')"
+									class="pointer-events-auto"
+									icon-only
+									@click.stop="openWorkshop(skin)"
+									><PaintbrushIcon
+								/></Button>
 								<Button
 									color="green"
 									aria-label="Изменить скин"
@@ -578,6 +612,16 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 	transition:
 		transform 180ms var(--smooth),
 		filter 180ms ease;
+}
+.studio-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.55rem;
+}
+.import-action {
+	background: #1e1930;
+	box-shadow: none;
 }
 
 .upload-action:hover {

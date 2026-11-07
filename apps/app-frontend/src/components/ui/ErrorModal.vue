@@ -32,7 +32,7 @@ const migrationFixCallbackModel = ref()
 
 const title = ref(launcherText('An error occurred'))
 const errorType = ref('unknown')
-const supportLink = ref('https://support.modrinth.com')
+const supportLink = 'https://discord.gg/QHc5AKVVRH'
 const metadata = ref({})
 
 defineExpose({
@@ -42,8 +42,6 @@ defineExpose({
 		if (errorVal.message && errorVal.message.includes('Minecraft authentication error:')) {
 			title.value = launcherText('Unable to sign in to Minecraft')
 			errorType.value = 'minecraft_auth'
-			supportLink.value =
-				'https://support.modrinth.com/en/articles/9038231-minecraft-sign-in-issues'
 
 			if (
 				errorVal.message.includes('existing connection was forcibly closed') ||
@@ -57,11 +55,9 @@ defineExpose({
 		} else if (errorVal.message && errorVal.message.includes('User is not logged in')) {
 			title.value = launcherText('Sign in to Minecraft')
 			errorType.value = 'minecraft_sign_in'
-			supportLink.value = 'https://support.modrinth.com'
 		} else if (errorVal.message && errorVal.message.includes('Move directory error:')) {
 			title.value = launcherText('Could not change app directory')
 			errorType.value = 'directory_move'
-			supportLink.value = 'https://support.modrinth.com'
 
 			if (errorVal.message.includes('directory is not writeable')) {
 				metadata.value.readOnly = true
@@ -73,16 +69,13 @@ defineExpose({
 		} else if (errorVal.message && errorVal.message.includes('No loader version selected for')) {
 			title.value = launcherText('No loader selected')
 			errorType.value = 'no_loader_version'
-			supportLink.value = 'https://support.modrinth.com'
 			metadata.value.profilePath = context.profilePath
 		} else if (source === 'state_init') {
 			title.value = launcherText('Error initializing BlockEra Launcher')
 			errorType.value = 'state_init'
-			supportLink.value = 'https://support.modrinth.com'
 		} else {
 			title.value = launcherText('An error occurred')
 			errorType.value = 'unknown'
-			supportLink.value = 'https://support.modrinth.com'
 			metadata.value = {}
 		}
 
