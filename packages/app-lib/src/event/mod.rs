@@ -10,6 +10,7 @@ use tauri::Emitter;
 use tokio::sync::OnceCell;
 use uuid::Uuid;
 
+pub mod download_control;
 pub mod emit;
 
 // Global event state
@@ -56,7 +57,17 @@ impl EventState {
     pub async fn list_progress_bars() -> crate::Result<DashMap<Uuid, LoadingBar>>
     {
         let value = Self::get()?;
-        Ok(value.loading_bars.clone())
+        let bars = value.loading_bars.clone();
+        let controls = download_control::states();
+        for mut bar in bars.iter_mut() {
+            bar.download_state = controls.get(bar.key()).copied();
+            if bar.download_state
+                == Some(download_control::DownloadState::Paused)
+            {
+                bar.bytes_per_second = None;
+            }
+        }
+        Ok(bars)
     }
 
     #[cfg(feature = "tauri")]
@@ -73,6 +84,7 @@ pub struct LoadingBar {
     // loading_bar_uuid not be used directly by external functions as it may not reflect the current state of the loading bar/hashmap
     pub loading_bar_uuid: Uuid,
     pub message: String,
+    pub download_state: Option<download_control::DownloadState>,
     pub total: f64,
     pub current: f64,
     pub downloaded_bytes: u64,
@@ -91,6 +103,12 @@ pub struct LoadingBar {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct LoadingBarId(Uuid);
+
+impl LoadingBarId {
+    pub fn uuid(&self) -> Uuid {
+        self.0
+    }
+}
 
 // When Loading bar id is dropped, we should remove it from the hashmap
 impl Drop for LoadingBarId {

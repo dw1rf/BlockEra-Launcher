@@ -55,7 +55,7 @@ const onHide = () => {
 	<ModalWrapper
 		ref="modpackVersionModal"
 		class="modpack-version-modal"
-		header="Change modpack version"
+		:header="$t('blockera.ui.19a24d79867c')"
 		:on-hide="onHide"
 	>
 		<div class="modal-body">
@@ -63,8 +63,8 @@ const onHide = () => {
 				<div class="table">
 					<div class="table-row with-columns table-head">
 						<div class="table-cell table-text download-cell" />
-						<div class="name-cell table-cell table-text">Name</div>
-						<div class="table-cell table-text">Supports</div>
+						<div class="name-cell table-cell table-text">{{ $t('blockera.ui.709a23220f2c') }}</div>
+						<div class="table-cell table-text">{{ $t('blockera.ui.da0eed8ce4ff') }}</div>
 					</div>
 					<div class="scrollable">
 						<div

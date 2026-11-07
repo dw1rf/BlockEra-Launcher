@@ -35,9 +35,10 @@ pub async fn offline_login(name: &str) -> Result<Credentials> {
 pub async fn elyby_login(
     uuid: uuid::Uuid,
     login: &str,
-    access_token: &str
+    access_token: &str,
 ) -> Result<Credentials> {
-    let credentials = minecraft_auth::elyby_auth(uuid, login, access_token).await?;
+    let credentials =
+        minecraft_auth::elyby_auth(uuid, login, access_token).await?;
     Ok(credentials)
 }
 
@@ -101,6 +102,13 @@ pub async fn login<R: Runtime>(
         window.close()?;
     }
 
+    let settings = theseus::settings::get().await?;
+    let signin_title = if settings.locale.starts_with("ru") {
+        "Вход в Microsoft — BlockEra"
+    } else {
+        "Microsoft sign-in — BlockEra"
+    };
+
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         "signin",
@@ -113,7 +121,7 @@ pub async fn login<R: Runtime>(
             },
         )?),
     )
-    .title("Sign into Modrinth")
+    .title(signin_title)
     .always_on_top(true)
     .center()
     .build()?;

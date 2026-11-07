@@ -263,32 +263,89 @@ async fn fetch_java_with_curl(url: &str) -> crate::Result<Bytes> {
         .tempfile()?
         .into_temp_path();
 
-    let output = tokio::process::Command::new("curl.exe")
-        .args([
-            "--fail",
-            "--location",
-            "--silent",
-            "--show-error",
-            "--http1.1",
-            "--retry",
-            "5",
-            "--retry-all-errors",
-            "--retry-delay",
-            "1",
-            "--connect-timeout",
-            "15",
-            "--speed-limit",
-            "1024",
-            "--speed-time",
-            "30",
-            "--max-time",
-            "600",
-            "--output",
-        ])
-        .arg(temp_path.as_os_str())
-        .arg(url)
-        .output()
-        .await?;
+    // curl is an external process: monitor all enclosing downloads independently
+    // so pausing the parent future also stops the subprocess network transfer.
+    let controls = crate::download_control::active_controls();
+    let download_url = url.to_owned();
+    let download_path = temp_path.to_path_buf();
+    let worker = tokio::spawn(async move {
+        use crate::download_control::DownloadState;
+        let mut interrupted = false;
+        loop {
+            if controls
+                .iter()
+                .any(|control| *control.borrow() == DownloadState::Cancelled)
+            {
+                return Err(std::io::Error::other("Загрузка Java отменена"));
+            }
+            if controls
+                .iter()
+                .any(|control| *control.borrow() == DownloadState::Paused)
+            {
+                tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+                continue;
+            }
+            let mut command = tokio::process::Command::new("curl.exe");
+            command
+                .kill_on_drop(true)
+                .args([
+                    "--fail",
+                    "--location",
+                    "--silent",
+                    "--show-error",
+                    "--http1.1",
+                    "--retry",
+                    "5",
+                    "--retry-all-errors",
+                    "--retry-delay",
+                    "1",
+                    "--connect-timeout",
+                    "15",
+                    "--speed-limit",
+                    "1024",
+                    "--speed-time",
+                    "30",
+                    "--max-time",
+                    "600",
+                    "--continue-at",
+                    "-",
+                    "--output",
+                ])
+                .arg(&download_path)
+                .arg(&download_url);
+            let mut output = Box::pin(command.output());
+            let finished = loop {
+                tokio::select! {
+                    result = &mut output => break Some(result?),
+                    _ = tokio::time::sleep(std::time::Duration::from_millis(25)) => {
+                        if controls.iter().any(|control| *control.borrow() != DownloadState::Running) {
+                            break None;
+                        }
+                    }
+                }
+            };
+            // kill_on_drop terminates curl before resuming it with the existing partial file.
+            drop(output);
+            if let Some(output) = finished {
+                if interrupted && !output.status.success() {
+                    // Some mirrors do not implement HTTP Range; retry the current file from zero.
+                    tokio::fs::write(&download_path, []).await?;
+                    interrupted = false;
+                    continue;
+                }
+                return Ok(output);
+            }
+            interrupted = true;
+        }
+    });
+    struct AbortWorker(tokio::task::AbortHandle);
+    impl Drop for AbortWorker {
+        fn drop(&mut self) {
+            self.0.abort();
+        }
+    }
+    let _abort = AbortWorker(worker.abort_handle());
+    let output = worker.await.map_err(std::io::Error::other)??;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();

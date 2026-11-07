@@ -11,7 +11,7 @@
 			<span class="gallery-time">
 				<CalendarIcon />
 				{{
-					new Date(image.created).toLocaleDateString('en-US', {
+					new Date(image.created).toLocaleDateString($i18n.locale, {
 						year: 'numeric',
 						month: 'long',
 						day: 'numeric',

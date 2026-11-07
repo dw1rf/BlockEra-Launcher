@@ -45,7 +45,9 @@ function backToInstance() {
 			</span>
 		</router-link>
 		<ButtonStyled>
-			<button type="button" @click="backToInstance"><LeftArrowIcon /> Back to instance</button>
+			<button type="button" @click="backToInstance">
+				<LeftArrowIcon /> {{ $t('blockera.ui.4516d56af62f') }}
+			</button>
 		</ButtonStyled>
 	</div>
 </template>

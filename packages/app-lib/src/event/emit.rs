@@ -84,6 +84,7 @@ pub async fn init_loading_unsafe(
         LoadingBar {
             loading_bar_uuid: key.0,
             message: title.to_string(),
+            download_state: None,
             total,
             current: 0.0,
             downloaded_bytes: 0,

@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
 					class="primary-button"
 					@click="installCreatorPack"
 				>
-					<DownloadIcon /> Установить
+					<DownloadIcon /> {{ $t('blockera.ui.fd6c3ebf7bef') }}
 				</button>
 				<button
 					v-if="installStatus?.state === 'downloading'"
@@ -310,7 +310,7 @@ onBeforeUnmount(() => {
 					<SpinnerIcon class="spin" /> Устанавливается…
 				</button>
 				<button v-if="activeProfilePath" class="primary-button" @click="playPack">
-					<PlayIcon /> Играть
+					<PlayIcon /> {{ $t('blockera.ui.5d12bd53552c') }}
 				</button>
 			</div>
 		</div>
@@ -349,7 +349,7 @@ onBeforeUnmount(() => {
 				</div>
 				<div v-if="activeProfilePath" class="secondary-actions instance-actions">
 					<button v-if="activeProfilePath" @click="openProfileFolder(activeProfilePath)">
-						<FolderOpenIcon /> Открыть папку
+						<FolderOpenIcon /> {{ $t('blockera.ui.f963014162aa') }}
 					</button>
 					<button
 						v-if="activeProfilePath"
@@ -357,10 +357,10 @@ onBeforeUnmount(() => {
 						@click="verifyPack"
 					>
 						<SpinnerIcon v-if="verification === 'checking'" class="spin" />
-						<CheckCircleIcon v-else /> Проверить файлы
+						<CheckCircleIcon v-else /> {{ $t('blockera.ui.4fe284aa847a') }}
 					</button>
 					<button v-if="activeProfilePath" class="delete-action" @click="deletePack">
-						<TrashIcon /> Удалить
+						<TrashIcon /> {{ $t('blockera.ui.e963907dac5c') }}
 					</button>
 					<button
 						v-if="activeProfilePath"
@@ -392,7 +392,10 @@ onBeforeUnmount(() => {
 				<h1>{{ project?.title ?? popularPack.title }}</h1>
 				<span>{{ popularPack.tagline }}</span>
 				<div class="hero-meta">
-					<span><UserIcon /> {{ popularPack.ownerKind }}: {{ popularPack.owner }}</span>
+					<span
+						><UserIcon /> {{ popularPack.ownerKind }}{{ $t('blockera.ui.9bc1c91ffdea') }}
+						{{ popularPack.owner }}</span
+					>
 					<span><DownloadIcon /> {{ compactNumber(project?.downloads) }} загрузок</span>
 					<span><PackageIcon /> {{ latestVersion?.version_number ?? 'актуальная версия' }}</span>
 				</div>

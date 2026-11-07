@@ -20,6 +20,7 @@ import { computed, ref } from 'vue'
 import ContextMenu from '@/components/ui/ContextMenu.vue'
 import Instance from '@/components/ui/Instance.vue'
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
+import { launcherText } from '@/helpers/launcher-language'
 import { duplicate, remove } from '@/helpers/profile.js'
 
 const { handleError } = injectNotificationManager()
@@ -271,7 +272,7 @@ const filteredResults = computed(() => {
 	<div class="flex gap-2">
 		<div class="iconified-input flex-1">
 			<SearchIcon />
-			<input v-model="search" type="text" placeholder="Search" />
+			<input v-model="search" type="text" :placeholder="$t('blockera.ui.bce06414177f')" />
 			<Button class="r-btn" @click="() => (search = '')">
 				<XIcon />
 			</Button>
@@ -281,22 +282,24 @@ const filteredResults = computed(() => {
 			v-model="state.sortBy"
 			name="Sort Dropdown"
 			class="max-w-[16rem]"
+			:display-name="launcherText"
 			:options="['Name', 'Last played', 'Date created', 'Date modified', 'Game version']"
-			placeholder="Select..."
+			:placeholder="$t('blockera.ui.b92e64f8b332')"
 		>
-			<span class="font-semibold text-primary">Sort by: </span>
-			<span class="font-semibold text-secondary">{{ selected }}</span>
+			<span class="font-semibold text-primary">{{ $t('blockera.ui.9bb640e5a014') }} </span>
+			<span class="font-semibold text-secondary">{{ launcherText(selected) }}</span>
 		</DropdownSelect>
 		<DropdownSelect
 			v-slot="{ selected }"
 			v-model="state.group"
 			class="max-w-[16rem]"
 			name="Group Dropdown"
+			:display-name="launcherText"
 			:options="['Group', 'Loader', 'Game version', 'None']"
-			placeholder="Select..."
+			:placeholder="$t('blockera.ui.b92e64f8b332')"
 		>
-			<span class="font-semibold text-primary">Group by: </span>
-			<span class="font-semibold text-secondary">{{ selected }}</span>
+			<span class="font-semibold text-primary">{{ $t('blockera.ui.e357306c9e50') }} </span>
+			<span class="font-semibold text-secondary">{{ launcherText(selected) }}</span>
 		</DropdownSelect>
 	</div>
 	<div
@@ -323,26 +326,26 @@ const filteredResults = computed(() => {
 	</div>
 	<ConfirmModalWrapper
 		ref="confirmModal"
-		title="Are you sure you want to delete this instance?"
-		description="If you proceed, all data for your instance will be removed. You will not be able to recover it."
+		:title="$t('blockera.ui.ce48c5ce17ea')"
+		:description="$t('blockera.ui.5d501fa5d0c8')"
 		:has-to-type="false"
-		proceed-label="Delete"
+		:proceed-label="$t('blockera.ui.f6fdbe48dc54')"
 		@proceed="deleteProfile"
 	/>
 	<ContextMenu ref="instanceOptions" @option-clicked="handleOptionsClick">
-		<template #play> <PlayIcon /> Играть </template>
-		<template #stop> <StopCircleIcon /> Остановить </template>
-		<template #add_content> <PlusIcon /> Найти моды </template>
+		<template #play> <PlayIcon /> {{ $t('blockera.ui.5d12bd53552c') }} </template>
+		<template #stop> <StopCircleIcon /> {{ $t('blockera.ui.9e253470c876') }} </template>
+		<template #add_content> <PlusIcon /> {{ $t('blockera.ui.3ba372ed53e9') }} </template>
 		<template #settings> <EyeIcon /> Настройки сборки </template>
 		<template #mods> <PlusIcon /> Установленные моды </template>
-		<template #resource_packs> <FolderOpenIcon /> Текстуры </template>
-		<template #shader_packs> <FolderOpenIcon /> Шейдеры </template>
-		<template #saves> <FolderOpenIcon /> Миры </template>
+		<template #resource_packs> <FolderOpenIcon /> {{ $t('blockera.ui.5aa8824d5c30') }} </template>
+		<template #shader_packs> <FolderOpenIcon /> {{ $t('blockera.ui.92973587e76f') }} </template>
+		<template #saves> <FolderOpenIcon /> {{ $t('blockera.ui.8e4d9728828a') }} </template>
 		<template #export> <ClipboardCopyIcon /> Экспорт </template>
 		<template #repair> <DownloadIcon /> Ремонт </template>
 		<template #duplicate> <ClipboardCopyIcon /> Дублировать</template>
-		<template #delete> <TrashIcon /> Удалить </template>
-		<template #open> <FolderOpenIcon /> Открыть папку </template>
+		<template #delete> <TrashIcon /> {{ $t('blockera.ui.e963907dac5c') }} </template>
+		<template #open> <FolderOpenIcon /> {{ $t('blockera.ui.f963014162aa') }} </template>
 		<template #copy> <ClipboardCopyIcon /> Копировать путь </template>
 	</ContextMenu>
 </template>

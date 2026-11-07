@@ -15,6 +15,7 @@ import { ChatIcon } from '@/assets/icons'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { login as login_flow, set_default_user } from '@/helpers/auth.js'
+import { launcherText } from '@/helpers/launcher-language'
 import { install } from '@/helpers/profile.js'
 import { cancel_directory_change } from '@/helpers/settings.ts'
 import { applyMigrationFix, restartApp } from '@/helpers/utils.js'
@@ -29,7 +30,7 @@ const errorCollapsed = ref(false)
 const migrationFixSuccess = ref(null) // null | true | false
 const migrationFixCallbackModel = ref()
 
-const title = ref('An error occurred')
+const title = ref(launcherText('An error occurred'))
 const errorType = ref('unknown')
 const supportLink = ref('https://support.modrinth.com')
 const metadata = ref({})
@@ -39,7 +40,7 @@ defineExpose({
 		closable.value = canClose
 
 		if (errorVal.message && errorVal.message.includes('Minecraft authentication error:')) {
-			title.value = 'Unable to sign in to Minecraft'
+			title.value = launcherText('Unable to sign in to Minecraft')
 			errorType.value = 'minecraft_auth'
 			supportLink.value =
 				'https://support.modrinth.com/en/articles/9038231-minecraft-sign-in-issues'
@@ -54,11 +55,11 @@ defineExpose({
 				metadata.value.hostsFile = true
 			}
 		} else if (errorVal.message && errorVal.message.includes('User is not logged in')) {
-			title.value = 'Sign in to Minecraft'
+			title.value = launcherText('Sign in to Minecraft')
 			errorType.value = 'minecraft_sign_in'
 			supportLink.value = 'https://support.modrinth.com'
 		} else if (errorVal.message && errorVal.message.includes('Move directory error:')) {
-			title.value = 'Could not change app directory'
+			title.value = launcherText('Could not change app directory')
 			errorType.value = 'directory_move'
 			supportLink.value = 'https://support.modrinth.com'
 
@@ -70,16 +71,16 @@ defineExpose({
 				metadata.value.notEnoughSpace = true
 			}
 		} else if (errorVal.message && errorVal.message.includes('No loader version selected for')) {
-			title.value = 'No loader selected'
+			title.value = launcherText('No loader selected')
 			errorType.value = 'no_loader_version'
 			supportLink.value = 'https://support.modrinth.com'
 			metadata.value.profilePath = context.profilePath
 		} else if (source === 'state_init') {
-			title.value = 'Error initializing BlockEra Launcher'
+			title.value = launcherText('Error initializing BlockEra Launcher')
 			errorType.value = 'state_init'
 			supportLink.value = 'https://support.modrinth.com'
 		} else {
-			title.value = 'An error occurred'
+			title.value = launcherText('An error occurred')
 			errorType.value = 'unknown'
 			supportLink.value = 'https://support.modrinth.com'
 			metadata.value = {}
@@ -180,120 +181,112 @@ async function onApplyMigrationFix(eol) {
 			<div class="markdown-body">
 				<template v-if="errorType === 'minecraft_auth'">
 					<template v-if="metadata.network">
-						<h3>Network issues</h3>
+						<h3>{{ $t('blockera.ui.2c560c673ce0') }}</h3>
 						<p>
-							It looks like there were issues with BlockEra Launcher connecting to Microsoft's
-							servers. This is often the result of a poor connection, so we recommend trying again
-							to see if it works. If issues continue to persist, follow the steps in
+							{{ $t('blockera.ui.0951c9cfadf4') }}
 							<a
 								href="https://support.modrinth.com/en/articles/9038231-minecraft-sign-in-issues#h_e71a5f805f"
 							>
-								our support article
+								{{ $t('blockera.ui.3dee43ecd306') }}
 							</a>
-							to troubleshoot.
+							{{ $t('blockera.ui.4f4e49d062f2') }}
 						</p>
 					</template>
 					<template v-else-if="metadata.hostsFile">
-						<h3>Network issues</h3>
+						<h3>{{ $t('blockera.ui.2c560c673ce0') }}</h3>
 						<p>
-							BlockEra Launcher tried to connect to Microsoft / Xbox / Minecraft services, but the
-							remote server rejected the connection. This may indicate that these services are
-							blocked by the hosts file. Please visit
+							{{ $t('blockera.ui.b6a5b59cb7ba') }}
 							<a
 								href="https://support.modrinth.com/en/articles/9038231-minecraft-sign-in-issues#h_d694a29256"
 							>
-								our support article
+								{{ $t('blockera.ui.3dee43ecd306') }}
 							</a>
-							for steps on how to fix the issue.
+							{{ $t('blockera.ui.a0f20ab6097f') }}
 						</p>
 					</template>
 					<template v-else>
-						<h3>Try another Microsoft account</h3>
+						<h3>{{ $t('blockera.ui.a15f2216ac28') }}</h3>
 						<p>
-							Double check you've signed in with the right account. You may own Minecraft on a
-							different Microsoft account.
+							{{ $t('blockera.ui.b7b62f61a300') }}
 						</p>
 						<div class="cta-button">
 							<button class="btn btn-primary" :disabled="loadingMinecraft" @click="loginMinecraft">
-								<LogInIcon /> Try another account
+								<LogInIcon /> {{ $t('blockera.ui.1c3eb22a2c17') }}
 							</button>
 						</div>
-						<h3>Using PC Game Pass, coming from Bedrock, or just bought the game?</h3>
+						<h3>{{ $t('blockera.ui.6f614eb6b772') }}</h3>
 						<p>
-							Try signing in with the
-							<a href="https://www.minecraft.net/en-us/download">official Minecraft Launcher</a>
-							first. Once you're done, come back here and sign in!
+							{{ $t('blockera.ui.0f0e301d0134') }}
+							<a href="https://www.minecraft.net/en-us/download">{{
+								$t('blockera.ui.a0eab8b25fc6')
+							}}</a>
+							{{ $t('blockera.ui.55db19d25943') }}
 						</p>
 					</template>
 					<div class="cta-button">
 						<button class="btn btn-primary" :disabled="loadingMinecraft" @click="loginMinecraft">
-							<LogInIcon /> Try signing in again
+							<LogInIcon /> {{ $t('blockera.ui.c265097df2f4') }}
 						</button>
 					</div>
 				</template>
 				<template v-if="errorType === 'directory_move'">
 					<template v-if="metadata.readOnly">
-						<h3>Change directory permissions</h3>
+						<h3>{{ $t('blockera.ui.44e6d88dd13f') }}</h3>
 						<p>
-							It looks like BlockEra Launcher is unable to write to the directory you selected.
-							Please adjust the permissions of the directory and try again or cancel the directory
-							change.
+							{{ $t('blockera.ui.94f7df82f77c') }}
 						</p>
 					</template>
 					<template v-else-if="metadata.notEnoughSpace">
-						<h3>Not enough space</h3>
+						<h3>{{ $t('blockera.ui.4785c5c50f00') }}</h3>
 						<p>
-							It looks like there is not enough space on the disk containing the directory you
-							selected. Please free up some space and try again or cancel the directory change.
+							{{ $t('blockera.ui.e8609c4f76c6') }}
 						</p>
 					</template>
 					<template v-else>
 						<p>
-							BlockEra Launcher is unable to migrate to the new directory you selected. Please
-							contact support for help or cancel the directory change.
+							{{ $t('blockera.ui.471d0f52b386') }}
 						</p>
 					</template>
 
 					<div class="cta-button">
 						<button class="btn" @click="retryDirectoryChange">
-							<UpdatedIcon /> Retry directory change
+							<UpdatedIcon /> {{ $t('blockera.ui.2f95463cdb9d') }}
 						</button>
 						<button class="btn btn-danger" @click="cancelDirectoryChange">
-							<XIcon /> Cancel directory change
+							<XIcon /> {{ $t('blockera.ui.9d2ac8f9d7d8') }}
 						</button>
 					</div>
 				</template>
 				<div v-else-if="errorType === 'minecraft_sign_in'">
 					<p>
-						To play this instance, you must sign in through Microsoft below. If you don't have a
-						Minecraft account, you can purchase the game on the
-						<a href="https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc"
-							>Minecraft website</a
+						{{ $t('blockera.ui.81d29ff5cd35') }}
+						<a href="https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc">{{
+							$t('blockera.ui.5a69a39cf505')
+						}}</a
 						>.
 					</p>
 					<div class="cta-button">
 						<button class="btn btn-primary" :disabled="loadingMinecraft" @click="loginMinecraft">
-							<LogInIcon /> Sign in to Minecraft
+							<LogInIcon /> {{ $t('blockera.ui.04b27c1aebd9') }}
 						</button>
 					</div>
 				</div>
 				<template v-else-if="errorType === 'state_init'">
 					<p>
-						BlockEra Launcher failed to load correctly. This may be because of a corrupted file, or
-						because the app is missing crucial files.
+						{{ $t('blockera.ui.efb4051db259') }}
 					</p>
-					<p>You may be able to fix it through one of the following ways:</p>
+					<p>{{ $t('blockera.ui.9854df32b631') }}</p>
 					<ul>
-						<li>Ensuring you are connected to the internet, then try restarting the app.</li>
-						<li>Redownloading the app.</li>
+						<li>{{ $t('blockera.ui.e74f49f3d1f5') }}</li>
+						<li>{{ $t('blockera.ui.fea9ac65cca0') }}</li>
 					</ul>
 				</template>
 				<template v-else-if="errorType === 'no_loader_version'">
-					<p>BlockEra Launcher failed to find the loader version for this instance.</p>
-					<p>To resolve this, you need to repair the instance. Click the button below to do so.</p>
+					<p>{{ $t('blockera.ui.9545b2b662f9') }}</p>
+					<p>{{ $t('blockera.ui.fbcbffec1854') }}</p>
 					<div class="cta-button">
 						<button class="btn btn-primary" :disabled="loadingRepair" @click="repairInstance">
-							<HammerIcon /> Repair instance
+							<HammerIcon /> {{ $t('blockera.ui.e6619b65c69f') }}
 						</button>
 					</div>
 				</template>
@@ -303,24 +296,27 @@ async function onApplyMigrationFix(eol) {
 				<template v-if="hasDebugInfo">
 					<hr />
 					<p>
-						If nothing is working and you need help, visit
-						<a :href="supportLink">our support page</a>
-						and start a chat using the widget in the bottom right and we will be more than happy to
-						assist! Make sure to provide the following debug information to the agent:
+						{{ $t('blockera.ui.9ed2d5a98dab') }}
+						<a :href="supportLink">{{ $t('blockera.ui.8f5b343647fd') }}</a>
+						{{ $t('blockera.ui.3a75e1310eef') }}
 					</p>
 				</template>
 			</div>
 			<div class="flex items-center gap-2">
 				<ButtonStyled>
-					<a :href="supportLink" @click="errorModal.hide()"><ChatIcon /> Get support</a>
+					<a :href="supportLink" @click="errorModal.hide()"
+						><ChatIcon /> {{ $t('blockera.ui.4541e7a202c6') }}</a
+					>
 				</ButtonStyled>
 				<ButtonStyled v-if="closable">
-					<button @click="errorModal.hide()"><XIcon /> Close</button>
+					<button @click="errorModal.hide()"><XIcon /> {{ $t('blockera.ui.bbfa773e5a63') }}</button>
 				</ButtonStyled>
 				<ButtonStyled v-if="hasDebugInfo">
 					<button :disabled="copied" @click="copyToClipboard(debugInfo)">
-						<template v-if="copied"> <CheckIcon class="text-green" /> Copied! </template>
-						<template v-else> <CopyIcon /> Copy debug info </template>
+						<template v-if="copied">
+							<CheckIcon class="text-green" /> {{ $t('blockera.ui.b7c3ca0ee379') }}
+						</template>
+						<template v-else> <CopyIcon /> {{ $t('blockera.ui.c3511494d913') }} </template>
 					</button>
 				</ButtonStyled>
 			</div>
@@ -330,7 +326,9 @@ async function onApplyMigrationFix(eol) {
 						class="flex items-center justify-between w-full bg-transparent border-0 px-4 py-3 cursor-pointer"
 						@click="errorCollapsed = !errorCollapsed"
 					>
-						<span class="text-contrast font-extrabold m-0">Debug information:</span>
+						<span class="text-contrast font-extrabold m-0">{{
+							$t('blockera.ui.4c806c855ac8')
+						}}</span>
 						<DropdownIcon
 							class="h-5 w-5 text-secondary transition-transform"
 							:class="{ 'rotate-180': !errorCollapsed }"
@@ -344,39 +342,33 @@ async function onApplyMigrationFix(eol) {
 					</Collapsible>
 				</div>
 				<template v-if="errorType === 'state_init'">
-					<h2>⚠️ Migration Issue • Important Notice</h2>
+					<h2>{{ $t('blockera.ui.cf1ac793741a') }}</h2>
 					<p>
-						We've detected a problem with our database migration system caused by inconsistent line
-						endings between operating systems (Windows vs. macOS/Linux). This may affect app
-						stability.
+						{{ $t('blockera.ui.b931cddd4a11') }}
 					</p>
 					<p>
-						<strong>What’s happening?</strong> Our migration validator misreads modified migrations
-						when line endings differ (CRLF ↔ LF), which can make the app unusable.
+						<strong>{{ $t('blockera.ui.617696c8133e') }}</strong>
+						{{ $t('blockera.ui.206a57f9baad') }}
 					</p>
 					<p>
-						<strong>Why?</strong> Git’s automatic line-ending conversions and OS differences can
-						cause these inconsistencies during builds.
+						<strong>{{ $t('blockera.ui.d77989c1e3c0') }}</strong>
+						{{ $t('blockera.ui.cea1024f4105') }}
 					</p>
 					<p>
-						<strong>What’s next?</strong> We’re working on a permanent fix. In the meantime, you can
-						apply one of the quick fixes below depending on your system.
+						<strong>{{ $t('blockera.ui.bca70bf7a9fa') }}</strong>
+						{{ $t('blockera.ui.b0afbfcb925b') }}
 					</p>
-					<h3>Do I need to apply a fix now?</h3>
+					<h3>{{ $t('blockera.ui.8a49d2b769ee') }}</h3>
 					<div>
 						<p class="notice__text">
-							If you're encountering an error while applying migrations, such as "Error while
-							applying migrations: migration XXXXXXXXXX was previously applied but has been
-							modified", or a similar issue with migration, the following actions might help:
+							{{ $t('blockera.ui.590a977f879d') }}
 						</p>
 						<p>
-							If none of the above steps help, you can try saving a copy of the file
-							<code>app.db</code> to a safe location, such as
-							<code>%appdata%\Roaming\BlockEraLauncher</code> on Windows or
-							<code>~/Library/Application Support/BlockEraLauncher</code> on macOS, then deleting
-							the original file and letting the app re-create the database file. Note that this may
-							cause data loss inside the app, so make sure to back up your launcher data before
-							applying this fixes.
+							{{ $t('blockera.ui.af199f0f220c') }}
+							<code>app.db</code> {{ $t('blockera.ui.34847c4c35c4') }}
+							<code>%appdata%\Roaming\BlockEraLauncher</code> {{ $t('blockera.ui.31d066ed215e') }}
+							<code>~/Library/Application Support/BlockEraLauncher</code>
+							{{ $t('blockera.ui.7c829d26d870') }}
 						</p>
 					</div>
 					<div class="flex justify-between">
@@ -387,7 +379,7 @@ async function onApplyMigrationFix(eol) {
 										title="Convert all line endings in migration files to LF (Unix-style: \\n)"
 										@click="onApplyMigrationFix('lf')"
 									>
-										Apply fix for Unix like systems (Debian, Ubuntu, macOS and others)
+										{{ $t('blockera.ui.4a0880ea8254') }}
 									</button>
 								</ButtonStyled>
 							</li>
@@ -397,7 +389,7 @@ async function onApplyMigrationFix(eol) {
 										title="Convert all line endings in migration files to CRLF (Windows-style: \\r\\n)"
 										@click="onApplyMigrationFix('crlf')"
 									>
-										Apply fix for Windows
+										{{ $t('blockera.ui.66d05094e407') }}
 									</button>
 								</ButtonStyled>
 							</li>
@@ -409,24 +401,23 @@ async function onApplyMigrationFix(eol) {
 	</ModalWrapper>
 	<ModalWrapper
 		ref="migrationFixCallbackModel"
-		header="💡 Migration fix report"
+		:header="$t('blockera.ui.e30d3bd53b9b')"
 		:closable="closable"
 	>
 		<div class="modal-body">
 			<h2 class="text-lg font-bold text-contrast space-y-2">
 				<template v-if="migrationFixSuccess === true">
 					<p class="flex items-center gap-2 neon-text">
-						✅ The migration fix has been applied successfully. Please restart the launcher and try
-						to log in to the game :)
+						{{ $t('blockera.ui.964071606403') }}
 					</p>
-					<p class="mt-2 text-sm neon-text">If the problem persists, please try the other fix.</p>
+					<p class="mt-2 text-sm neon-text">{{ $t('blockera.ui.cf24c9e25b78') }}</p>
 				</template>
 
 				<template v-else-if="migrationFixSuccess === false">
 					<p class="flex items-center gap-2 neon-text">
-						❌ The migration fix failed or had no effect.
+						{{ $t('blockera.ui.bab90054367c') }}
 					</p>
-					<p class="mt-2 text-sm neon-text">If the problem persists, please try the other fix.</p>
+					<p class="mt-2 text-sm neon-text">{{ $t('blockera.ui.cf24c9e25b78') }}</p>
 				</template>
 			</h2>
 		</div>

@@ -149,9 +149,13 @@ const criticalErrorMessage = ref()
 
 const isMaximized = ref(false)
 
+const selectedAccountType = ref(null)
 const authUnreachableDebug = useDebugLogger('AuthReachableChecker')
 const authServerQuery = useQuery({
 	queryKey: ['authServerReachability'],
+	enabled: computed(
+		() => stateInitialized.value && selectedAccountType.value?.toLowerCase() === 'microsoft',
+	),
 	queryFn: async () => {
 		await check_reachable()
 		authUnreachableDebug('Auth servers are reachable')
@@ -163,7 +167,11 @@ const authServerQuery = useQuery({
 })
 
 const authUnreachable = computed(() => {
-	if (authServerQuery.isError.value && !authServerQuery.isLoading.value) {
+	if (
+		selectedAccountType.value?.toLowerCase() === 'microsoft' &&
+		authServerQuery.isError.value &&
+		!authServerQuery.isLoading.value
+	) {
 		console.warn('Failed to reach auth servers', authServerQuery.error.value)
 		return true
 	}
@@ -246,6 +254,7 @@ async function setupApp() {
 	// Initialize locale from saved settings
 	if (locale) {
 		i18n.global.locale.value = locale
+		document.documentElement.lang = locale
 	}
 
 	if (default_page === 'library') {
@@ -561,7 +570,8 @@ function openOnboardingJava() {
 	settingsModal.value?.show()
 }
 
-function handleAccountChange() {
+function handleAccountChange(accountType) {
+	selectedAccountType.value = accountType ?? null
 	accountRevision.value += 1
 }
 
@@ -784,7 +794,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			v-if="!cinematicShell"
 			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.5rem] w-[--left-bar-width]"
 		>
-			<NavButton v-tooltip.right="'Главная'" to="/">
+			<NavButton v-tooltip.right="$t('blockera.ui.70f8bb9a8a53')" to="/">
 				<HomeIcon />
 			</NavButton>
 			<NavButton
@@ -795,7 +805,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<ServerIcon />
 			</NavButton>
 			<NavButton
-				v-tooltip.right="'Каталог'"
+				v-tooltip.right="$t('blockera.ui.4a88d27bbae1')"
 				to="/browse/modpack"
 				:is-primary="() => route.path.startsWith('/browse') && !route.query.i"
 				:is-subpage="(route) => route.path.startsWith('/project') && !route.query.i"
@@ -806,7 +816,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<ChangeSkinIcon />
 			</NavButton>
 			<NavButton
-				v-tooltip.right="'Библиотека'"
+				v-tooltip.right="$t('blockera.ui.b8100f5ba8bd')"
 				to="/library"
 				:is-subpage="
 					() =>
@@ -819,7 +829,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			</NavButton>
 			<div class="h-px w-6 mx-auto my-2 bg-surface-5"></div>
 			<NavButton
-				v-tooltip.right="'Создать сборку'"
+				v-tooltip.right="$t('blockera.ui.448e244903a8')"
 				:to="() => $refs.installationModal.show()"
 				:disabled="offline"
 			>
@@ -874,7 +884,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				<template #view-profile>
 					<UserIcon />
 					<span class="inline-flex items-center gap-1">
-						Signed in as
+						{{ $t('blockera.ui.a02107c35fb1') }}
 						<span class="inline-flex items-center gap-1 text-contrast font-semibold">
 							<Avatar :src="credentials.user.avatar_url" alt="" size="20px" circle />
 							{{ credentials.user.username }}
@@ -882,7 +892,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					</span>
 					<ExternalIcon />
 				</template>
-				<template #sign-out> <LogOutIcon /> Sign out </template>
+				<template #sign-out> <LogOutIcon /> {{ $t('blockera.ui.dc1649a16c14') }} </template>
 			</OverflowMenu>
 			<NavButton v-else v-tooltip.right="'Sign in to a Modrinth account'" :to="() => signIn()">
 				<LogInIcon class="text-brand" />
@@ -896,9 +906,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 			<div data-tauri-drag-region class="flex p-3">
 				<div data-tauri-drag-region class="flex items-center gap-1 ml-3">
 					<button
-						v-tooltip="'Назад'"
+						v-tooltip="$t('blockera.ui.b52b36b7269f')"
 						class="cursor-pointer p-0 m-0 text-contrast border-none outline-none bg-button-bg rounded-full flex items-center justify-center w-6 h-6 hover:brightness-75 transition-all"
-						aria-label="Назад"
+						:aria-label="$t('blockera.ui.b52b36b7269f')"
 						@click="navigateHistory('back')"
 					>
 						<LeftArrowIcon />
@@ -935,16 +945,16 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				</div>
 				<section v-if="!nativeDecorations" class="window-controls" data-tauri-drag-region-exclude>
 					<Button
-						v-tooltip="'Свернуть'"
+						v-tooltip="$t('blockera.ui.1c5b768c8e72')"
 						class="titlebar-button"
 						icon-only
-						aria-label="Свернуть окно"
+						:aria-label="$t('blockera.ui.72115aba2cad')"
 						@click="() => getCurrentWindow().minimize()"
 					>
 						<MinimizeIcon />
 					</Button>
 					<Button
-						v-tooltip="'Развернуть или восстановить'"
+						v-tooltip="$t('blockera.ui.1855c75e374a')"
 						class="titlebar-button"
 						icon-only
 						aria-label="Развернуть или восстановить окно"
@@ -954,10 +964,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 						<MaximizeIcon v-else />
 					</Button>
 					<Button
-						v-tooltip="'Закрыть'"
+						v-tooltip="$t('blockera.ui.bbfa773e5a63')"
 						class="titlebar-button close"
 						icon-only
-						aria-label="Закрыть окно"
+						:aria-label="$t('blockera.ui.e3896a930398')"
 						@click="handleClose"
 					>
 						<XIcon />
@@ -975,7 +985,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				@click="closeActiveProject"
 			>
 				<LeftArrowIcon aria-hidden="true" />
-				<span>Назад</span>
+				<span>{{ $t('blockera.ui.b52b36b7269f') }}</span>
 			</button>
 			<router-link to="/" class="cinematic-brand">
 				<BlockEraLogo aria-hidden="true" />
@@ -985,33 +995,49 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				</span>
 			</router-link>
 			<nav class="cinematic-nav" aria-label="Основная навигация">
-				<router-link to="/" class="cinematic-nav-link" aria-label="Главная">
+				<router-link to="/" class="cinematic-nav-link" :aria-label="$t('blockera.ui.70f8bb9a8a53')">
 					<HomeIcon />
-					<span>Главная</span>
+					<span>{{ $t('blockera.ui.70f8bb9a8a53') }}</span>
 				</router-link>
-				<router-link to="/library" class="cinematic-nav-link" aria-label="Библиотека">
+				<router-link
+					to="/library"
+					class="cinematic-nav-link"
+					:aria-label="$t('blockera.ui.b8100f5ba8bd')"
+				>
 					<CollectionIcon />
-					<span>Библиотека</span>
+					<span>{{ $t('blockera.ui.b8100f5ba8bd') }}</span>
 				</router-link>
-				<router-link :to="modsRoute" class="cinematic-nav-link" aria-label="Моя сборка">
+				<router-link
+					:to="modsRoute"
+					class="cinematic-nav-link"
+					:aria-label="$t('blockera.ui.44651c97a627')"
+				>
 					<BlocksIcon />
-					<span>Моя сборка</span>
+					<span>{{ $t('blockera.ui.44651c97a627') }}</span>
 				</router-link>
-				<router-link to="/browse/modpack" class="cinematic-nav-link" aria-label="Каталог">
+				<router-link
+					to="/browse/modpack"
+					class="cinematic-nav-link"
+					:aria-label="$t('blockera.ui.4a88d27bbae1')"
+				>
 					<CompassIcon />
-					<span>Каталог</span>
+					<span>{{ $t('blockera.ui.4a88d27bbae1') }}</span>
 				</router-link>
-				<router-link to="/skins" class="cinematic-nav-link" aria-label="Скины">
+				<router-link
+					to="/skins"
+					class="cinematic-nav-link"
+					:aria-label="$t('blockera.ui.3e03229d39e4')"
+				>
 					<ChangeSkinIcon />
-					<span>Скины</span>
+					<span>{{ $t('blockera.ui.3e03229d39e4') }}</span>
 				</router-link>
 				<button
 					class="cinematic-nav-link"
-					aria-label="Настройки"
+					:aria-label="$t('blockera.ui.c7f73bb54d92')"
 					@click="$refs.settingsModal.toggle($event)"
 				>
 					<SettingsIcon />
-					<span>Настройки</span>
+					<span>{{ $t('blockera.ui.c7f73bb54d92') }}</span>
 				</button>
 			</nav>
 			<div class="cinematic-topbar-actions" data-tauri-drag-region-exclude>
@@ -1031,16 +1057,16 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 				</Suspense>
 				<section v-if="!nativeDecorations" class="window-controls cinematic-window-controls">
 					<Button
-						v-tooltip="'Свернуть'"
+						v-tooltip="$t('blockera.ui.1c5b768c8e72')"
 						class="titlebar-button"
 						icon-only
-						aria-label="Свернуть окно"
+						:aria-label="$t('blockera.ui.72115aba2cad')"
 						@click="() => getCurrentWindow().minimize()"
 					>
 						<MinimizeIcon />
 					</Button>
 					<Button
-						v-tooltip="'Развернуть или восстановить'"
+						v-tooltip="$t('blockera.ui.1855c75e374a')"
 						class="titlebar-button"
 						icon-only
 						aria-label="Развернуть или восстановить окно"
@@ -1050,10 +1076,10 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 						<MaximizeIcon v-else />
 					</Button>
 					<Button
-						v-tooltip="'Закрыть'"
+						v-tooltip="$t('blockera.ui.bbfa773e5a63')"
 						class="titlebar-button close"
 						icon-only
-						aria-label="Закрыть окно"
+						:aria-label="$t('blockera.ui.e3896a930398')"
 						@click="handleClose"
 					>
 						<XIcon />
@@ -1078,7 +1104,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					v-if="availableSurvey"
 					class="w-[400px] z-20 fixed -bottom-12 pb-16 right-[--right-bar-width] mr-4 rounded-t-2xl card-shadow bg-bg-raised border-divider border-[1px] border-solid border-b-0 p-4"
 				>
-					<h2 class="text-lg font-extrabold mt-0 mb-2">Hey there Modrinth user!</h2>
+					<h2 class="text-lg font-extrabold mt-0 mb-2">{{ $t('blockera.ui.5fd415e25ac4') }}</h2>
 					<p class="m-0 leading-tight">
 						Ответите на несколько вопросов о работе с BlockEra Launcher?
 					</p>
@@ -1163,7 +1189,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 					<div
 						class="p-4 pr-1 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
 					>
-						<h3 class="text-base text-primary font-medium m-0">Playing as</h3>
+						<h3 class="text-base text-primary font-medium m-0">
+							{{ $t('blockera.ui.b82e18096718') }}
+						</h3>
 						<suspense>
 							<AccountsCard ref="accounts" mode="small" @change="handleAccountChange" />
 						</suspense>
@@ -1178,7 +1206,9 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 						</suspense>
 					</div>
 					<div v-if="news && news.length > 0" class="p-4 pr-1 flex flex-col items-center">
-						<h3 class="text-base mb-4 text-primary font-medium m-0 text-left w-full">News</h3>
+						<h3 class="text-base mb-4 text-primary font-medium m-0 text-left w-full">
+							{{ $t('blockera.ui.34c808d0a63f') }}
+						</h3>
 						<div class="space-y-4 flex flex-col items-center w-full">
 							<NewsArticleCard
 								v-for="(item, index) in news"
@@ -1187,7 +1217,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 							/>
 							<ButtonStyled color="brand" size="large">
 								<a href="https://modrinth.com/news" target="_blank" class="my-4">
-									<NewspaperIcon /> View all news
+									<NewspaperIcon /> {{ $t('blockera.ui.77966641b7a9') }}
 								</a>
 							</ButtonStyled>
 						</div>

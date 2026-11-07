@@ -60,11 +60,11 @@
 					}}</span>
 				</button>
 				<div v-if="accounts.length === 0" class="account-empty">
-					<strong>Аккаунты не добавлены</strong>
+					<strong>{{ $t('blockera.ui.ea50217c903c') }}</strong>
 					<span>Добавьте Microsoft, Ely.by или офлайн-профиль.</span>
 				</div>
 				<button type="button" class="manage-accounts" @click.stop="showAccountManager">
-					Управление аккаунтами
+					{{ $t('blockera.ui.f360b84e2ce2') }}
 					<DropdownIcon />
 				</button>
 			</div>
@@ -79,7 +79,7 @@
 			<div class="account-manager-body">
 				<div class="account-manager-intro">
 					<span>ПРОФИЛИ MINECRAFT</span>
-					<h2>Выберите способ входа</h2>
+					<h2>{{ $t('blockera.ui.c4e348afa8f2') }}</h2>
 					<p>Активный аккаунт будет использоваться при следующем запуске игры.</p>
 				</div>
 				<div class="account-provider-grid">
@@ -88,10 +88,14 @@
 							v-else
 							class="animate-spin"
 						/>
-						<span><strong>Microsoft</strong><small>Лицензионный аккаунт</small></span>
+						<span
+							><strong>Microsoft</strong><small>{{ $t('blockera.ui.f1abbaf60748') }}</small></span
+						>
 					</button>
 					<button type="button" @click="showOfflineLoginModal()">
-						<OfflineIcon /><span><strong>Офлайн</strong><small>Локальное имя игрока</small></span>
+						<OfflineIcon /><span
+							><strong>Офлайн</strong><small>{{ $t('blockera.ui.9cb46625360a') }}</small></span
+						>
 					</button>
 					<button type="button" :disabled="elyByLoginDisabled" @click="showElyByLoginModal()">
 						<ElyByIcon v-if="!elyByLoginDisabled" /><SpinnerIcon v-else class="animate-spin" />
@@ -150,7 +154,7 @@
 							class="continue-button"
 							@click="addElyByProfile()"
 						>
-							Продолжить
+							{{ $t('blockera.ui.2e02623966f9') }}
 						</Button>
 					</div>
 				</div>
@@ -190,7 +194,7 @@
 						class="continue-button"
 						@click="addElyByProfile()"
 					>
-						Войти
+						{{ $t('blockera.ui.ada2e9e96fa9') }}
 					</Button>
 				</div>
 			</div>
@@ -206,7 +210,7 @@
 				/>
 				<div class="mt-6 ml-auto">
 					<Button icon-only color="primary" class="continue-button" @click="addOfflineProfile()">
-						Добавить
+						{{ $t('blockera.ui.61cc55aa0453') }}
 					</Button>
 				</div>
 			</div>
@@ -214,38 +218,34 @@
 		<ModalWrapper
 			ref="authenticationElyByErrorModal"
 			class="modal"
-			header="Error while proceeding authentication event with Ely.by"
+			:header="$t('blockera.ui.eacd1a78acf7')"
 		>
 			<div class="flex flex-col gap-4 px-6 py-5">
 				<label class="text-base font-medium text-red-700">
-					An error occurred while logging in.
+					{{ $t('blockera.ui.4616cb5e5445') }}
 				</label>
 
 				<div class="mt-6 ml-auto">
 					<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
-						Try again
+						{{ $t('blockera.ui.042c862e4467') }}
 					</Button>
 				</div>
 			</div>
 		</ModalWrapper>
-		<ModalWrapper
-			ref="inputElyByErrorModal"
-			class="modal"
-			header="Error while proceeding input event with Ely.by"
-		>
+		<ModalWrapper ref="inputElyByErrorModal" class="modal" :header="$t('blockera.ui.88644fc91d5a')">
 			<div class="flex flex-col gap-4 px-6 py-5">
 				<label class="text-base font-medium text-red-700">
-					An error occurred while adding the Ely.by account. Please follow the instructions below.
+					{{ $t('blockera.ui.abf3397267cb') }}
 				</label>
 
 				<ul class="list-disc list-inside text-sm space-y-1">
-					<li>Check that you have entered the correct player name or email.</li>
-					<li>Check that you have entered the correct password.</li>
+					<li>{{ $t('blockera.ui.1ff7356d08d9') }}</li>
+					<li>{{ $t('blockera.ui.b452f5d3d23b') }}</li>
 				</ul>
 
 				<div class="mt-6 ml-auto">
 					<Button color="primary" class="retry-button" @click="retryAddElyByProfile">
-						Try again
+						{{ $t('blockera.ui.042c862e4467') }}
 					</Button>
 				</div>
 			</div>
@@ -253,32 +253,33 @@
 		<ModalWrapper
 			ref="inputOfflineErrorModal"
 			class="modal"
-			header="Error while proceeding input event with offline account"
+			:header="$t('blockera.ui.e985fea7bf7e')"
 		>
 			<div class="flex flex-col gap-4 px-6 py-5">
 				<label class="text-base font-medium text-red-700">
-					An error occurred while adding the offline account. Please follow the instructions below.
+					{{ $t('blockera.ui.4df2b5c61229') }}
 				</label>
 
 				<ul class="list-disc list-inside text-sm space-y-1">
-					<li>Check that you have entered the correct player name.</li>
+					<li>{{ $t('blockera.ui.785abfa6f8b4') }}</li>
 					<li>
-						Player name must be at least {{ minOfflinePlayerNameLength }} characters long and no
-						more than {{ maxOfflinePlayerNameLength }} characters.
+						{{ $t('blockera.ui.77db5cb326a2') }} {{ minOfflinePlayerNameLength }}
+						{{ $t('blockera.ui.b06ed46f727b') }} {{ maxOfflinePlayerNameLength }}
+						{{ $t('blockera.ui.a5cec9ea22e0') }}
 					</li>
-					<li>Make sure your name meets the format requirement `{{ nameExp }}`</li>
+					<li>{{ $t('blockera.ui.b7831c917e2d') }}{{ nameExp }}`</li>
 				</ul>
 
 				<div class="mt-6 ml-auto">
 					<Button color="primary" class="retry-button" @click="retryAddOfflineProfile">
-						Try again
+						{{ $t('blockera.ui.042c862e4467') }}
 					</Button>
 				</div>
 			</div>
 		</ModalWrapper>
-		<ModalWrapper ref="unexpectedErrorModal" class="modal" header="Unexpected error occurred">
+		<ModalWrapper ref="unexpectedErrorModal" class="modal" :header="$t('blockera.ui.ae312bc773a3')">
 			<div class="modal-body">
-				<label class="label">An unexpected error has occurred. Please try again later.</label>
+				<label class="label">{{ $t('blockera.ui.8de506289d6f') }}</label>
 			</div>
 		</ModalWrapper>
 	</Teleport>
@@ -599,7 +600,7 @@ async function setAccount(account) {
 	equippedSkinUserId.value = null
 	await set_default_user(account.profile.id).catch(handleError)
 	await refreshEquippedSkin(account.profile.id)
-	emit('change')
+	emit('change', selectedAccount.value?.account_type)
 }
 
 async function login() {
@@ -625,7 +626,7 @@ const logout = async (id) => {
 		await setAccount(accounts.value[0])
 		await refreshValues()
 	} else {
-		emit('change')
+		emit('change', selectedAccount.value?.account_type)
 	}
 	trackEvent('AccountLogOut')
 }
@@ -693,6 +694,7 @@ const unlisten = await process_listener(async (e) => {
 })
 
 onMounted(() => {
+	emit('change', selectedAccount.value?.account_type)
 	window.addEventListener('click', handleClickOutside)
 	window.addEventListener('keydown', handleKeydown)
 	window.addEventListener('resize', updatePopoverPosition)

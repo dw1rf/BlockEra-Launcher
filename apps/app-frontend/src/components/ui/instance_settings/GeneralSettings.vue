@@ -166,10 +166,10 @@ const messages = defineMessages({
 <template>
 	<ConfirmModalWrapper
 		ref="deleteConfirmModal"
-		title="Are you sure you want to delete this instance?"
-		description="If you proceed, all data for your instance will be permanently erased, including your worlds. You will not be able to recover it."
+		:title="$t('blockera.ui.ce48c5ce17ea')"
+		:description="$t('blockera.ui.157052a2028b')"
 		:has-to-type="false"
-		proceed-label="Delete"
+		:proceed-label="$t('blockera.ui.f6fdbe48dc54')"
 		:show-ad-on-close="false"
 		@proceed="removeProfile"
 	/>

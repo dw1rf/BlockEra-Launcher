@@ -722,7 +722,7 @@ void refreshSearch()
 						:options="sortTypes as any"
 						:display-name="(option: SortType | undefined) => sortLabel(option?.display)"
 					>
-						<span class="font-semibold text-primary">Сортировка: </span>
+						<span class="font-semibold text-primary">{{ $t('blockera.ui.9bb640e5a014') }} </span>
 						<span class="font-semibold text-secondary">{{ sortLabel(selected) }}</span>
 					</DropdownSelect>
 					<DropdownSelect
@@ -766,7 +766,7 @@ void refreshSearch()
 					<section v-else-if="searchState === 'error'" class="offline browse-error" role="alert">
 						<strong>Не удалось загрузить каталог</strong>
 						<span>{{ searchError }}</span>
-						<Button @click="refreshSearch">Повторить</Button>
+						<Button @click="refreshSearch">{{ $t('blockera.ui.042c862e4467') }}</Button>
 					</section>
 					<section v-else-if="offline && results.total_hits === 0" class="offline">
 						Каталог недоступен без сети. Проверьте подключение к интернету и повторите попытку.

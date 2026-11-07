@@ -10,7 +10,7 @@
 			<template #actions="{ version }">
 				<ButtonStyled circular type="transparent">
 					<button
-						v-tooltip="`Install`"
+						v-tooltip="$t('blockera.ui.fd6c3ebf7bef')"
 						:class="{
 							'group-hover:!bg-brand group-hover:[&>svg]:!text-brand-inverted':
 								!installed || version.id !== installedVersion,
@@ -40,18 +40,20 @@
 								link: `https://modrinth.com/${project.project_type}/${project.slug}/version/${version.id}`,
 							},
 						]"
-						aria-label="More options"
+						:aria-label="$t('blockera.ui.86c0a35ec883')"
 					>
 						<MoreVerticalIcon aria-hidden="true" />
 						<template #install-elsewhere>
 							<DownloadIcon aria-hidden="true" />
-							Add to another instance
+							{{ $t('blockera.ui.78d738be87fe') }}
 						</template>
-						<template #open-in-browser> <ExternalIcon /> Open in browser </template>
+						<template #open-in-browser>
+							<ExternalIcon /> {{ $t('blockera.ui.052269b2c823') }}
+						</template>
 					</OverflowMenu>
 					<a
 						v-else
-						v-tooltip="`Open in browser`"
+						v-tooltip="$t('blockera.ui.052269b2c823')"
 						class="group-hover:!bg-button-bg"
 						:href="`https://modrinth.com/${project.project_type}/${project.slug}/version/${version.id}`"
 						target="_blank"

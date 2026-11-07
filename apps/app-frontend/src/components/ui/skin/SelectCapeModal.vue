@@ -78,7 +78,9 @@ defineExpose({
 	<ModalWrapper ref="modal" @on-hide="onModalHide">
 		<template #title>
 			<div class="flex flex-col">
-				<span class="text-lg font-extrabold text-heading">Change cape</span>
+				<span class="text-lg font-extrabold text-heading">{{
+					$t('blockera.ui.2ec856f75b29')
+				}}</span>
 			</div>
 		</template>
 		<div class="flex flex-col md:flex-row gap-6">
@@ -108,7 +110,7 @@ defineExpose({
 							<template #icon>
 								<XIcon />
 							</template>
-							<span>None</span>
+							<span>{{ $t('blockera.ui.6eef6648406c') }}</span>
 						</CapeLikeTextButton>
 						<CapeButton
 							v-for="cape in sortedCapes"
@@ -127,13 +129,13 @@ defineExpose({
 			<ButtonStyled color="brand">
 				<button @click="select">
 					<CheckIcon />
-					Select
+					{{ $t('blockera.ui.8598222918d3') }}
 				</button>
 			</ButtonStyled>
 			<ButtonStyled>
 				<button @click="hide">
 					<XIcon />
-					Cancel
+					{{ $t('blockera.ui.77dfd2135f4d') }}
 				</button>
 			</ButtonStyled>
 		</div>

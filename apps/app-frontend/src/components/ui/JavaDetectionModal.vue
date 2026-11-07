@@ -18,7 +18,9 @@
 						<Button v-if="currentSelected.path === javaInstall.path" disabled
 							><CheckIcon /> Выбрана</Button
 						>
-						<Button v-else @click="setJavaInstall(javaInstall)"><PlusIcon /> Выбрать</Button>
+						<Button v-else @click="setJavaInstall(javaInstall)"
+							><PlusIcon /> {{ $t('blockera.ui.78b7c9f6d6d7') }}</Button
+						>
 					</div>
 				</div>
 				<div v-if="chosenInstallOptions.length === 0" class="table-row entire-row">
@@ -28,7 +30,7 @@
 			<div class="input-group push-right">
 				<Button @click="$refs.detectJavaModal.hide()">
 					<XIcon />
-					Закрыть
+					{{ $t('blockera.ui.bbfa773e5a63') }}
 				</Button>
 			</div>
 		</div>

@@ -250,7 +250,7 @@ const createInstance = async () => {
 							v-model="name"
 							autocomplete="off"
 							type="text"
-							placeholder="Название"
+							:placeholder="$t('blockera.ui.709a23220f2c')"
 							class="creation-input"
 						/>
 						<Button :disabled="creatingInstance === true || !name" @click="createInstance()">
@@ -265,7 +265,7 @@ const createInstance = async () => {
 					<PlusIcon />
 					{{ showCreation ? 'Скрыть создание' : 'Создать новую сборку' }}
 				</Button>
-				<Button @click="installModal.hide()">Отмена</Button>
+				<Button @click="installModal.hide()">{{ $t('blockera.ui.77dfd2135f4d') }}</Button>
 			</div>
 		</div>
 	</ModalWrapper>

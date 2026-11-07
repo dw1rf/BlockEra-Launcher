@@ -475,12 +475,12 @@ onUnmounted(() => {
 		<ContextMenu ref="instanceFolderMenu" @option-clicked="handleFolderMenu">
 			<template #settings><SettingsIcon /> Настройки сборки</template>
 			<template #content><PackageIcon /> Установленные моды</template>
-			<template #export><PackageIcon /> Экспорт сборки</template>
+			<template #export><PackageIcon /> {{ $t('blockera.ui.565c7f6f9c1a') }}</template>
 			<template #repair><WrenchIcon /> Ремонт сборки</template>
 			<template #root><FolderOpenIcon /> Открыть папку сборки</template>
-			<template #mods><PackageIcon /> Моды</template>
-			<template #resource_packs><ImageIcon /> Текстуры</template>
-			<template #shader_packs><PaletteIcon /> Шейдеры</template>
+			<template #mods><PackageIcon /> {{ $t('blockera.ui.cc459f63a7ae') }}</template>
+			<template #resource_packs><ImageIcon /> {{ $t('blockera.ui.5aa8824d5c30') }}</template>
+			<template #shader_packs><PaletteIcon /> {{ $t('blockera.ui.92973587e76f') }}</template>
 			<template #saves><WorldIcon /> Карты</template>
 		</ContextMenu>
 	</main>

@@ -73,7 +73,7 @@ async function applyLauncherDir() {
 	<div class="launcher-settings-page">
 		<header class="settings-page-header">
 			<p>ХРАНИЛИЩЕ</p>
-			<h2>Файлы и загрузки</h2>
+			<h2>{{ $t('blockera.ui.ed98902aa712') }}</h2>
 			<span>Папка данных, кэш и нагрузка на интернет и диск.</span>
 		</header>
 		<section class="settings-section settings-fields">

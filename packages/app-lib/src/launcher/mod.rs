@@ -263,153 +263,159 @@ pub async fn install_minecraft(
         "Downloading Minecraft",
     )
     .await?;
-
-    crate::api::profile::edit(&profile.path, |prof| {
-        prof.install_stage = ProfileInstallStage::MinecraftInstalling;
-
-        async { Ok(()) }
-    })
-    .await?;
-
-    let state = State::get().await?;
-
-    let instance_path =
-        crate::api::profile::get_full_path(&profile.path).await?;
-    let minecraft = crate::api::metadata::get_minecraft_versions().await?;
-
-    let version_index = minecraft
-        .versions
-        .iter()
-        .position(|it| it.id == profile.game_version)
-        .ok_or(crate::ErrorKind::LauncherError(format!(
-            "Invalid game version: {}",
-            profile.game_version
-        )))?;
-    let version = &minecraft.versions[version_index];
-    let minecraft_updated = version_index
-        <= minecraft
-            .versions
-            .iter()
-            .position(|x| x.id == "22w16a")
-            .unwrap_or(0);
-
-    let mut loader_version = get_loader_version_from_profile(
-        &profile.game_version,
-        profile.loader,
-        profile.loader_version.as_deref(),
-    )
-    .await?;
-
-    // If no loader version is selected, try to select the stable version!
-    if profile.loader != ModLoader::Vanilla && loader_version.is_none() {
-        loader_version = get_loader_version_from_profile(
-            &profile.game_version,
-            profile.loader,
-            Some("stable"),
-        )
-        .await?;
-
-        let loader_version_id = loader_version.clone();
+    crate::event::download_control::run(loading_bar.uuid(), async {
         crate::api::profile::edit(&profile.path, |prof| {
-            prof.loader_version = loader_version_id.clone().map(|x| x.id);
+            prof.install_stage = ProfileInstallStage::MinecraftInstalling;
 
             async { Ok(()) }
         })
         .await?;
-    }
 
-    let version_jar =
-        loader_version.as_ref().map_or(version.id.clone(), |it| {
-            format!("{}-{}", version.id.clone(), it.id.clone())
-        });
+        let state = State::get().await?;
 
-    // Download version info (5)
-    let mut version_info = download::download_version_info(
-        &state,
-        version,
-        loader_version.as_ref(),
-        Some(repairing),
-        Some(&loading_bar),
-    )
-    .await?;
+        let instance_path =
+            crate::api::profile::get_full_path(&profile.path).await?;
+        let minecraft = crate::api::metadata::get_minecraft_versions().await?;
 
-    let key = version_info
-        .java_version
-        .as_ref()
-        .map_or(8, |it| it.major_version);
-    let (java_version, set_java) = if let Some(java_version) =
-        get_java_version_from_profile(profile, &version_info).await?
-    {
-        (std::path::PathBuf::from(java_version.path), false)
-    } else {
-        let path = crate::api::jre::auto_install_java(key).await?;
+        let version_index = minecraft
+            .versions
+            .iter()
+            .position(|it| it.id == profile.game_version)
+            .ok_or(crate::ErrorKind::LauncherError(format!(
+                "Invalid game version: {}",
+                profile.game_version
+            )))?;
+        let version = &minecraft.versions[version_index];
+        let minecraft_updated = version_index
+            <= minecraft
+                .versions
+                .iter()
+                .position(|x| x.id == "22w16a")
+                .unwrap_or(0);
 
-        (path, true)
-    };
+        let mut loader_version = get_loader_version_from_profile(
+            &profile.game_version,
+            profile.loader,
+            profile.loader_version.as_deref(),
+        )
+        .await?;
 
-    // Test jre version
-    let java_version = crate::api::jre::check_jre(java_version.clone()).await?;
+        // If no loader version is selected, try to select the stable version!
+        if profile.loader != ModLoader::Vanilla && loader_version.is_none() {
+            loader_version = get_loader_version_from_profile(
+                &profile.game_version,
+                profile.loader,
+                Some("stable"),
+            )
+            .await?;
 
-    if set_java {
-        java_version.upsert(&state.pool).await?;
-    }
+            let loader_version_id = loader_version.clone();
+            crate::api::profile::edit(&profile.path, |prof| {
+                prof.loader_version = loader_version_id.clone().map(|x| x.id);
 
-    // Download minecraft (5-90)
-    download::download_minecraft(
-        &state,
-        &version_info,
-        &loading_bar,
-        &java_version.architecture,
-        repairing,
-        minecraft_updated,
-    )
-    .await?;
+                async { Ok(()) }
+            })
+            .await?;
+        }
 
-    let client_path = state
-        .directories
-        .version_dir(&version_jar)
-        .join(format!("{version_jar}.jar"));
-    if let Some(processors) = &version_info.processors {
-        let libraries_dir = state.directories.libraries_dir();
+        let version_jar =
+            loader_version.as_ref().map_or(version.id.clone(), |it| {
+                format!("{}-{}", version.id.clone(), it.id.clone())
+            });
 
-        if let Some(ref mut data) = version_info.data {
-            processor_rules! {
-                data;
-                "SIDE":
-                    client => "client",
-                    server => "";
-                "MINECRAFT_JAR" :
-                    client => client_path.to_string_lossy(),
-                    server => "";
-                "MINECRAFT_VERSION":
-                    client => profile.game_version.clone(),
-                    server => "";
-                "ROOT":
-                    client => instance_path.to_string_lossy(),
-                    server => "";
-                "LIBRARY_DIR":
-                    client => libraries_dir.to_string_lossy(),
-                    server => "";
-            }
+        // Download version info (5)
+        let mut version_info = download::download_version_info(
+            &state,
+            version,
+            loader_version.as_ref(),
+            Some(repairing),
+            Some(&loading_bar),
+        )
+        .await?;
 
-            emit_loading(&loading_bar, 0.0, Some("Running forge processors"))?;
-            let total_length = processors.len();
+        let key = version_info
+            .java_version
+            .as_ref()
+            .map_or(8, |it| it.major_version);
+        let (java_version, set_java) = if let Some(java_version) =
+            get_java_version_from_profile(profile, &version_info).await?
+        {
+            (std::path::PathBuf::from(java_version.path), false)
+        } else {
+            let path = crate::api::jre::auto_install_java(key).await?;
 
-            // Forge processors (90-100)
-            for (index, processor) in processors.iter().enumerate() {
-                if let Some(sides) = &processor.sides
-                    && !sides.contains(&String::from("client"))
-                {
-                    continue;
+            (path, true)
+        };
+
+        // Test jre version
+        let java_version =
+            crate::api::jre::check_jre(java_version.clone()).await?;
+
+        if set_java {
+            java_version.upsert(&state.pool).await?;
+        }
+
+        // Download minecraft (5-90)
+        download::download_minecraft(
+            &state,
+            &version_info,
+            &loading_bar,
+            &java_version.architecture,
+            repairing,
+            minecraft_updated,
+        )
+        .await?;
+
+        let client_path = state
+            .directories
+            .version_dir(&version_jar)
+            .join(format!("{version_jar}.jar"));
+        if let Some(processors) = &version_info.processors {
+            let libraries_dir = state.directories.libraries_dir();
+
+            if let Some(ref mut data) = version_info.data {
+                processor_rules! {
+                    data;
+                    "SIDE":
+                        client => "client",
+                        server => "";
+                    "MINECRAFT_JAR" :
+                        client => client_path.to_string_lossy(),
+                        server => "";
+                    "MINECRAFT_VERSION":
+                        client => profile.game_version.clone(),
+                        server => "";
+                    "ROOT":
+                        client => instance_path.to_string_lossy(),
+                        server => "";
+                    "LIBRARY_DIR":
+                        client => libraries_dir.to_string_lossy(),
+                        server => "";
                 }
 
-                let cp = {
-                    let mut cp = processor.classpath.clone();
-                    cp.push(processor.jar.clone());
-                    cp
-                };
+                emit_loading(
+                    &loading_bar,
+                    0.0,
+                    Some("Running forge processors"),
+                )?;
+                let total_length = processors.len();
 
-                let child = Command::new(&java_version.path)
+                // Forge processors (90-100)
+                for (index, processor) in processors.iter().enumerate() {
+                    if let Some(sides) = &processor.sides
+                        && !sides.contains(&String::from("client"))
+                    {
+                        continue;
+                    }
+
+                    let cp = {
+                        let mut cp = processor.classpath.clone();
+                        cp.push(processor.jar.clone());
+                        cp
+                    };
+
+                    let child = Command::new(&java_version.path)
+                    .kill_on_drop(true)
                     .arg("-cp")
                     .arg(args::get_class_paths_jar(
                         &libraries_dir,
@@ -444,37 +450,40 @@ pub async fn install_minecraft(
                         ))
                     })?;
 
-                if !child.status.success() {
-                    return Err(crate::ErrorKind::LauncherError(format!(
-                        "Processor error: {}",
-                        String::from_utf8_lossy(&child.stderr)
-                    ))
-                    .as_error());
-                }
+                    if !child.status.success() {
+                        return Err(crate::ErrorKind::LauncherError(format!(
+                            "Processor error: {}",
+                            String::from_utf8_lossy(&child.stderr)
+                        ))
+                        .as_error());
+                    }
 
-                emit_loading(
-                    &loading_bar,
-                    30.0 / total_length as f64,
-                    Some(&format!(
-                        "Running forge processor {index}/{total_length}"
-                    )),
-                )?;
+                    emit_loading(
+                        &loading_bar,
+                        30.0 / total_length as f64,
+                        Some(&format!(
+                            "Running forge processor {index}/{total_length}"
+                        )),
+                    )?;
+                }
             }
         }
-    }
 
-    let protocol_version = read_protocol_version_from_jar(client_path).await?;
+        let protocol_version =
+            read_protocol_version_from_jar(client_path).await?;
 
-    crate::api::profile::edit(&profile.path, |prof| {
-        prof.install_stage = ProfileInstallStage::Installed;
-        prof.protocol_version = protocol_version;
+        crate::api::profile::edit(&profile.path, |prof| {
+            prof.install_stage = ProfileInstallStage::Installed;
+            prof.protocol_version = protocol_version;
 
-        async { Ok(()) }
+            async { Ok(()) }
+        })
+        .await?;
+        emit_loading(&loading_bar, 1.0, Some("Finished installing"))?;
+
+        Ok(())
     })
-    .await?;
-    emit_loading(&loading_bar, 1.0, Some("Finished installing"))?;
-
-    Ok(())
+    .await
 }
 
 pub async fn read_protocol_version_from_jar(

@@ -13,7 +13,9 @@
 			<p>{{ projectsError }}</p>
 			<div class="empty-state-actions">
 				<ButtonStyled
-					><button @click="refreshProjects"><UpdatedIcon /> Повторить</button></ButtonStyled
+					><button @click="refreshProjects">
+						<UpdatedIcon /> {{ $t('blockera.ui.042c862e4467') }}
+					</button></ButtonStyled
 				>
 				<AddContentButton :instance="instance" />
 			</div>
@@ -145,7 +147,9 @@
 							color-fill="text"
 							hover-color-fill="text"
 						>
-							<button @click="updateSelected()"><DownloadIcon /> Обновить</button>
+							<button @click="updateSelected()">
+								<DownloadIcon /> {{ $t('blockera.ui.fb91e24fa52d') }}
+							</button>
 						</ButtonStyled>
 						<ButtonStyled>
 							<OverflowMenu
@@ -169,20 +173,32 @@
 								]"
 							>
 								<ShareIcon /> Поделиться <DropdownIcon />
-								<template #share-names> <TextInputIcon /> Project names </template>
-								<template #share-file-names> <FileIcon /> File names </template>
-								<template #share-urls> <LinkIcon /> Project links </template>
-								<template #share-markdown> <CodeIcon /> Markdown links </template>
+								<template #share-names>
+									<TextInputIcon /> {{ $t('blockera.ui.eeab067e8c95') }}
+								</template>
+								<template #share-file-names>
+									<FileIcon /> {{ $t('blockera.ui.c4bb047317cb') }}
+								</template>
+								<template #share-urls> <LinkIcon /> {{ $t('blockera.ui.c11652f1708d') }} </template>
+								<template #share-markdown>
+									<CodeIcon /> {{ $t('blockera.ui.4a71c8d824be') }}
+								</template>
 							</OverflowMenu>
 						</ButtonStyled>
 						<ButtonStyled v-if="selectedProjects.some((m) => m.disabled)">
-							<button @click="enableAll()"><CheckCircleIcon /> Включить</button>
+							<button @click="enableAll()">
+								<CheckCircleIcon /> {{ $t('blockera.ui.20063ad90532') }}
+							</button>
 						</ButtonStyled>
 						<ButtonStyled v-if="selectedProjects.some((m) => !m.disabled)">
-							<button @click="disableAll()"><SlashIcon /> Отключить</button>
+							<button @click="disableAll()">
+								<SlashIcon /> {{ $t('blockera.ui.9a7d4e0687b1') }}
+							</button>
 						</ButtonStyled>
 						<ButtonStyled color="red">
-							<button @click="deleteSelected()"><TrashIcon /> Удалить</button>
+							<button @click="deleteSelected()">
+								<TrashIcon /> {{ $t('blockera.ui.e963907dac5c') }}
+							</button>
 						</ButtonStyled>
 					</div>
 				</template>
@@ -190,7 +206,7 @@
 					<ButtonStyled type="transparent" color-fill="text" hover-color-fill="text">
 						<button :disabled="refreshingProjects" class="w-max" @click="refreshProjects">
 							<UpdatedIcon />
-							Обновить список
+							{{ $t('blockera.ui.56e3badc4e6c') }}
 						</button>
 					</ButtonStyled>
 					<ButtonStyled
@@ -223,7 +239,7 @@
 						circular
 					>
 						<button
-							v-tooltip="`Обновить`"
+							v-tooltip="$t('blockera.ui.fb91e24fa52d')"
 							aria-label="Обновить проект"
 							:disabled="(item.data as ProjectListEntry).updating"
 							@click="updateProject(item.data)"
@@ -239,7 +255,11 @@
 						@update:model-value="toggleDisableMod(item.data)"
 					/>
 					<ButtonStyled type="transparent" circular>
-						<button v-tooltip="'Удалить'" aria-label="Удалить проект" @click="removeMod(item)">
+						<button
+							v-tooltip="$t('blockera.ui.e963907dac5c')"
+							aria-label="Удалить проект"
+							@click="removeMod(item)"
+						>
 							<TrashIcon />
 						</button>
 					</ButtonStyled>

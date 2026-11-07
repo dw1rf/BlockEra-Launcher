@@ -106,20 +106,25 @@ const exportPack = async () => {
 </script>
 
 <template>
-	<ModalWrapper ref="exportModal" header="Export modpack">
+	<ModalWrapper ref="exportModal" :header="$t('blockera.ui.565c7f6f9c1a')">
 		<div class="modal-body">
 			<div class="labeled_input">
-				<p>Modpack Name</p>
+				<p>{{ $t('blockera.ui.f98714ca604d') }}</p>
 				<div class="iconified-input">
 					<PackageIcon />
-					<input v-model="nameInput" type="text" placeholder="Modpack name" class="input" />
+					<input
+						v-model="nameInput"
+						type="text"
+						:placeholder="$t('blockera.ui.d7144817e844')"
+						class="input"
+					/>
 					<Button class="r-btn" @click="nameInput = ''">
 						<XIcon />
 					</Button>
 				</div>
 			</div>
 			<div class="labeled_input">
-				<p>Version number</p>
+				<p>{{ $t('blockera.ui.29156f5ef29f') }}</p>
 				<div class="iconified-input">
 					<VersionIcon />
 					<input v-model="versionInput" type="text" placeholder="1.0.0" class="input" />
@@ -130,10 +135,10 @@ const exportPack = async () => {
 			</div>
 			<div class="adjacent-input">
 				<div class="labeled_input">
-					<p>Description</p>
+					<p>{{ $t('blockera.ui.55f8ebc805e6') }}</p>
 
 					<div class="textarea-wrapper">
-						<textarea v-model="exportDescription" placeholder="Enter modpack description..." />
+						<textarea v-model="exportDescription" :placeholder="$t('blockera.ui.c5e2d4de6596')" />
 					</div>
 				</div>
 			</div>
@@ -141,7 +146,7 @@ const exportPack = async () => {
 			<div class="table">
 				<div class="table-head">
 					<div class="table-cell row-wise">
-						Select files and folders to include in pack
+						{{ $t('blockera.ui.9bcb6ba81b62') }}
 						<Button
 							class="sleek-primary collapsed-button"
 							icon-only
@@ -200,11 +205,11 @@ const exportPack = async () => {
 			<div class="button-row push-right">
 				<Button @click="exportModal.hide">
 					<XIcon />
-					Cancel
+					{{ $t('blockera.ui.77dfd2135f4d') }}
 				</Button>
 				<Button color="primary" @click="exportPack">
 					<PackageIcon />
-					Export
+					{{ $t('blockera.ui.f3e4fadb9e37') }}
 				</Button>
 			</div>
 		</div>

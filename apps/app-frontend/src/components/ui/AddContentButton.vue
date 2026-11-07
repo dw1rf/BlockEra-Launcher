@@ -39,7 +39,7 @@ const handleSearchContent = async () => {
 		<ButtonStyled>
 			<button @click="handleSearchContent">
 				<PlusIcon />
-				Найти моды
+				{{ $t('blockera.ui.3ba372ed53e9') }}
 			</button>
 		</ButtonStyled>
 		<ButtonStyled>

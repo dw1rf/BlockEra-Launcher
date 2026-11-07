@@ -152,7 +152,7 @@ onUnmounted(() => {
 								})
 							}}
 						</template>
-						<template v-else> Not played yet </template>
+						<template v-else> {{ $t('blockera.ui.3a2af56614b7') }} </template>
 					</div>
 					•
 					<span v-if="modpack" class="flex items-center gap-1 truncate text-secondary">
@@ -167,7 +167,7 @@ onUnmounted(() => {
 					</span>
 					<span v-else-if="loadingModpack" class="flex items-center gap-1 truncate text-secondary">
 						<SpinnerIcon class="animate-spin shrink-0" />
-						<span class="truncate">Loading modpack...</span>
+						<span class="truncate">{{ $t('blockera.ui.ad79dd395a11') }}</span>
 					</span>
 					<span v-else class="flex items-center gap-1 truncate text-secondary">
 						{{ loader }}
@@ -210,7 +210,7 @@ onUnmounted(() => {
 						<MoreVerticalIcon aria-hidden="true" />
 						<template #open-instance>
 							<EyeIcon aria-hidden="true" />
-							View instance
+							{{ $t('blockera.ui.4438cd21edb7') }}
 						</template>
 						<template #open-folder>
 							<FolderOpenIcon aria-hidden="true" />

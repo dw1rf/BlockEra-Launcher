@@ -46,7 +46,7 @@
 						</ButtonStyled>
 						<ButtonStyled size="large" circular type="transparent">
 							<OverflowMenu
-								:tooltip="`More options`"
+								:tooltip="$t('blockera.ui.86c0a35ec883')"
 								:options="[
 									{
 										id: 'follow',
@@ -75,13 +75,15 @@
 										link: `https://modrinth.com/report?item=project&itemID=${data.id}`,
 									},
 								]"
-								aria-label="More options"
+								:aria-label="$t('blockera.ui.86c0a35ec883')"
 							>
 								<MoreVerticalIcon aria-hidden="true" />
-								<template #open-in-browser> <ExternalIcon /> Open in browser </template>
-								<template #follow> <HeartIcon /> Follow </template>
-								<template #save> <BookmarkIcon /> Save </template>
-								<template #report> <ReportIcon /> Report </template>
+								<template #open-in-browser>
+									<ExternalIcon /> {{ $t('blockera.ui.052269b2c823') }}
+								</template>
+								<template #follow> <HeartIcon /> {{ $t('blockera.ui.66587a7a62a9') }} </template>
+								<template #save> <BookmarkIcon /> {{ $t('blockera.ui.efc007a393f6') }} </template>
+								<template #report> <ReportIcon /> {{ $t('blockera.ui.ee45c30326b7') }} </template>
 							</OverflowMenu>
 						</ButtonStyled>
 					</template>
@@ -118,12 +120,14 @@
 					:installed-version="installedVersion"
 				/>
 			</template>
-			<template v-else> Project data couldn't not be loaded. </template>
+			<template v-else> {{ $t('blockera.ui.5726f65625c8') }} </template>
 		</div>
 		<ContextMenu ref="options" @option-clicked="handleOptionsClick">
-			<template #install> <DownloadIcon /> Install </template>
-			<template #open_link> <GlobeIcon /> Open in Modrinth <ExternalIcon /> </template>
-			<template #copy_link> <ClipboardCopyIcon /> Copy link </template>
+			<template #install> <DownloadIcon /> {{ $t('blockera.ui.fd6c3ebf7bef') }} </template>
+			<template #open_link>
+				<GlobeIcon /> {{ $t('blockera.ui.f16fceebe8ec') }} <ExternalIcon />
+			</template>
+			<template #copy_link> <ClipboardCopyIcon /> {{ $t('blockera.ui.2f84eea5d45d') }} </template>
 		</ContextMenu>
 	</div>
 </template>

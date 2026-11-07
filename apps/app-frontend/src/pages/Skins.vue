@@ -311,7 +311,7 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 		ref="deleteSkinModal"
 		title="Удалить этот скин?"
 		description="Скин будет удалён без возможности восстановления."
-		proceed-label="Удалить"
+		:proceed-label="$t('blockera.ui.e963907dac5c')"
 		@proceed="deleteSkin"
 	/>
 
@@ -429,7 +429,7 @@ await Promise.all([loadCapes(), loadSkins(), loadCurrentUser()])
 									class="pointer-events-auto"
 									@click.stop="(e: MouseEvent) => editSkinModal?.show(e, skin)"
 								>
-									<EditIcon /> Изменить
+									<EditIcon /> {{ $t('blockera.ui.5301648dcf6b') }}
 								</Button>
 								<Button
 									v-show="!skin.is_equipped"

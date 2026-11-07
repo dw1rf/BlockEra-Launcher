@@ -23,3 +23,7 @@ export async function progress_bars_list() {
 export async function get_opening_command() {
 	return await invoke('plugin:utils|get_opening_command')
 }
+
+export async function download_control(id, action) {
+	return await invoke('plugin:utils|download_control', { id, action })
+}

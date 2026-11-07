@@ -38,12 +38,13 @@
 					@click="deleteLog()"
 				>
 					<TrashIcon aria-hidden="true" />
-					Удалить
+					{{ $t('blockera.ui.e963907dac5c') }}
 				</Button>
 			</div>
 		</div>
 		<p v-if="shareError" class="log-action-error" role="alert">
-			{{ shareError }} <button type="button" @click="share">Повторить</button>
+			{{ shareError }}
+			<button type="button" @click="share">{{ $t('blockera.ui.042c862e4467') }}</button>
 		</p>
 		<div class="button-row">
 			<input

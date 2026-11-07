@@ -29,7 +29,7 @@ defineExpose({ show, hide })
 	<ModalWrapper ref="modal" @hide="onFlowCancel">
 		<template #title>
 			<span class="items-center gap-2 text-lg font-extrabold text-contrast">
-				<LogInIcon /> Sign in
+				<LogInIcon /> {{ $t('blockera.ui.ada2e9e96fa9') }}
 			</span>
 		</template>
 
@@ -37,7 +37,7 @@ defineExpose({ show, hide })
 			<SpinnerIcon class="w-12 h-12 animate-spin" />
 		</div>
 		<p class="text-sm text-secondary">
-			Please sign in at the browser window that just opened to continue.
+			{{ $t('blockera.ui.2f9dc55094a8') }}
 		</p>
 	</ModalWrapper>
 </template>

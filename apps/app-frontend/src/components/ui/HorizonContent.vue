@@ -174,7 +174,9 @@ onUnmounted(() => {
 					официальными инструментами Horizon.
 				</p>
 			</div>
-			<button :disabled="loading" @click="refresh"><UpdatedIcon /> Обновить</button>
+			<button :disabled="loading" @click="refresh">
+				<UpdatedIcon /> {{ $t('blockera.ui.fb91e24fa52d') }}
+			</button>
 		</header>
 		<div class="native-panel">
 			<div>
@@ -202,7 +204,8 @@ onUnmounted(() => {
 		<p v-if="error" class="error" role="alert">{{ error }}</p>
 		<div class="toolbar">
 			<nav aria-label="Моды Horizon">
-				<button :class="{ active: tab === 'catalog' }" @click="tab = 'catalog'">Каталог</button
+				<button :class="{ active: tab === 'catalog' }" @click="tab = 'catalog'">
+					{{ $t('blockera.ui.4a88d27bbae1') }}</button
 				><button :class="{ active: tab === 'installed' }" @click="tab = 'installed'">
 					Установленные · {{ state.installed.length }}
 				</button>
@@ -211,7 +214,7 @@ onUnmounted(() => {
 				><SearchIcon /><input
 					v-model="search"
 					aria-label="Поиск модов Horizon"
-					placeholder="Zoom, Minimap, FPS…"
+					:placeholder="$t('blockera.ui.44db19896dea')"
 			/></label>
 			<select v-model="filter" aria-label="Тип модов">
 				<option value="all">Все моды</option>
@@ -243,7 +246,7 @@ onUnmounted(() => {
 							:disabled="disabled"
 							@click="act('update', mod)"
 						>
-							<UpdatedIcon /> Обновить
+							<UpdatedIcon /> {{ $t('blockera.ui.fb91e24fa52d') }}
 						</button>
 						<button
 							:disabled="disabled"
@@ -261,7 +264,7 @@ onUnmounted(() => {
 						</button>
 					</template>
 					<button v-else class="primary" :disabled="disabled" @click="act('install', mod)">
-						<DownloadIcon /> Установить
+						<DownloadIcon /> {{ $t('blockera.ui.fd6c3ebf7bef') }}
 					</button>
 				</div>
 			</article>
@@ -293,7 +296,7 @@ onUnmounted(() => {
 			</ul>
 			<label><input v-model="trusted" type="checkbox" /> Я доверяю коду перечисленных модов</label>
 			<div class="mod-actions">
-				<button @click="confirmBuild = false">Отмена</button
+				<button @click="confirmBuild = false">{{ $t('blockera.ui.77dfd2135f4d') }}</button
 				><button class="primary" :disabled="!trusted || disabled" @click="act('build')">
 					Доверяю — собрать клиент
 				</button>
@@ -306,10 +309,10 @@ onUnmounted(() => {
 			aria-modal="true"
 			aria-labelledby="remove-mod-title"
 		>
-			<h3 id="remove-mod-title">Удалить {{ removeTarget.name }}?</h3>
+			<h3 id="remove-mod-title">{{ $t('blockera.ui.e963907dac5c') }} {{ removeTarget.name }}?</h3>
 			<p>Миры и настройки сборки сохранятся. Для нативных модов потребуется пересборка клиента.</p>
 			<div class="mod-actions">
-				<button @click="removeTarget = null">Отмена</button
+				<button @click="removeTarget = null">{{ $t('blockera.ui.77dfd2135f4d') }}</button
 				><button :disabled="disabled" @click="act('remove', removeTarget ?? undefined)">
 					Удалить мод
 				</button>

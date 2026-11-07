@@ -32,7 +32,7 @@
 				</Button>
 				<Button>
 					<ReportIcon />
-					Report
+					{{ $t('blockera.ui.ee45c30326b7') }}
 				</Button>
 				<a
 					:href="`https://modrinth.com/mod/${route.params.id}/version/${route.params.version}`"
@@ -40,18 +40,18 @@
 					class="btn"
 				>
 					<ExternalIcon />
-					Modrinth website
+					{{ $t('blockera.ui.93dbf84cf287') }}
 				</a>
 			</div>
 		</Card>
 		<div class="version-container">
 			<div class="description-cards">
 				<Card>
-					<h3 class="card-title">Changelog</h3>
+					<h3 class="card-title">{{ $t('blockera.ui.164b3d4809f9') }}</h3>
 					<div class="markdown-body" v-html="renderString(version.changelog ?? '')" />
 				</Card>
 				<Card>
-					<h3 class="card-title">Files</h3>
+					<h3 class="card-title">{{ $t('blockera.ui.6ce6c512ea43') }}</h3>
 					<Card
 						v-for="file in version.files"
 						:key="file.id"
@@ -65,7 +65,9 @@
 									{{ file.filename }}
 								</span>
 								({{ formatBytes(file.size) }})
-								<span v-if="file.primary" class="primary-label"> Primary </span>
+								<span v-if="file.primary" class="primary-label">
+									{{ $t('blockera.ui.a9a96ec01949') }}
+								</span>
 							</span>
 						</span>
 						<Button
@@ -81,7 +83,7 @@
 					</Card>
 				</Card>
 				<Card v-if="displayDependencies.length > 0">
-					<h2>Dependencies</h2>
+					<h2>{{ $t('blockera.ui.0562f32dc56f') }}</h2>
 					<div v-for="dependency in displayDependencies" :key="dependency.title">
 						<router-link v-if="dependency.link" class="btn dependency" :to="dependency.link">
 							<Avatar size="sm" :src="dependency.icon" />
@@ -101,10 +103,10 @@
 				</Card>
 			</div>
 			<Card class="metadata-card">
-				<h3 class="card-title">Metadata</h3>
+				<h3 class="card-title">{{ $t('blockera.ui.251edc0eb5a8') }}</h3>
 				<div class="metadata">
 					<div class="metadata-item">
-						<span class="metadata-label">Release Channel</span>
+						<span class="metadata-label">{{ $t('blockera.ui.ddb05bbae80d') }}</span>
 						<span class="metadata-value"
 							><Badge
 								:color="releaseColor(version.version_type)"
@@ -114,11 +116,11 @@
 						/></span>
 					</div>
 					<div class="metadata-item">
-						<span class="metadata-label">Version Number</span>
+						<span class="metadata-label">{{ $t('blockera.ui.d94ba951992b') }}</span>
 						<span class="metadata-value">{{ version.version_number }}</span>
 					</div>
 					<div class="metadata-item">
-						<span class="metadata-label">Loaders</span>
+						<span class="metadata-label">{{ $t('blockera.ui.4f514b04ed6b') }}</span>
 						<span class="metadata-value">{{
 							version.loaders
 								.map((loader) => loader.charAt(0).toUpperCase() + loader.slice(1))
@@ -126,36 +128,36 @@
 						}}</span>
 					</div>
 					<div class="metadata-item">
-						<span class="metadata-label">Game Versions</span>
+						<span class="metadata-label">{{ $t('blockera.ui.5c0639a491b7') }}</span>
 						<span class="metadata-value"> {{ version.game_versions.join(', ') }} </span>
 					</div>
 					<div class="metadata-item">
-						<span class="metadata-label">Downloads</span>
+						<span class="metadata-label">{{ $t('blockera.ui.a862c2b21b5e') }}</span>
 						<span class="metadata-value">{{ version.downloads }}</span>
 					</div>
 					<div class="metadata-item">
-						<span class="metadata-label">Publication Date</span>
+						<span class="metadata-label">{{ $t('blockera.ui.0e510417e930') }}</span>
 						<span class="metadata-value">
 							{{
-								new Date(version.date_published).toLocaleString('en-US', {
+								new Date(version.date_published).toLocaleString($i18n.locale, {
 									month: 'long',
 									day: 'numeric',
 									year: 'numeric',
 								})
 							}}
-							at
+							{{ $t('blockera.ui.27e90dfa57c3') }}
 							{{
-								new Date(version.date_published).toLocaleString('en-US', {
+								new Date(version.date_published).toLocaleString($i18n.locale, {
 									hour: 'numeric',
 									minute: 'numeric',
 									second: 'numeric',
-									hour12: true,
+									hour12: false,
 								})
 							}}
 						</span>
 					</div>
 					<div v-if="author" class="metadata-item">
-						<span class="metadata-label">Author</span>
+						<span class="metadata-label">{{ $t('blockera.ui.5fda23d62015') }}</span>
 						<a
 							:href="`https://modrinth.com/user/${author.user.username}`"
 							rel="external"
@@ -172,7 +174,7 @@
 						</a>
 					</div>
 					<div class="metadata-item">
-						<span class="metadata-label">Version ID</span>
+						<span class="metadata-label">{{ $t('blockera.ui.a5534656b0ca') }}</span>
 						<span class="metadata-value"><CopyCode class="copycode" :text="version.id" /></span>
 					</div>
 				</div>

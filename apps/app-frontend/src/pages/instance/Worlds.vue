@@ -37,7 +37,7 @@
 				:disabled="startingInstance"
 				@click="joinWorld(failedWorld)"
 			>
-				Повторить
+				{{ $t('blockera.ui.042c862e4467') }}
 			</button>
 		</div>
 		<div v-if="!worldsLoaded" class="worlds-local-skeleton" aria-label="Загрузка миров">
@@ -72,7 +72,7 @@
 						</template>
 						<template v-else>
 							<UpdatedIcon />
-							Обновить
+							{{ $t('blockera.ui.fb91e24fa52d') }}
 						</template>
 					</button>
 				</ButtonStyled>
@@ -140,7 +140,7 @@
 						</template>
 						<template v-else>
 							<UpdatedIcon aria-hidden="true" />
-							Обновить
+							{{ $t('blockera.ui.fb91e24fa52d') }}
 						</template>
 					</button>
 				</ButtonStyled>
@@ -154,7 +154,7 @@
 				</div>
 				<ButtonStyled>
 					<button @click="openProfileFolder(instance.path, 'backups')">
-						<FolderOpenIcon /> Открыть папку
+						<FolderOpenIcon /> {{ $t('blockera.ui.f963014162aa') }}
 					</button>
 				</ButtonStyled>
 			</div>
@@ -178,7 +178,7 @@
 							{{ restoringBackup === backup.id ? 'Восстанавливаем…' : 'Восстановить' }}
 						</button>
 						<button :disabled="deletingBackup === backup.id" @click="removeBackup(backup)">
-							Удалить
+							{{ $t('blockera.ui.e963907dac5c') }}
 						</button>
 					</div>
 				</article>

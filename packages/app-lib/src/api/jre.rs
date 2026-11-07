@@ -65,6 +65,7 @@ pub async fn auto_install_java(java_version: u32) -> crate::Result<PathBuf> {
         "Downloading java version",
     )
     .await?;
+    crate::event::download_control::run(loading_bar.uuid(), async {
 
     #[cfg(not(target_os = "windows"))]
     #[derive(Deserialize)]
@@ -181,6 +182,7 @@ pub async fn auto_install_java(java_version: u32) -> crate::Result<PathBuf> {
     }
 
     Ok(base_path)
+    }).await
 }
 
 // Validates JRE at a given at a given path

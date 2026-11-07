@@ -532,5 +532,851 @@
   },
   "search.filter.locked.instance.sync": {
     "message": "Использовать из сборки"
+  },
+  "blockera.ui.a02107c35fb1": {
+    "message": "Вы вошли как"
+  },
+  "blockera.ui.dc1649a16c14": {
+    "message": "Выйти"
+  },
+  "blockera.ui.5fd415e25ac4": {
+    "message": "Добро пожаловать в BlockEra!"
+  },
+  "blockera.ui.b82e18096718": {
+    "message": "Вы играете как"
+  },
+  "blockera.ui.34c808d0a63f": {
+    "message": "Новости"
+  },
+  "blockera.ui.77966641b7a9": {
+    "message": "Все новости"
+  },
+  "blockera.ui.9bb640e5a014": {
+    "message": "Сортировка:"
+  },
+  "blockera.ui.e357306c9e50": {
+    "message": "Группировка:"
+  },
+  "blockera.ui.fd6c3ebf7bef": {
+    "message": "Установить"
+  },
+  "blockera.ui.f16fceebe8ec": {
+    "message": "Открыть на Modrinth"
+  },
+  "blockera.ui.2f84eea5d45d": {
+    "message": "Скопировать ссылку"
+  },
+  "blockera.ui.4616cb5e5445": {
+    "message": "Не удалось войти в аккаунт."
+  },
+  "blockera.ui.042c862e4467": {
+    "message": "Повторить"
+  },
+  "blockera.ui.abf3397267cb": {
+    "message": "Не удалось добавить аккаунт Ely.by. Проверьте данные ниже."
+  },
+  "blockera.ui.1ff7356d08d9": {
+    "message": "Проверьте имя игрока или адрес электронной почты."
+  },
+  "blockera.ui.b452f5d3d23b": {
+    "message": "Проверьте пароль."
+  },
+  "blockera.ui.4df2b5c61229": {
+    "message": "Не удалось добавить локальный аккаунт. Проверьте данные ниже."
+  },
+  "blockera.ui.785abfa6f8b4": {
+    "message": "Проверьте имя игрока."
+  },
+  "blockera.ui.77db5cb326a2": {
+    "message": "Длина имени — от"
+  },
+  "blockera.ui.b06ed46f727b": {
+    "message": "до"
+  },
+  "blockera.ui.a5cec9ea22e0": {
+    "message": "символов."
+  },
+  "blockera.ui.b7831c917e2d": {
+    "message": "Допустимый формат имени: `"
+  },
+  "blockera.ui.8de506289d6f": {
+    "message": "Произошла непредвиденная ошибка. Повторите попытку позже."
+  },
+  "blockera.ui.7cfb4ece229d": {
+    "message": "Код сборки"
+  },
+  "blockera.ui.53910b44c66c": {
+    "message": "Информация о сборке"
+  },
+  "blockera.ui.71dd2eff9b4d": {
+    "message": "Название:"
+  },
+  "blockera.ui.77dfd2135f4d": {
+    "message": "Отмена"
+  },
+  "blockera.ui.2c560c673ce0": {
+    "message": "Проблемы с подключением"
+  },
+  "blockera.ui.3dee43ecd306": {
+    "message": "статье поддержки"
+  },
+  "blockera.ui.4f4e49d062f2": {
+    "message": "для устранения неполадки."
+  },
+  "blockera.ui.a0f20ab6097f": {
+    "message": "с инструкциями по устранению неполадки."
+  },
+  "blockera.ui.a15f2216ac28": {
+    "message": "Попробуйте другой аккаунт Microsoft"
+  },
+  "blockera.ui.b7b62f61a300": {
+    "message": "Проверьте выбранный аккаунт. Лицензия Minecraft может быть привязана к другому аккаунту Microsoft."
+  },
+  "blockera.ui.1c3eb22a2c17": {
+    "message": "Выбрать другой аккаунт"
+  },
+  "blockera.ui.6f614eb6b772": {
+    "message": "Используете PC Game Pass, играли в Bedrock или только что купили игру?"
+  },
+  "blockera.ui.0f0e301d0134": {
+    "message": "Сначала войдите через"
+  },
+  "blockera.ui.55db19d25943": {
+    "message": ". Затем вернитесь в BlockEra и повторите вход."
+  },
+  "blockera.ui.a0eab8b25fc6": {
+    "message": "официальный лаунчер Minecraft"
+  },
+  "blockera.ui.c265097df2f4": {
+    "message": "Повторить вход"
+  },
+  "blockera.ui.44e6d88dd13f": {
+    "message": "Проверьте права на папку"
+  },
+  "blockera.ui.4785c5c50f00": {
+    "message": "Недостаточно места"
+  },
+  "blockera.ui.2f95463cdb9d": {
+    "message": "Повторить перенос"
+  },
+  "blockera.ui.9d2ac8f9d7d8": {
+    "message": "Отменить перенос"
+  },
+  "blockera.ui.5a69a39cf505": {
+    "message": "сайте Minecraft"
+  },
+  "blockera.ui.04b27c1aebd9": {
+    "message": "Войти в Minecraft"
+  },
+  "blockera.ui.9854df32b631": {
+    "message": "Попробуйте следующие действия:"
+  },
+  "blockera.ui.e74f49f3d1f5": {
+    "message": "Проверьте подключение к интернету и перезапустите лаунчер."
+  },
+  "blockera.ui.fea9ac65cca0": {
+    "message": "Скачайте и установите лаунчер заново."
+  },
+  "blockera.ui.9545b2b662f9": {
+    "message": "Не удалось определить версию загрузчика сборки."
+  },
+  "blockera.ui.fbcbffec1854": {
+    "message": "Для исправления восстановите файлы сборки кнопкой ниже."
+  },
+  "blockera.ui.e6619b65c69f": {
+    "message": "Исправить сборку"
+  },
+  "blockera.ui.9ed2d5a98dab": {
+    "message": "Если ошибка повторяется, откройте"
+  },
+  "blockera.ui.8f5b343647fd": {
+    "message": "страницу поддержки"
+  },
+  "blockera.ui.4541e7a202c6": {
+    "message": "Поддержка"
+  },
+  "blockera.ui.bbfa773e5a63": {
+    "message": "Закрыть"
+  },
+  "blockera.ui.b7c3ca0ee379": {
+    "message": "Скопировано!"
+  },
+  "blockera.ui.c3511494d913": {
+    "message": "Скопировать подробности"
+  },
+  "blockera.ui.4c806c855ac8": {
+    "message": "Технические подробности:"
+  },
+  "blockera.ui.f98714ca604d": {
+    "message": "Название сборки"
+  },
+  "blockera.ui.29156f5ef29f": {
+    "message": "Номер версии"
+  },
+  "blockera.ui.55f8ebc805e6": {
+    "message": "Описание"
+  },
+  "blockera.ui.9bcb6ba81b62": {
+    "message": "Выберите файлы и папки для экспорта"
+  },
+  "blockera.ui.f3e4fadb9e37": {
+    "message": "Экспортировать"
+  },
+  "blockera.ui.f28a76e90b95": {
+    "message": "Нет новых заявок в друзья"
+  },
+  "blockera.ui.ac72c5eba49e": {
+    "message": "отправил вам заявку в друзья"
+  },
+  "blockera.ui.d25dee44ac48": {
+    "message": "Вы отправили"
+  },
+  "blockera.ui.fb01eb1bad82": {
+    "message": "заявку в друзья"
+  },
+  "blockera.ui.681f08495e81": {
+    "message": "заявку в друзья"
+  },
+  "blockera.ui.bb54db510a92": {
+    "message": "Принять"
+  },
+  "blockera.ui.98f55db57c8e": {
+    "message": "Отклонить"
+  },
+  "blockera.ui.91d5082c1dc5": {
+    "message": "Время игры"
+  },
+  "blockera.ui.6e46a0f17494": {
+    "message": "Ещё не запускалась"
+  },
+  "blockera.ui.4516d56af62f": {
+    "message": "К сборке"
+  },
+  "blockera.ui.4bc72928eb5f": {
+    "message": "Используется Java по умолчанию"
+  },
+  "blockera.ui.9bc1c91ffdea": {
+    "message": ":"
+  },
+  "blockera.ui.51656b027e25": {
+    "message": "Не удалось найти Java"
+  },
+  "blockera.ui.4eec0ba33692": {
+    "message": ". Выберите установленную версию ниже:"
+  },
+  "blockera.ui.67f46635a4f8": {
+    "message": "Не удалось автоматически выбрать Java. Укажите установленную версию ниже:"
+  },
+  "blockera.ui.ada2e9e96fa9": {
+    "message": "Войти"
+  },
+  "blockera.ui.2f9dc55094a8": {
+    "message": "Для продолжения войдите в аккаунт в открывшемся окне браузера."
+  },
+  "blockera.ui.709a23220f2c": {
+    "message": "Название"
+  },
+  "blockera.ui.da0eed8ce4ff": {
+    "message": "Совместимость"
+  },
+  "blockera.ui.e01fa717bacc": {
+    "message": "Нет подключения"
+  },
+  "blockera.ui.8f44dc9b8e8b": {
+    "message": "Нет запущенных сборок"
+  },
+  "blockera.ui.4962177988ce": {
+    "message": "Плащ по умолчанию"
+  },
+  "blockera.ui.4bab2d8fe13f": {
+    "message": "Ещё"
+  },
+  "blockera.ui.2ec856f75b29": {
+    "message": "Выбрать плащ"
+  },
+  "blockera.ui.6eef6648406c": {
+    "message": "Нет"
+  },
+  "blockera.ui.8598222918d3": {
+    "message": "Выбрать"
+  },
+  "blockera.ui.3a2af56614b7": {
+    "message": "Ещё не запускалась"
+  },
+  "blockera.ui.ad79dd395a11": {
+    "message": "Загрузка сборки…"
+  },
+  "blockera.ui.4438cd21edb7": {
+    "message": "Открыть сборку"
+  },
+  "blockera.ui.1d9181b4dde7": {
+    "message": "Продолжить игру"
+  },
+  "blockera.ui.b04ba49f8486": {
+    "message": "Загрузка…"
+  },
+  "blockera.ui.684d9903aa1c": {
+    "message": "Несовместимая версия"
+  },
+  "blockera.ui.2dbc2fd2358e": {
+    "message": "в сети"
+  },
+  "blockera.ui.5d12bd53552c": {
+    "message": "Играть"
+  },
+  "blockera.ui.9e253470c876": {
+    "message": "Остановить"
+  },
+  "blockera.ui.b53526456e1c": {
+    "message": "Добавить контент"
+  },
+  "blockera.ui.5301648dcf6b": {
+    "message": "Изменить"
+  },
+  "blockera.ui.9804556fd4b8": {
+    "message": "Скопировать путь"
+  },
+  "blockera.ui.f963014162aa": {
+    "message": "Открыть папку"
+  },
+  "blockera.ui.8e2bdc99ce2a": {
+    "message": "Скопировать названия"
+  },
+  "blockera.ui.8e3b3f51939e": {
+    "message": "Скопировать идентификаторы"
+  },
+  "blockera.ui.d2de5d61f95f": {
+    "message": "Переключить выбранные"
+  },
+  "blockera.ui.bdc16fe15871": {
+    "message": "Отключить выбранные"
+  },
+  "blockera.ui.745d209fc42c": {
+    "message": "Включить выбранные"
+  },
+  "blockera.ui.521977540f00": {
+    "message": "Показать или скрыть невыбранные"
+  },
+  "blockera.ui.b4b2734a2398": {
+    "message": "Выбрать доступные обновления"
+  },
+  "blockera.ui.eeab067e8c95": {
+    "message": "Названия проектов"
+  },
+  "blockera.ui.c4bb047317cb": {
+    "message": "Имена файлов"
+  },
+  "blockera.ui.c11652f1708d": {
+    "message": "Ссылки на проекты"
+  },
+  "blockera.ui.4a71c8d824be": {
+    "message": "Ссылки Markdown"
+  },
+  "blockera.ui.b8634f87eb93": {
+    "message": "Релиз GitHub · .mrpack"
+  },
+  "blockera.ui.052269b2c823": {
+    "message": "Открыть в браузере"
+  },
+  "blockera.ui.66587a7a62a9": {
+    "message": "Подписаться"
+  },
+  "blockera.ui.efc007a393f6": {
+    "message": "Сохранить"
+  },
+  "blockera.ui.ee45c30326b7": {
+    "message": "Пожаловаться"
+  },
+  "blockera.ui.5726f65625c8": {
+    "message": "Не удалось загрузить информацию о проекте."
+  },
+  "blockera.ui.93dbf84cf287": {
+    "message": "Сайт Modrinth"
+  },
+  "blockera.ui.164b3d4809f9": {
+    "message": "Изменения"
+  },
+  "blockera.ui.6ce6c512ea43": {
+    "message": "Файлы"
+  },
+  "blockera.ui.a9a96ec01949": {
+    "message": "Основной"
+  },
+  "blockera.ui.0562f32dc56f": {
+    "message": "Зависимости"
+  },
+  "blockera.ui.251edc0eb5a8": {
+    "message": "Информация"
+  },
+  "blockera.ui.ddb05bbae80d": {
+    "message": "Канал выпуска"
+  },
+  "blockera.ui.d94ba951992b": {
+    "message": "Номер версии"
+  },
+  "blockera.ui.4f514b04ed6b": {
+    "message": "Загрузчики"
+  },
+  "blockera.ui.5c0639a491b7": {
+    "message": "Версии игры"
+  },
+  "blockera.ui.a862c2b21b5e": {
+    "message": "Скачивания"
+  },
+  "blockera.ui.0e510417e930": {
+    "message": "Дата публикации"
+  },
+  "blockera.ui.5fda23d62015": {
+    "message": "Автор"
+  },
+  "blockera.ui.a5534656b0ca": {
+    "message": "Идентификатор версии"
+  },
+  "blockera.ui.78d738be87fe": {
+    "message": "Добавить в другую сборку"
+  },
+  "blockera.ui.8e4d9728828a": {
+    "message": "Миры"
+  },
+  "blockera.ui.bce06414177f": {
+    "message": "Поиск"
+  },
+  "blockera.ui.b92e64f8b332": {
+    "message": "Выберите…"
+  },
+  "blockera.ui.ce48c5ce17ea": {
+    "message": "Удалить сборку?"
+  },
+  "blockera.ui.5d501fa5d0c8": {
+    "message": "Сборка и все её данные, включая миры, будут удалены без возможности восстановления."
+  },
+  "blockera.ui.157052a2028b": {
+    "message": "Сборка и все её данные, включая миры, будут удалены без возможности восстановления."
+  },
+  "blockera.ui.f6fdbe48dc54": {
+    "message": "Удалить"
+  },
+  "blockera.ui.eacd1a78acf7": {
+    "message": "Ошибка входа через Ely.by"
+  },
+  "blockera.ui.88644fc91d5a": {
+    "message": "Не удалось добавить аккаунт Ely.by"
+  },
+  "blockera.ui.e985fea7bf7e": {
+    "message": "Не удалось добавить локальный аккаунт"
+  },
+  "blockera.ui.ae312bc773a3": {
+    "message": "Непредвиденная ошибка"
+  },
+  "blockera.ui.78582309ac7e": {
+    "message": "Введите код сборки CurseForge"
+  },
+  "blockera.ui.565c7f6f9c1a": {
+    "message": "Экспорт сборки"
+  },
+  "blockera.ui.d7144817e844": {
+    "message": "Название сборки"
+  },
+  "blockera.ui.c5e2d4de6596": {
+    "message": "Введите описание сборки…"
+  },
+  "blockera.ui.1dacc0980553": {
+    "message": "Выберите версию"
+  },
+  "blockera.ui.7abe09135358": {
+    "message": "Выбранная установка Java"
+  },
+  "blockera.ui.fef0cbd756b5": {
+    "message": "Заявки в друзья"
+  },
+  "blockera.ui.86c0a35ec883": {
+    "message": "Другие действия"
+  },
+  "blockera.ui.f4cb180ae6e3": {
+    "message": "Остановить сборку"
+  },
+  "blockera.ui.4c3958dd9176": {
+    "message": "Открыть журнал"
+  },
+  "blockera.ui.91a5327cbb34": {
+    "message": "Версия игры"
+  },
+  "blockera.ui.7201a863cb15": {
+    "message": "Последний запуск"
+  },
+  "blockera.ui.621b5f951daa": {
+    "message": "Дата создания"
+  },
+  "blockera.ui.dcef8297cd84": {
+    "message": "Дата изменения"
+  },
+  "blockera.ui.7addb39ba68d": {
+    "message": "Сортировка"
+  },
+  "blockera.ui.ae0632ca0be8": {
+    "message": "Группировка"
+  },
+  "blockera.ui.86d67413e7f1": {
+    "message": "Сборки"
+  },
+  "blockera.ui.98a5e115c36d": {
+    "message": "Произошла ошибка"
+  },
+  "blockera.ui.4999efb1e67a": {
+    "message": "Не удалось войти в Minecraft"
+  },
+  "blockera.ui.2df83aeed195": {
+    "message": "Не удалось перенести папку лаунчера"
+  },
+  "blockera.ui.d81fae20b27e": {
+    "message": "Не выбран загрузчик"
+  },
+  "blockera.ui.d42058570989": {
+    "message": "Не удалось запустить BlockEra"
+  },
+  "blockera.ui.f3c7e2b8a976": {
+    "message": "Описание ошибки отсутствует."
+  },
+  "blockera.ui.781961bc81c2": {
+    "message": "Пауза"
+  },
+  "blockera.ui.b3bd0b5a7049": {
+    "message": "Продолжить"
+  },
+  "blockera.ui.67bb11d08df2": {
+    "message": "Отменить загрузку"
+  },
+  "blockera.ui.c7dfb6f1d9c5": {
+    "message": "Приостановлено"
+  },
+  "blockera.ui.cb8f0ceaaa3a": {
+    "message": "Загрузка сборки"
+  },
+  "blockera.ui.4ed1bfa63e63": {
+    "message": "Загрузка Minecraft"
+  },
+  "blockera.ui.d54b189bb66c": {
+    "message": "Загрузка файла сборки"
+  },
+  "blockera.ui.d332d0d13372": {
+    "message": "Получение версии"
+  },
+  "blockera.ui.80240685779d": {
+    "message": "Получение информации о проекте"
+  },
+  "blockera.ui.addef936e914": {
+    "message": "Загрузка значка"
+  },
+  "blockera.ui.b2d4d8a76932": {
+    "message": "Загрузка Java"
+  },
+  "blockera.ui.cec7d751bb19": {
+    "message": "Получение версии Java"
+  },
+  "blockera.ui.05626368f432": {
+    "message": "Распаковка файлов сборки"
+  },
+  "blockera.ui.385ef31dc145": {
+    "message": "Подготовка Forge"
+  },
+  "blockera.ui.49a7083645de": {
+    "message": "Распаковка файлов"
+  },
+  "blockera.ui.1798b3ba42ee": {
+    "message": "Завершено"
+  },
+  "blockera.ui.0951c9cfadf4": {
+    "message": "Не удалось связаться с серверами Microsoft. Проверьте подключение и повторите вход. Дополнительные рекомендации — в"
+  },
+  "blockera.ui.b6a5b59cb7ba": {
+    "message": "Сервисы Microsoft, Xbox или Minecraft отклонили подключение. Проверьте сетевые ограничения и файл hosts. Инструкции есть в"
+  },
+  "blockera.ui.94f7df82f77c": {
+    "message": "Нет прав для записи в выбранную папку. Проверьте разрешения и повторите перенос либо отмените его."
+  },
+  "blockera.ui.e8609c4f76c6": {
+    "message": "На выбранном диске недостаточно свободного места. Освободите место и повторите перенос либо отмените его."
+  },
+  "blockera.ui.471d0f52b386": {
+    "message": "Не удалось перенести данные в выбранную папку. Обратитесь в поддержку либо отмените перенос."
+  },
+  "blockera.ui.81d29ff5cd35": {
+    "message": "Для запуска этой сборки войдите в Microsoft. Приобрести Minecraft можно на"
+  },
+  "blockera.ui.efb4051db259": {
+    "message": "Не удалось запустить BlockEra. Возможно, необходимые файлы повреждены или отсутствуют."
+  },
+  "blockera.ui.3a75e1310eef": {
+    "message": "и приложите технические подробности ошибки, доступные ниже."
+  },
+  "blockera.ui.cf1ac793741a": {
+    "message": "⚠️ Ошибка обновления базы данных"
+  },
+  "blockera.ui.b931cddd4a11": {
+    "message": "Обнаружена проблема с обновлением базы данных. Одной из причин может быть разный формат переноса строк в Windows, macOS и Linux."
+  },
+  "blockera.ui.617696c8133e": {
+    "message": "Что произошло?"
+  },
+  "blockera.ui.206a57f9baad": {
+    "message": "Проверка миграций считает файлы изменёнными при различии переносов строк CRLF и LF. Это может мешать запуску лаунчера."
+  },
+  "blockera.ui.d77989c1e3c0": {
+    "message": "Почему?"
+  },
+  "blockera.ui.cea1024f4105": {
+    "message": "Автоматическое преобразование переносов строк в Git и различия между ОС могут менять контрольные суммы файлов при сборке."
+  },
+  "blockera.ui.bca70bf7a9fa": {
+    "message": "Как исправить?"
+  },
+  "blockera.ui.b0afbfcb925b": {
+    "message": "Если ошибка связана с переносами строк, попробуйте исправление для своей операционной системы ниже."
+  },
+  "blockera.ui.8a49d2b769ee": {
+    "message": "Когда применять исправление?"
+  },
+  "blockera.ui.590a977f879d": {
+    "message": "Исправление может помочь, если в технических подробностях говорится, что ранее применённая миграция была изменена."
+  },
+  "blockera.ui.af199f0f220c": {
+    "message": "Перед изменением базы данных сохраните копию файла"
+  },
+  "blockera.ui.34847c4c35c4": {
+    "message": "в отдельном безопасном месте. Папка данных:"
+  },
+  "blockera.ui.31d066ed215e": {
+    "message": "в Windows или"
+  },
+  "blockera.ui.7c829d26d870": {
+    "message": "в macOS. Пересоздание базы может привести к потере настроек и данных лаунчера. Не удаляйте исходный файл без резервной копии."
+  },
+  "blockera.ui.4a0880ea8254": {
+    "message": "Исправить для Linux и macOS"
+  },
+  "blockera.ui.66d05094e407": {
+    "message": "Исправить для Windows"
+  },
+  "blockera.ui.964071606403": {
+    "message": "✅ Исправление применено. Перезапустите лаунчер и повторите запуск игры."
+  },
+  "blockera.ui.cf24c9e25b78": {
+    "message": "Если ошибка повторяется, обратитесь в поддержку и приложите технические подробности."
+  },
+  "blockera.ui.bab90054367c": {
+    "message": "❌ Исправление не помогло."
+  },
+  "blockera.ui.9407e9ca65ce": {
+    "message": "Язык интерфейса"
+  },
+  "blockera.ui.ce810d5657ec": {
+    "message": "Выберите язык меню, уведомлений и диалогов."
+  },
+  "blockera.ui.89b86ab0e66f": {
+    "message": "Язык"
+  },
+  "blockera.ui.9370d4df1eae": {
+    "message": "Выбор сохраняется автоматически. Некоторые переводы могут быть неполными."
+  },
+  "blockera.ui.ae7e887517b0": {
+    "message": "Сохранение…"
+  },
+  "blockera.ui.19a24d79867c": {
+    "message": "Изменить версию сборки"
+  },
+  "blockera.ui.7d759c79c980": {
+    "message": "Свои настройки памяти"
+  },
+  "blockera.ui.383561111117": {
+    "message": "Свои аргументы Java"
+  },
+  "blockera.ui.030ab422ea7e": {
+    "message": "Введите аргументы Java…"
+  },
+  "blockera.ui.260f3b6bd8ee": {
+    "message": "Свои переменные окружения"
+  },
+  "blockera.ui.81b0e8164c11": {
+    "message": "Введите переменные окружения…"
+  },
+  "blockera.ui.2eb4ac18a602": {
+    "message": "Преобразовать переносы строк миграций в LF"
+  },
+  "blockera.ui.80f02196acd1": {
+    "message": "Преобразовать переносы строк миграций в CRLF"
+  },
+  "blockera.ui.e30d3bd53b9b": {
+    "message": "💡 Результат исправления миграций"
+  },
+  "blockera.ui.44db19896dea": {
+    "message": "Масштаб, миникарта, счётчик кадров…"
+  },
+  "blockera.ui.171a0606f7c7": {
+    "message": "Группа"
+  },
+  "blockera.ui.ec6f9069daa8": {
+    "message": "Загрузчик"
+  },
+  "blockera.ui.27e90dfa57c3": {
+    "message": "в"
+  },
+  "blockera.ui.c7f73bb54d92": {
+    "message": "Настройки"
+  },
+  "blockera.ui.70f8bb9a8a53": {
+    "message": "Главная"
+  },
+  "blockera.ui.4a88d27bbae1": {
+    "message": "Каталог"
+  },
+  "blockera.ui.b8100f5ba8bd": {
+    "message": "Библиотека"
+  },
+  "blockera.ui.44651c97a627": {
+    "message": "Моя сборка"
+  },
+  "blockera.ui.3e03229d39e4": {
+    "message": "Скины"
+  },
+  "blockera.ui.0efc2e6be4c2": {
+    "message": "Обзор"
+  },
+  "blockera.ui.4f9be057f0ea": {
+    "message": "Контент"
+  },
+  "blockera.ui.126dd3b70a5c": {
+    "message": "Логи"
+  },
+  "blockera.ui.448e244903a8": {
+    "message": "Создать сборку"
+  },
+  "blockera.ui.95f5e3fa9d62": {
+    "message": "Новая сборка"
+  },
+  "blockera.ui.e98a2eb26d10": {
+    "message": "Название сборки"
+  },
+  "blockera.ui.49af9b931cd8": {
+    "message": "Версия и загрузчик"
+  },
+  "blockera.ui.fb91e24fa52d": {
+    "message": "Обновить"
+  },
+  "blockera.ui.e963907dac5c": {
+    "message": "Удалить"
+  },
+  "blockera.ui.20063ad90532": {
+    "message": "Включить"
+  },
+  "blockera.ui.9a7d4e0687b1": {
+    "message": "Отключить"
+  },
+  "blockera.ui.7bb4405cdfc9": {
+    "message": "Установлено"
+  },
+  "blockera.ui.3ba372ed53e9": {
+    "message": "Найти моды"
+  },
+  "blockera.ui.56e3badc4e6c": {
+    "message": "Обновить список"
+  },
+  "blockera.ui.7b4db7ef1fa2": {
+    "message": "Интерфейс"
+  },
+  "blockera.ui.cf01481f626d": {
+    "message": "Конфиденциальность"
+  },
+  "blockera.ui.f5e068a05331": {
+    "message": "Запуск игры"
+  },
+  "blockera.ui.ed98902aa712": {
+    "message": "Файлы и загрузки"
+  },
+  "blockera.ui.df76cafe14c1": {
+    "message": "О BlockEra"
+  },
+  "blockera.ui.11c5a1b8fd12": {
+    "message": "Готов к запуску"
+  },
+  "blockera.ui.f360b84e2ce2": {
+    "message": "Управление аккаунтами"
+  },
+  "blockera.ui.c4e348afa8f2": {
+    "message": "Выберите способ входа"
+  },
+  "blockera.ui.9cb46625360a": {
+    "message": "Локальное имя игрока"
+  },
+  "blockera.ui.f1abbaf60748": {
+    "message": "Лицензионный аккаунт"
+  },
+  "blockera.ui.61cc55aa0453": {
+    "message": "Добавить"
+  },
+  "blockera.ui.2e02623966f9": {
+    "message": "Продолжить"
+  },
+  "blockera.ui.b52b36b7269f": {
+    "message": "Назад"
+  },
+  "blockera.ui.78b7c9f6d6d7": {
+    "message": "Выбрать"
+  },
+  "blockera.ui.04a212215ef9": {
+    "message": "Подтвердить"
+  },
+  "blockera.ui.4fe284aa847a": {
+    "message": "Проверить файлы"
+  },
+  "blockera.ui.530cc25bdc7d": {
+    "message": "Резервные копии"
+  },
+  "blockera.ui.8a772f3c6b5f": {
+    "message": "Автоматические бэкапы"
+  },
+  "blockera.ui.75aad268487b": {
+    "message": "Открыть контент"
+  },
+  "blockera.ui.1c5b768c8e72": {
+    "message": "Свернуть"
+  },
+  "blockera.ui.e3896a930398": {
+    "message": "Закрыть окно"
+  },
+  "blockera.ui.72115aba2cad": {
+    "message": "Свернуть окно"
+  },
+  "blockera.ui.1855c75e374a": {
+    "message": "Развернуть или восстановить"
+  },
+  "blockera.ui.5aa8824d5c30": {
+    "message": "Текстуры"
+  },
+  "blockera.ui.92973587e76f": {
+    "message": "Шейдеры"
+  },
+  "blockera.ui.cc459f63a7ae": {
+    "message": "Моды"
+  },
+  "blockera.ui.ea50217c903c": {
+    "message": "Аккаунты не добавлены"
+  },
+  "blockera.ui.e5f58095ac29": {
+    "message": "Запуск…"
+  },
+  "blockera.ui.0c43c38d9ef0": {
+    "message": "Исправляем…"
+  },
+  "blockera.ui.7ccd783ad2ed": {
+    "message": "Загрузка архива сборки…"
+  },
+  "blockera.ui.df237503973c": {
+    "message": "Загрузка модов…"
+  },
+  "blockera.ui.c781b18cdad8": {
+    "message": "Распаковка Java"
+  },
+  "blockera.ui.09601a94e3c3": {
+    "message": "Java распакована"
   }
 }

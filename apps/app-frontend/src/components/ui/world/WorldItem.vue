@@ -214,13 +214,13 @@ const messages = defineMessages({
 					>
 						<template v-if="refreshing">
 							<SpinnerIcon aria-hidden="true" class="animate-spin shrink-0" />
-							Loading...
+							{{ $t('blockera.ui.b04ba49f8486') }}
 						</template>
 						<template v-else-if="serverStatus">
 							<template v-if="serverIncompatible">
 								<IssuesIcon class="shrink-0 text-orange" aria-hidden="true" />
 								<span class="text-orange">
-									Incompatible version {{ serverStatus.version?.name }}
+									{{ $t('blockera.ui.684d9903aa1c') }} {{ serverStatus.version?.name }}
 								</span>
 							</template>
 							<template v-else>
@@ -237,7 +237,7 @@ const messages = defineMessages({
 								<Tooltip :disabled="!hasPlayersTooltip">
 									<span :class="{ 'cursor-help': hasPlayersTooltip }">
 										{{ formatNumber(serverStatus.players?.online, false) }}
-										online
+										{{ $t('blockera.ui.2dbc2fd2358e') }}
 									</span>
 									<template #popper>
 										<div class="flex flex-col gap-1">
@@ -251,7 +251,7 @@ const messages = defineMessages({
 						</template>
 						<template v-else>
 							<NoSignalIcon aria-hidden="true" stroke-width="3px" class="shrink-0" />
-							Offline
+							{{ $t('blockera.ui.e01fa717bacc') }}
 						</template>
 					</div>
 				</div>
@@ -272,7 +272,7 @@ const messages = defineMessages({
 								})
 							}}
 						</template>
-						<template v-else> Not played yet </template>
+						<template v-else> {{ $t('blockera.ui.3a2af56614b7') }} </template>
 					</div>
 					<template v-if="instancePath">
 						•

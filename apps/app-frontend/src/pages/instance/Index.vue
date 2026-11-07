@@ -33,7 +33,7 @@
 					class="instance-play stop"
 					@click="stopInstance('InstancePage')"
 				>
-					<StopCircleIcon /> Остановить
+					<StopCircleIcon /> {{ $t('blockera.ui.9e253470c876') }}
 				</button>
 				<button
 					v-else
@@ -44,15 +44,6 @@
 					<PlayIcon /> {{ loading ? 'Запуск…' : 'Играть' }}
 				</button>
 				<button
-					v-if="instance.loader === 'horizon' && instance.install_stage === 'installed' && !playing"
-					class="instance-offline"
-					:disabled="loading"
-					title="Запустить без Microsoft-сессии с выбранным именем игрока"
-					@click="startInstance('InstancePageOffline', true)"
-				>
-					Играть офлайн
-				</button>
-				<button
 					class="instance-icon-action"
 					aria-label="Настройки сборки"
 					@click="settingsModal.show()"
@@ -61,7 +52,7 @@
 				</button>
 				<button
 					class="instance-icon-action"
-					aria-label="Экспорт сборки"
+					:aria-label="$t('blockera.ui.565c7f6f9c1a')"
 					@click="$refs.exportModal.show()"
 				>
 					<PackageIcon />
@@ -102,7 +93,9 @@
 					<router-link v-for="tab in tabs" :key="tab.href" :to="tab.href">{{
 						tab.label
 					}}</router-link>
-					<button type="button" @click="settingsModal.show()">Настройки</button>
+					<button type="button" @click="settingsModal.show()">
+						{{ $t('blockera.ui.c7f73bb54d92') }}
+					</button>
 				</nav>
 				<RouterView v-slot="{ Component }" :key="instance.path">
 					<template v-if="Component">
@@ -148,14 +141,11 @@
 				<button class="backup-toggle" @click="toggleAutomaticBackups">
 					<span class="toggle-indicator" :class="{ enabled: automaticBackups }"></span>
 					<span
-						><strong>Автоматические бэкапы</strong><small>{{ nextBackupLabel }}</small></span
+						><strong>{{ $t('blockera.ui.8a772f3c6b5f') }}</strong
+						><small>{{ nextBackupLabel }}</small></span
 					>
 				</button>
-				<button
-					class="quick-backup"
-					:disabled="creatingBackup"
-					@click="createManualBackup"
-				>
+				<button class="quick-backup" :disabled="creatingBackup" @click="createManualBackup">
 					<PackageIcon /><span
 						><strong>{{ creatingBackup ? 'Создаём бэкап…' : 'Сделать бэкап' }}</strong
 						><small>{{ backupActionStatus || 'Все одиночные миры сборки' }}</small></span
@@ -163,33 +153,35 @@
 				</button>
 				<button class="quick-repair" :disabled="repairing" @click="repairInstance">
 					<DownloadIcon /><span
-						><strong>Проверить файлы</strong
+						><strong>{{ $t('blockera.ui.4fe284aa847a') }}</strong
 						><small>Переустановить повреждённые компоненты</small></span
 					>
 				</button>
 			</aside>
 		</div>
 		<ContextMenu ref="options" @option-clicked="handleOptionsClick">
-			<template #play> <PlayIcon /> Play </template>
-			<template #stop> <StopCircleIcon /> Stop </template>
-			<template #add_content> <PlusIcon /> Add content </template>
-			<template #edit> <EditIcon /> Edit </template>
-			<template #copy_path> <ClipboardCopyIcon /> Copy path </template>
-			<template #open_folder> <FolderOpenIcon /> Open folder </template>
+			<template #play> <PlayIcon /> {{ $t('blockera.ui.5d12bd53552c') }} </template>
+			<template #stop> <StopCircleIcon /> {{ $t('blockera.ui.9e253470c876') }} </template>
+			<template #add_content> <PlusIcon /> {{ $t('blockera.ui.b53526456e1c') }} </template>
+			<template #edit> <EditIcon /> {{ $t('blockera.ui.5301648dcf6b') }} </template>
+			<template #copy_path> <ClipboardCopyIcon /> {{ $t('blockera.ui.9804556fd4b8') }} </template>
+			<template #open_folder> <FolderOpenIcon /> {{ $t('blockera.ui.f963014162aa') }} </template>
 			<template #copy_link> <ClipboardCopyIcon /> Копировать ссылку </template>
-			<template #open_link> <GlobeIcon /> Open in Modrinth <ExternalIcon /> </template>
-			<template #copy_names><EditIcon />Copy names</template>
-			<template #copy_slugs><HashIcon />Copy slugs</template>
+			<template #open_link>
+				<GlobeIcon /> {{ $t('blockera.ui.f16fceebe8ec') }} <ExternalIcon />
+			</template>
+			<template #copy_names><EditIcon />{{ $t('blockera.ui.8e2bdc99ce2a') }}</template>
+			<template #copy_slugs><HashIcon />{{ $t('blockera.ui.8e3b3f51939e') }}</template>
 			<template #copy_links><GlobeIcon />Копировать ссылки</template>
-			<template #toggle><EditIcon />Toggle selected</template>
-			<template #disable><XIcon />Disable selected</template>
-			<template #enable><CheckCircleIcon />Enable selected</template>
-			<template #hide_show><EyeIcon />Show/Hide unselected</template>
+			<template #toggle><EditIcon />{{ $t('blockera.ui.d2de5d61f95f') }}</template>
+			<template #disable><XIcon />{{ $t('blockera.ui.bdc16fe15871') }}</template>
+			<template #enable><CheckCircleIcon />{{ $t('blockera.ui.745d209fc42c') }}</template>
+			<template #hide_show><EyeIcon />{{ $t('blockera.ui.521977540f00') }}</template>
 			<template #update_all><UpdatedIcon />Обновить выбранное</template>
-			<template #filter_update><UpdatedIcon />Select Updatable</template>
+			<template #filter_update><UpdatedIcon />{{ $t('blockera.ui.b4b2734a2398') }}</template>
 		</ContextMenu>
 	</div>
-	<div v-else class="blockera-instance instance-shell" aria-label="Загрузка сборки">
+	<div v-else class="blockera-instance instance-shell" :aria-label="$t('blockera.ui.cb8f0ceaaa3a')">
 		<section class="instance-hero shell-block"></section>
 		<section class="instance-health-strip shell-block"></section>
 		<div class="instance-layout">
@@ -247,7 +239,6 @@ import {
 	get_optimal_jre_key,
 	kill,
 	run,
-	run_horizon_offline,
 } from '@/helpers/profile'
 import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
 import { handleSevereError } from '@/store/error.js'
@@ -371,11 +362,10 @@ const tabs = computed(() => [
 
 const options = ref(null)
 
-const startInstance = async (context, offlineMode = false) => {
+const startInstance = async (context) => {
 	loading.value = true
 	try {
-		if (offlineMode) await run_horizon_offline(route.params.id)
-		else await run(route.params.id)
+		await run(route.params.id)
 		playing.value = true
 	} catch (err) {
 		handleSevereError(err, { profilePath: route.params.id })
@@ -982,7 +972,6 @@ Button {
 	gap: 9px;
 }
 .instance-play,
-.instance-offline,
 .instance-icon-action {
 	width: auto !important;
 	height: 46px;
@@ -998,15 +987,6 @@ Button {
 		transform 170ms ease,
 		filter 170ms ease,
 		border-color 170ms ease;
-}
-.instance-offline {
-	padding: 0 16px;
-	background: rgba(255, 255, 255, 0.07);
-	font-weight: 700;
-}
-.instance-offline:disabled {
-	opacity: 0.58;
-	cursor: wait;
 }
 .instance-play {
 	min-width: 154px;

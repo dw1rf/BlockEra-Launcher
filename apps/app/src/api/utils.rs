@@ -28,6 +28,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
             open_profile_folder,
             show_launcher_logs_folder,
             progress_bars_list,
+            download_control,
             get_opening_command,
             create_desktop_shortcut,
             save_custom_background
@@ -342,4 +343,13 @@ pub(crate) fn tauri_convert_file_src(path: &Path) -> Result<Url> {
     let encoded = urlencoding::encode(&path);
 
     Ok(theseus_try!(Url::parse(&format!("{BASE}{encoded}"))))
+}
+
+#[tauri::command]
+pub async fn download_control(
+    id: uuid::Uuid,
+    action: theseus::download_control::DownloadState,
+) -> Result<()> {
+    theseus::download_control::set(id, action)?;
+    Ok(())
 }

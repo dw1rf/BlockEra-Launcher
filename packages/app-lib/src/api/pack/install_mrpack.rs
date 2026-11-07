@@ -139,6 +139,7 @@ pub async fn install_zipped_mrpack_files(
         "Downloading modpack",
     )
     .await?;
+    crate::event::download_control::run(loading_bar.uuid(), async {
 
     let num_files = pack.files.len();
     loading_try_for_each_concurrent(
@@ -282,6 +283,7 @@ pub async fn install_zipped_mrpack_files(
     }
 
     Ok::<String, crate::Error>(profile_path.clone())
+    }).await
 }
 
 #[tracing::instrument(skip(mrpack_file))]

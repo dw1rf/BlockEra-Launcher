@@ -25,7 +25,7 @@
 								v-model="selectedVersion"
 								:options="versions"
 								:searchable="true"
-								placeholder="Select version"
+								:placeholder="$t('blockera.ui.1dacc0980553')"
 								open-direction="top"
 								:show-labels="false"
 								:custom-label="
@@ -49,7 +49,9 @@
 				</tbody>
 			</table>
 			<div class="button-group">
-				<Button @click="() => incompatibleModal.hide()"><XIcon />Отмена</Button>
+				<Button @click="() => incompatibleModal.hide()"
+					><XIcon />{{ $t('blockera.ui.77dfd2135f4d') }}</Button
+				>
 				<Button color="primary" :disabled="installing" @click="install()">
 					<DownloadIcon /> {{ installing ? 'Устанавливаем…' : 'Установить' }}
 				</Button>

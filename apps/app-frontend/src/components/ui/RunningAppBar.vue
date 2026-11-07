@@ -33,7 +33,7 @@
 			<div v-if="!props.compact && offline" class="status">
 				<UnplugIcon />
 				<div class="running-text">
-					<span> Offline </span>
+					<span> {{ $t('blockera.ui.e01fa717bacc') }} </span>
 				</div>
 			</div>
 			<div v-if="!props.compact && selectedProcess" class="status">
@@ -55,20 +55,25 @@
 					</div>
 				</div>
 				<Button
-					v-tooltip="'Stop instance'"
+					v-tooltip="$t('blockera.ui.f4cb180ae6e3')"
 					icon-only
 					class="icon-button stop"
 					@click="stop(selectedProcess)"
 				>
 					<StopCircleIcon />
 				</Button>
-				<Button v-tooltip="'View logs'" icon-only class="icon-button" @click="goToTerminal()">
+				<Button
+					v-tooltip="$t('blockera.ui.4c3958dd9176')"
+					icon-only
+					class="icon-button"
+					@click="goToTerminal()"
+				>
 					<TerminalSquareIcon />
 				</Button>
 			</div>
 			<div v-else-if="!props.compact" class="status">
 				<span class="circle stopped" />
-				<span class="running-text"> No instances running </span>
+				<span class="running-text"> {{ $t('blockera.ui.8f44dc9b8e8b') }} </span>
 			</div>
 		</div>
 		<Teleport to="#teleports">
@@ -95,7 +100,31 @@
 							<span>{{ formatDownloadSpeed(loadingBar.bytes_per_second) }}</span>
 							<span>{{ formatDownloadBytes(loadingBar.downloaded_bytes) }}</span>
 						</div>
-						<div class="download-message">{{ loadingBar.message }}</div>
+						<div class="download-message">
+							{{
+								loadingBar.download_state === 'paused'
+									? launcherText('Paused')
+									: downloadMessage(loadingBar.message)
+							}}
+						</div>
+						<div v-if="loadingBar.download_state" class="download-controls">
+							<Button
+								:disabled="downloadActions.has(loadingBar.loading_bar_uuid)"
+								@click="
+									controlDownload(
+										loadingBar,
+										loadingBar.download_state === 'paused' ? 'running' : 'paused',
+									)
+								"
+							>
+								{{ launcherText(loadingBar.download_state === 'paused' ? 'Resume' : 'Pause') }}
+							</Button>
+							<Button
+								:disabled="downloadActions.has(loadingBar.loading_bar_uuid)"
+								@click="controlDownload(loadingBar, 'cancelled')"
+								>{{ launcherText('Cancel download') }}</Button
+							>
+						</div>
 					</div>
 				</Card>
 			</transition>
@@ -114,7 +143,7 @@
 				>
 					<div class="text"><span class="circle running" /> {{ process.profile.name }}</div>
 					<Button
-						v-tooltip="'Stop instance'"
+						v-tooltip="$t('blockera.ui.f4cb180ae6e3')"
 						icon-only
 						class="icon-button stop"
 						@click.stop="stop(process)"
@@ -122,7 +151,7 @@
 						<StopCircleIcon />
 					</Button>
 					<Button
-						v-tooltip="'View logs'"
+						v-tooltip="$t('blockera.ui.4c3958dd9176')"
 						icon-only
 						class="icon-button"
 						@click.stop="goToTerminal(process.profile.path)"
@@ -155,9 +184,10 @@ import {
 	formatDownloadSpeed,
 } from '@/helpers/download-progress'
 import { loading_listener, process_listener } from '@/helpers/events'
+import { downloadMessage, launcherText } from '@/helpers/launcher-language'
 import { get_all as getRunningProcesses, kill as killProcess } from '@/helpers/process'
 import { get_many } from '@/helpers/profile.js'
-import { progress_bars_list } from '@/helpers/state.js'
+import { download_control, progress_bars_list } from '@/helpers/state.js'
 
 const { handleError } = injectNotificationManager()
 const props = defineProps({
@@ -177,6 +207,19 @@ const cardPosition = ref({})
 
 const showProfiles = ref(false)
 
+const downloadActions = ref(new Set())
+async function controlDownload(bar, action) {
+	const id = bar.loading_bar_uuid
+	downloadActions.value.add(id)
+	try {
+		await download_control(id, action)
+		await refreshInfo()
+	} catch (error) {
+		handleError(error)
+	} finally {
+		downloadActions.value.delete(id)
+	}
+}
 const currentProcesses = ref([])
 const selectedProcess = ref()
 
@@ -236,7 +279,8 @@ const loadingProgress = (loadingBar) => {
 	return Math.min(100, Math.max(0, Math.floor((100 * current) / total)))
 }
 
-const loadingTitle = (loadingBar) => loadingBar?.title || loadingBar?.message || 'Подготовка файлов'
+const loadingTitle = (loadingBar) =>
+	loadingBar?.title || downloadMessage(loadingBar?.message ?? '') || 'Подготовка файлов'
 
 const downloadStatusLabel = (loadingBar) =>
 	`Загрузка: ${loadingTitle(loadingBar)}, ${loadingProgress(loadingBar)}%, ${formatDownloadSpeed(loadingBar?.bytes_per_second)}`
@@ -365,6 +409,12 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+.download-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 0.6rem;
+}
 .running-app-bar {
 	position: relative;
 	display: flex;

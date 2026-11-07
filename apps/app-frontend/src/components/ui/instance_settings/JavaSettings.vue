@@ -106,26 +106,26 @@ const messages = defineMessages({
 		<h2 id="project-name" class="m-0 mb-1 text-lg font-extrabold text-contrast block">
 			{{ formatMessage(messages.javaInstallation) }}
 		</h2>
-		<Checkbox v-model="overrideJavaInstall" label="Custom Java installation" class="mb-2" />
+		<Checkbox v-model="overrideJavaInstall" :label="$t('blockera.ui.7abe09135358')" class="mb-2" />
 		<template v-if="!overrideJavaInstall">
 			<div class="flex my-2 items-center gap-2 font-semibold">
 				<template v-if="javaInstall">
 					<CheckCircleIcon class="text-brand-green h-4 w-4" />
-					<span>Using default Java {{ optimalJava.major_version }} installation:</span>
+					<span
+						>{{ $t('blockera.ui.4bc72928eb5f') }} {{ optimalJava.major_version }}
+						{{ $t('blockera.ui.9bc1c91ffdea') }}</span
+					>
 				</template>
 				<template v-else-if="optimalJava">
 					<XCircleIcon class="text-brand-red h-5 w-5" />
 					<span
-						>Could not find a default Java {{ optimalJava.major_version }} installation. Please set
-						one below:</span
+						>{{ $t('blockera.ui.51656b027e25') }} {{ optimalJava.major_version }}
+						{{ $t('blockera.ui.4eec0ba33692') }}</span
 					>
 				</template>
 				<template v-else>
 					<XCircleIcon class="text-brand-red h-5 w-5" />
-					<span
-						>Could not automatically determine a Java installation to use. Please set one
-						below:</span
-					>
+					<span>{{ $t('blockera.ui.67f46635a4f8') }}</span>
 				</template>
 			</div>
 			<div
@@ -139,7 +139,11 @@ const messages = defineMessages({
 		<h2 id="project-name" class="mt-4 mb-1 text-lg font-extrabold text-contrast block">
 			{{ formatMessage(messages.javaMemory) }}
 		</h2>
-		<Checkbox v-model="overrideMemorySettings" label="Custom memory allocation" class="mb-2" />
+		<Checkbox
+			v-model="overrideMemorySettings"
+			:label="$t('blockera.ui.7d759c79c980')"
+			class="mb-2"
+		/>
 		<Slider
 			id="max-memory"
 			v-model="memory.maximum"
@@ -154,7 +158,7 @@ const messages = defineMessages({
 		<h2 id="project-name" class="mt-4 mb-1 text-lg font-extrabold text-contrast block">
 			{{ formatMessage(messages.javaArguments) }}
 		</h2>
-		<Checkbox v-model="overrideJavaArgs" label="Custom java arguments" class="my-2" />
+		<Checkbox v-model="overrideJavaArgs" :label="$t('blockera.ui.383561111117')" class="my-2" />
 		<input
 			id="java-args"
 			v-model="javaArgs"
@@ -162,12 +166,12 @@ const messages = defineMessages({
 			:disabled="!overrideJavaArgs"
 			type="text"
 			class="w-full"
-			placeholder="Enter java arguments..."
+			:placeholder="$t('blockera.ui.030ab422ea7e')"
 		/>
 		<h2 id="project-name" class="mt-4 mb-1 text-lg font-extrabold text-contrast block">
 			{{ formatMessage(messages.javaEnvironmentVariables) }}
 		</h2>
-		<Checkbox v-model="overrideEnvVars" label="Custom environment variables" class="mb-2" />
+		<Checkbox v-model="overrideEnvVars" :label="$t('blockera.ui.260f3b6bd8ee')" class="mb-2" />
 		<input
 			id="env-vars"
 			v-model="envVars"
@@ -175,7 +179,7 @@ const messages = defineMessages({
 			:disabled="!overrideEnvVars"
 			type="text"
 			class="w-full"
-			placeholder="Enter environmental variables..."
+			:placeholder="$t('blockera.ui.81b0e8164c11')"
 		/>
 	</div>
 </template>

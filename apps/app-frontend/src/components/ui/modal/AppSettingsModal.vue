@@ -220,7 +220,9 @@ const messages = defineMessages({
 						aria-live="polite"
 					>
 						<span>{{ saveLabel }}</span>
-						<button v-if="saveState === 'error'" type="button" @click="retrySave">Повторить</button>
+						<button v-if="saveState === 'error'" type="button" @click="retrySave">
+							{{ $t('blockera.ui.042c862e4467') }}
+						</button>
 						<small v-if="saveError">{{ saveError }}</small>
 					</div>
 					<div class="mb-3">
@@ -288,7 +290,9 @@ const messages = defineMessages({
 					<p v-if="updateError" class="update-request-error">{{ updateError }}</p>
 				</div>
 				<div class="absolute bottom-4 right-4 flex items-center gap-4 neon-button neon">
-					<Button class="bordered" @click="closeUpdateModal">Закрыть</Button>
+					<Button class="bordered" @click="closeUpdateModal">{{
+						$t('blockera.ui.bbfa773e5a63')
+					}}</Button>
 					<Button
 						v-if="availableUpdate"
 						class="bordered"

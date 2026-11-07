@@ -128,9 +128,9 @@ watch(() => props.instance.path, loadSummary, { immediate: true })
 				>
 					<PlayIcon /> {{ playing ? 'Игра запущена' : 'Играть' }}
 				</button>
-				<router-link :to="`${basePath}/content`">Открыть контент</router-link>
-				<router-link :to="`${basePath}/worlds`">Миры</router-link>
-				<router-link :to="`${basePath}/logs`">Логи</router-link>
+				<router-link :to="`${basePath}/content`">{{ $t('blockera.ui.75aad268487b') }}</router-link>
+				<router-link :to="`${basePath}/worlds`">{{ $t('blockera.ui.8e4d9728828a') }}</router-link>
+				<router-link :to="`${basePath}/logs`">{{ $t('blockera.ui.126dd3b70a5c') }}</router-link>
 			</div>
 		</section>
 

@@ -130,7 +130,7 @@ onMounted(async () => {
 							<span>Forge {{ pack.forge }}</span>
 							<span>v{{ pack.version }}</span>
 							<span>{{ formatBytes(pack.size) }} МБ</span>
-							<span>GitHub Release · .mrpack</span>
+							<span>{{ $t('blockera.ui.b8634f87eb93') }}</span>
 							<span class="status">{{
 								installedProfile(pack.id) ? 'Установлена' : 'Не установлена'
 							}}</span>

@@ -179,6 +179,34 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn russian_default_migration_preserves_later_language_choices() {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let migrator = sqlx::migrate!();
+        migrator.run(&pool).await.unwrap();
+        let locale: String =
+            sqlx::query_scalar("SELECT locale FROM settings WHERE id = 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(locale, "ru-RU");
+        sqlx::query("UPDATE settings SET locale = 'en-US' WHERE id = 0")
+            .execute(&pool)
+            .await
+            .unwrap();
+        migrator.run(&pool).await.unwrap();
+        let locale: String =
+            sqlx::query_scalar("SELECT locale FROM settings WHERE id = 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(locale, "en-US");
+    }
+
+    #[tokio::test]
     async fn world_backup_migrations_match_previously_shipped_versions() {
         // These checksums are from the August release, already applied to user databases.
         let migrator = sqlx::migrate!();

@@ -252,6 +252,7 @@ fn main() {
                         "open_profile_folder",
                         "show_launcher_logs_folder",
                         "progress_bars_list",
+                        "download_control",
                         "get_opening_command",
                         "create_desktop_shortcut",
                         "save_custom_background",

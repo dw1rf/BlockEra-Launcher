@@ -32,7 +32,7 @@
 			</Button>
 			<Button :disabled="props.disabled" @click="handleJavaFileInput()">
 				<FolderSearchIcon />
-				Выбрать
+				{{ $t('blockera.ui.78b7c9f6d6d7') }}
 			</Button>
 			<Button v-if="testingJava" disabled> Проверяем… </Button>
 			<Button v-else-if="testingJavaSuccess === true">

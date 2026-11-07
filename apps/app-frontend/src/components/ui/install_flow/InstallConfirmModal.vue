@@ -81,7 +81,9 @@ async function install() {
 		<div class="modal-body">
 			<p>Эта сборка уже установлена. Установить её ещё раз?</p>
 			<div class="input-group push-right">
-				<Button @click="() => $refs.confirmModal.hide()"><XIcon />Отмена</Button>
+				<Button @click="() => $refs.confirmModal.hide()"
+					><XIcon />{{ $t('blockera.ui.77dfd2135f4d') }}</Button
+				>
 				<Button color="primary" :disabled="installing" @click="install()"
 					><DownloadIcon /> {{ installing ? 'Устанавливаем…' : 'Установить' }}</Button
 				>

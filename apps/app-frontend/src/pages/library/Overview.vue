@@ -9,5 +9,9 @@ defineProps({
 })
 </script>
 <template>
-	<GridDisplay v-if="instances.length > 0" label="Instances" :instances="instances" />
+	<GridDisplay
+		v-if="instances.length > 0"
+		:label="$t('blockera.ui.86d67413e7f1')"
+		:instances="instances"
+	/>
 </template>

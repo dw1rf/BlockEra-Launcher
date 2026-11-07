@@ -2,7 +2,7 @@
 	<ModalWrapper ref="modal" :header="'Import from CurseForge Profile Code'">
 		<div class="modal-body">
 			<div class="input-row">
-				<p class="input-label">Profile Code</p>
+				<p class="input-label">{{ $t('blockera.ui.7cfb4ece229d') }}</p>
 				<div class="iconified-input">
 					<SearchIcon aria-hidden="true" class="text-lg" />
 					<input
@@ -12,7 +12,7 @@
 						class="h-12 card-shadow"
 						spellcheck="false"
 						type="text"
-						placeholder="Enter CurseForge profile code"
+						:placeholder="$t('blockera.ui.78582309ac7e')"
 						maxlength="20"
 						@keyup.enter="importProfile"
 					/>
@@ -23,8 +23,10 @@
 			</div>
 
 			<div v-if="metadata && !importing" class="profile-info">
-				<h3>Profile Information</h3>
-				<p><strong>Name:</strong> {{ metadata.name }}</p>
+				<h3>{{ $t('blockera.ui.53910b44c66c') }}</h3>
+				<p>
+					<strong>{{ $t('blockera.ui.71dd2eff9b4d') }}</strong> {{ metadata.name }}
+				</p>
 			</div>
 
 			<div v-if="error" class="error-message">
@@ -44,7 +46,7 @@
 			<div class="button-row">
 				<Button :disabled="importing" @click="hide">
 					<XIcon />
-					Cancel
+					{{ $t('blockera.ui.77dfd2135f4d') }}
 				</Button>
 				<Button
 					v-if="!metadata"

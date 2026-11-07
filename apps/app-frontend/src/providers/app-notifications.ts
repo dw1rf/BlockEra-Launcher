@@ -5,6 +5,9 @@ import {
 } from '@modrinth/ui'
 import { type Ref, ref } from 'vue'
 
+import { launcherText } from '@/helpers/launcher-language'
+import i18n from '@/i18n.config'
+
 export class AppNotificationManager extends AbstractWebNotificationManager {
 	private readonly state: Ref<WebNotification[]>
 	private readonly locationState: Ref<NotificationPanelLocation>
@@ -13,6 +16,23 @@ export class AppNotificationManager extends AbstractWebNotificationManager {
 		super()
 		this.state = ref<WebNotification[]>([])
 		this.locationState = ref<NotificationPanelLocation>('right')
+	}
+
+	public override handleError = (error: Error): void => {
+		const original = typeof error === 'string' ? error : (error.message ?? String(error))
+		let text = launcherText(original)
+		if (i18n.global.locale.value.startsWith('ru')) {
+			text = text
+				.replace(/^Error launching Minecraft:\s*/, 'Не удалось запустить Minecraft: ')
+				.replace(/^Minecraft authentication error:\s*/, 'Ошибка авторизации Minecraft: ')
+				.replace(/^User is not logged in.*$/, 'Выберите аккаунт для запуска игры.')
+		}
+		this.addNotification({
+			title: launcherText('An error occurred'),
+			text,
+			type: 'error',
+			supportData: { originalMessage: original },
+		})
 	}
 
 	public getNotificationLocation(): NotificationPanelLocation {

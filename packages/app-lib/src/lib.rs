@@ -20,6 +20,7 @@ mod state;
 
 pub use api::*;
 pub use error::*;
+pub use event::download_control;
 pub use event::{
     EventState, LoadingBar, LoadingBarType, emit::emit_loading,
     emit::init_loading,

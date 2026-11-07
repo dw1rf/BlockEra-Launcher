@@ -32,7 +32,13 @@
 						<span>ЦЕНТР ОБНОВЛЕНИЙ</span>
 						<h3 id="blockera-update-center-title">BlockEra</h3>
 					</div>
-					<button type="button" aria-label="Закрыть" @click="closeCenter(true)"><XIcon /></button>
+					<button
+						type="button"
+						:aria-label="$t('blockera.ui.bbfa773e5a63')"
+						@click="closeCenter(true)"
+					>
+						<XIcon />
+					</button>
 				</header>
 
 				<nav class="update-tabs" role="tablist" aria-label="Разделы центра обновлений">

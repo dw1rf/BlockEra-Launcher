@@ -208,99 +208,103 @@ pub async fn generate_pack_from_version_id(
         .await?
     };
 
-    emit_loading(&loading_bar, 0.0, Some("Fetching version"))?;
-    let version = CachedEntry::get_version(
-        &version_id,
-        None,
-        &state.pool,
-        &state.api_semaphore,
-    )
-    .await?
-    .ok_or_else(|| {
-        crate::ErrorKind::InputError(
-            "Invalid version ID specified!".to_string(),
+    crate::event::download_control::run(loading_bar.uuid(), async {
+        emit_loading(&loading_bar, 0.0, Some("Fetching version"))?;
+        let version = CachedEntry::get_version(
+            &version_id,
+            None,
+            &state.pool,
+            &state.api_semaphore,
         )
-    })?;
-    emit_loading(&loading_bar, 10.0, None)?;
-
-    let (url, hash) =
-        if let Some(file) = version.files.iter().find(|x| x.primary) {
-            Some((file.url.clone(), file.hashes.get("sha1")))
-        } else {
-            version
-                .files
-                .first()
-                .map(|file| (file.url.clone(), file.hashes.get("sha1")))
-        }
+        .await?
         .ok_or_else(|| {
             crate::ErrorKind::InputError(
-                "Specified version has no files".to_string(),
+                "Invalid version ID specified!".to_string(),
+            )
+        })?;
+        emit_loading(&loading_bar, 10.0, None)?;
+
+        let (url, hash) =
+            if let Some(file) = version.files.iter().find(|x| x.primary) {
+                Some((file.url.clone(), file.hashes.get("sha1")))
+            } else {
+                version
+                    .files
+                    .first()
+                    .map(|file| (file.url.clone(), file.hashes.get("sha1")))
+            }
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(
+                    "Specified version has no files".to_string(),
+                )
+            })?;
+
+        let file = fetch_advanced(
+            Method::GET,
+            &url,
+            hash.map(|x| &**x),
+            None,
+            None,
+            Some((&loading_bar, 70.0)),
+            &state.fetch_semaphore,
+            &state.pool,
+        )
+        .await?;
+        emit_loading(&loading_bar, 0.0, Some("Fetching project metadata"))?;
+
+        let project = CachedEntry::get_project(
+            &version.project_id,
+            None,
+            &state.pool,
+            &state.api_semaphore,
+        )
+        .await?
+        .ok_or_else(|| {
+            crate::ErrorKind::InputError(
+                "Invalid project ID specified!".to_string(),
             )
         })?;
 
-    let file = fetch_advanced(
-        Method::GET,
-        &url,
-        hash.map(|x| &**x),
-        None,
-        None,
-        Some((&loading_bar, 70.0)),
-        &state.fetch_semaphore,
-        &state.pool,
-    )
-    .await?;
-    emit_loading(&loading_bar, 0.0, Some("Fetching project metadata"))?;
+        emit_loading(&loading_bar, 10.0, Some("Retrieving icon"))?;
+        let icon = if let Some(icon_url) = project.icon_url {
+            let state = State::get().await?;
+            let icon_bytes =
+                fetch(&icon_url, None, &state.fetch_semaphore, &state.pool)
+                    .await?;
 
-    let project = CachedEntry::get_project(
-        &version.project_id,
-        None,
-        &state.pool,
-        &state.api_semaphore,
-    )
-    .await?
-    .ok_or_else(|| {
-        crate::ErrorKind::InputError(
-            "Invalid project ID specified!".to_string(),
-        )
-    })?;
+            let filename = icon_url.rsplit('/').next();
 
-    emit_loading(&loading_bar, 10.0, Some("Retrieving icon"))?;
-    let icon = if let Some(icon_url) = project.icon_url {
-        let state = State::get().await?;
-        let icon_bytes =
-            fetch(&icon_url, None, &state.fetch_semaphore, &state.pool).await?;
-
-        let filename = icon_url.rsplit('/').next();
-
-        if let Some(filename) = filename {
-            Some(
-                write_cached_icon(
-                    filename,
-                    &state.directories.caches_dir(),
-                    icon_bytes,
-                    &state.io_semaphore,
+            if let Some(filename) = filename {
+                Some(
+                    write_cached_icon(
+                        filename,
+                        &state.directories.caches_dir(),
+                        icon_bytes,
+                        &state.io_semaphore,
+                    )
+                    .await?,
                 )
-                .await?,
-            )
+            } else {
+                None
+            }
         } else {
             None
-        }
-    } else {
-        None
-    };
-    emit_loading(&loading_bar, 10.0, None)?;
+        };
+        emit_loading(&loading_bar, 10.0, None)?;
 
-    Ok(CreatePack {
-        file,
-        description: CreatePackDescription {
-            icon,
-            override_title: None,
-            project_id: Some(project_id),
-            version_id: Some(version_id),
-            existing_loading_bar: Some(loading_bar),
-            profile_path,
-        },
+        Ok(CreatePack {
+            file,
+            description: CreatePackDescription {
+                icon,
+                override_title: None,
+                project_id: Some(project_id),
+                version_id: Some(version_id),
+                existing_loading_bar: Some(loading_bar),
+                profile_path,
+            },
+        })
     })
+    .await
 }
 
 #[tracing::instrument]

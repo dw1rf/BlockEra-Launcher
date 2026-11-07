@@ -11,7 +11,7 @@ defineProps({
 <template>
 	<GridDisplay
 		v-if="instances.length > 0"
-		label="Instances"
+		:label="$t('blockera.ui.86d67413e7f1')"
 		:instances="instances.filter((i) => i.linked_data)"
 	/>
 </template>

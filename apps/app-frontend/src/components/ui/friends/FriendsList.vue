@@ -215,8 +215,8 @@ const messages = defineMessages({
 </script>
 
 <template>
-	<ModalWrapper ref="friendInvitesModal" header="View friend requests">
-		<p v-if="incomingRequests.length === 0">You have no pending friend requests :C</p>
+	<ModalWrapper ref="friendInvitesModal" :header="$t('blockera.ui.fef0cbd756b5')">
+		<p v-if="incomingRequests.length === 0">{{ $t('blockera.ui.f28a76e90b95') }}</p>
 		<div v-else class="flex flex-col gap-4 min-w-[40rem]">
 			<div v-for="friend in incomingRequests" :key="friend.username" class="flex gap-2">
 				<Avatar :src="friend.avatar" class="w-12 h-12 rounded-full" size="2.25rem" circle />
@@ -224,10 +224,13 @@ const messages = defineMessages({
 					<div>
 						<p class="m-0">
 							<template v-if="friend.id === userCredentials?.user_id">
-								<span class="text-contrast">{{ friend.username }}</span> sent you a friend request
+								<span class="text-contrast">{{ friend.username }}</span>
+								{{ $t('blockera.ui.ac72c5eba49e') }}
 							</template>
 							<template v-else>
-								You sent <span class="font-bold">{{ friend.username }}</span> a friend request
+								{{ $t('blockera.ui.d25dee44ac48') }}
+								<span class="font-bold">{{ friend.username }}</span>
+								{{ $t('blockera.ui.681f08495e81') }}
 							</template>
 						</p>
 						<p class="m-0 text-sm text-secondary">
@@ -239,13 +242,13 @@ const messages = defineMessages({
 							<ButtonStyled color="brand">
 								<button @click="addFriend(friend)">
 									<UserPlusIcon />
-									Accept
+									{{ $t('blockera.ui.bb54db510a92') }}
 								</button>
 							</ButtonStyled>
 							<ButtonStyled>
 								<button @click="removeFriend(friend)">
 									<XIcon />
-									Ignore
+									{{ $t('blockera.ui.98f55db57c8e') }}
 								</button>
 							</ButtonStyled>
 						</template>
@@ -253,7 +256,7 @@ const messages = defineMessages({
 							<ButtonStyled>
 								<button @click="removeFriend(friend)">
 									<XIcon />
-									Cancel
+									{{ $t('blockera.ui.77dfd2135f4d') }}
 								</button>
 							</ButtonStyled>
 						</template>

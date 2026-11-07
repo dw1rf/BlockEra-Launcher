@@ -66,7 +66,7 @@ onUnmounted(() => {
 			</div>
 			<Button color="primary" :disabled="offline" @click="$refs.installationModal.show()">
 				<PlusIcon />
-				Новая сборка
+				{{ $t('blockera.ui.95f5e3fa9d62') }}
 			</Button>
 		</section>
 
@@ -90,7 +90,7 @@ onUnmounted(() => {
 				<h3>Сборок пока нет</h3>
 				<p>Создайте первую сборку или установите готовую из каталога.</p>
 				<Button color="primary" :disabled="offline" @click="$refs.installationModal.show()">
-					<PlusIcon /> Создать сборку
+					<PlusIcon /> {{ $t('blockera.ui.448e244903a8') }}
 				</Button>
 			</div>
 		</section>

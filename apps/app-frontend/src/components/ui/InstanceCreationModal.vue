@@ -45,13 +45,13 @@
 						<div class="panel-heading">
 							<span>01</span>
 							<div>
-								<h3>Название сборки</h3>
+								<h3>{{ $t('blockera.ui.e98a2eb26d10') }}</h3>
 								<p>Карточка будет оформлена выбранным фоном.</p>
 							</div>
 						</div>
 						<div class="identity-fields">
 							<label class="field-control">
-								<span>Название сборки</span>
+								<span>{{ $t('blockera.ui.e98a2eb26d10') }}</span>
 								<input
 									v-model="profile_name"
 									autocomplete="off"
@@ -67,7 +67,7 @@
 						<div class="panel-heading">
 							<span>02</span>
 							<div>
-								<h3>Версия и загрузчик</h3>
+								<h3>{{ $t('blockera.ui.49af9b931cd8') }}</h3>
 								<p>Выберите Java Edition или нативный клиент Horizon на Rust.</p>
 							</div>
 						</div>
@@ -119,7 +119,7 @@
 									:options="game_versions"
 									:multiple="false"
 									:searchable="true"
-									placeholder="Выберите версию"
+									:placeholder="$t('blockera.ui.1dacc0980553')"
 									:show-labels="false"
 								/>
 							</label>
@@ -148,7 +148,7 @@
 									:class="{ active: loader_version === 'other' }"
 									@click="loader_version = 'other'"
 								>
-									Выбрать
+									{{ $t('blockera.ui.78b7c9f6d6d7') }}
 								</button>
 							</div>
 							<multiselect
@@ -170,7 +170,7 @@
 							<strong>{{ profile_name.trim() || 'Новая сборка' }}</strong
 							><span>{{ game_version || 'Версия не выбрана' }} · {{ formatLoader(loader) }}</span>
 						</div>
-						<Button @click="hide()"><XIcon /> Отмена</Button>
+						<Button @click="hide()"><XIcon /> {{ $t('blockera.ui.77dfd2135f4d') }}</Button>
 						<Button color="primary" :disabled="!check_valid || creating" @click="create_instance()"
 							><PlusIcon v-if="!creating" /> {{ creating ? 'Создаём…' : 'Создать сборку' }}</Button
 						>
@@ -255,7 +255,7 @@
 									<FolderSearchIcon />
 								</Button>
 								<Button
-									v-tooltip="'Обновить список'"
+									v-tooltip="$t('blockera.ui.56e3badc4e6c')"
 									icon-only
 									aria-label="Обновить список сборок"
 									@click="reload"
@@ -280,7 +280,7 @@
 										"
 									/>
 								</div>
-								<div class="name-cell table-cell">Название сборки</div>
+								<div class="name-cell table-cell">{{ $t('blockera.ui.e98a2eb26d10') }}</div>
 							</div>
 							<div
 								v-if="

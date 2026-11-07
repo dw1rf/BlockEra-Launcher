@@ -457,7 +457,7 @@ pub async fn install(
         async { Ok(()) }
     })
     .await?;
-    let result = async {
+    let result = crate::event::download_control::run(bar.uuid(), async {
         if marker.is_file() && binary(&root, "horizon-client").is_file()
             && root.join(".local/horizon-client").join(&profile.game_version).is_dir() && !repairing {
             return Ok(());
@@ -567,7 +567,7 @@ pub async fn install(
             tokio::fs::write(home.join(".horizon-manager/native-dirty"), "").await.map_err(IOError::from)?;
         }
         Ok(())
-    }.await;
+    }).await;
     let success = result.is_ok();
     crate::profile::edit(&profile.path, |p| {
         p.install_stage = if success {

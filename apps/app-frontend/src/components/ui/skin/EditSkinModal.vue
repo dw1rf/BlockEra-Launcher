@@ -49,10 +49,10 @@
 							faded
 							@select="selectCape(undefined)"
 						>
-							<span>Use default cape</span>
+							<span>{{ $t('blockera.ui.4962177988ce') }}</span>
 						</CapeButton>
 						<CapeLikeTextButton v-else :highlighted="!selectedCape" @click="selectCape(undefined)">
-							<span>Use default cape</span>
+							<span>{{ $t('blockera.ui.4962177988ce') }}</span>
 						</CapeLikeTextButton>
 
 						<CapeButton
@@ -71,7 +71,7 @@
 							@mouseup="openSelectCapeModal"
 						>
 							<template #icon><ChevronRightIcon /></template>
-							<span>More</span>
+							<span>{{ $t('blockera.ui.4bab2d8fe13f') }}</span>
 						</CapeLikeTextButton>
 					</div>
 				</section>
@@ -87,7 +87,9 @@
 					{{ mode === 'new' ? 'Добавить скин' : 'Сохранить скин' }}
 				</button>
 			</ButtonStyled>
-			<Button :disabled="isSaving" @click="hide"><XIcon />Отмена</Button>
+			<Button :disabled="isSaving" @click="hide"
+				><XIcon />{{ $t('blockera.ui.77dfd2135f4d') }}</Button
+			>
 		</div>
 	</ModalWrapper>
 
@@ -372,10 +374,18 @@ async function save() {
 		const bytes: Uint8Array = new Uint8Array(await (await fetch(textureUrl)).arrayBuffer())
 
 		if (mode.value === 'new') {
-			await add_and_equip_custom_skin(bytes, variant.value, props.offline ? undefined : selectedCape.value)
+			await add_and_equip_custom_skin(
+				bytes,
+				variant.value,
+				props.offline ? undefined : selectedCape.value,
+			)
 			emit('saved')
 		} else {
-			await add_and_equip_custom_skin(bytes, variant.value, props.offline ? undefined : selectedCape.value)
+			await add_and_equip_custom_skin(
+				bytes,
+				variant.value,
+				props.offline ? undefined : selectedCape.value,
+			)
 			await remove_custom_skin(currentSkin.value!)
 			emit('saved')
 		}
