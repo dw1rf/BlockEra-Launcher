@@ -100,7 +100,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Horizon regression tests
-        run: cargo test --locked -p theseus --lib horizon:: -- --nocapture
+        run: 'cargo test --locked -p theseus --lib horizon:: -- --nocapture'
 
       - name: World backup regression tests
         run: cargo test --locked -p theseus --lib api::worlds::tests -- --nocapture
