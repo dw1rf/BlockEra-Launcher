@@ -1,5 +1,6 @@
 import { arrayBufferToBase64 } from '@modrinth/utils'
 import { invoke } from '@tauri-apps/api/core'
+import { save } from '@tauri-apps/plugin-dialog'
 
 export interface Cape {
 	id: string
@@ -125,7 +126,7 @@ export async function add_and_equip_custom_skin(
 	expectedAccount?: string,
 ): Promise<void> {
 	await invoke('plugin:minecraft-skins|add_and_equip_custom_skin', {
-		textureBlob,
+		textureBlob: Array.from(textureBlob),
 		variant,
 		capeOverride,
 		expectedAccount,
@@ -157,7 +158,10 @@ export async function get_normalized_skin_texture(skin: Skin): Promise<string> {
 }
 
 export async function normalize_skin_texture(texture: Uint8Array | string): Promise<Uint8Array> {
-	return await invoke('plugin:minecraft-skins|normalize_skin_texture', { texture })
+	const data = await invoke<number[]>('plugin:minecraft-skins|normalize_skin_texture', {
+		texture: typeof texture === 'string' ? texture : Array.from(texture),
+	})
+	return new Uint8Array(data)
 }
 
 export async function unequip_skin(): Promise<void> {
@@ -167,4 +171,26 @@ export async function unequip_skin(): Promise<void> {
 export async function get_dragged_skin_data(path: string): Promise<Uint8Array> {
 	const data = await invoke<number[]>('plugin:minecraft-skins|get_dragged_skin_data', { path })
 	return new Uint8Array(data)
+}
+
+/** Save through the native dialog; WebView2 does not reliably download anchors. */
+export async function export_skin_png(textureBlob: Uint8Array): Promise<boolean> {
+	const path = await save({
+		defaultPath: 'blockera-skin.png',
+		filters: [{ name: 'PNG', extensions: ['png'] }],
+	})
+	if (!path) return false
+	await invoke('plugin:minecraft-skins|export_skin_png', {
+		path,
+		textureBlob: Array.from(textureBlob),
+	})
+	return true
+}
+
+export function skin_error_message(cause: unknown, fallback: string): string {
+	if (cause instanceof Error) return cause.message || fallback
+	if (typeof cause === 'string') return cause || fallback
+	if (cause && typeof cause === 'object' && 'message' in cause && typeof cause.message === 'string')
+		return cause.message || fallback
+	return fallback
 }

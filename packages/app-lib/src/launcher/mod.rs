@@ -414,7 +414,11 @@ pub async fn install_minecraft(
                         cp
                     };
 
-                    let child = Command::new(&java_version.path)
+                    let mut processor_command =
+                        Command::new(&java_version.path);
+                    #[cfg(target_os = "windows")]
+                    processor_command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+                    let child = processor_command
                     .kill_on_drop(true)
                     .arg("-cp")
                     .arg(args::get_class_paths_jar(
@@ -895,12 +899,22 @@ pub async fn launch_minecraft(
             version_jar
 			)
         ).await;
-        let path_buf = utils::get_elyby_injector_library().await?;
-        let path = path_buf.to_str().unwrap();
+        // Ely.by supports the standard authlib-injector bundled with BlockEra.
+        // Do not make a game launch depend on the former third-party mirror.
+        let (resource_dir, path_buf) = get_resource_file!(
+            env "AUTHLIB_INJECTOR_DIR" / "authlib-injector-1.2.8.jar"
+        )?;
+        verify_bundled_authlib_injector(&path_buf).map_err(|detail| {
+            crate::ErrorKind::LauncherError(format!(
+                "Повреждён встроенный компонент входа Ely.by. Переустановите лаунчер. {detail}"
+            ))
+        })?;
+        let path = path_buf.display();
         let _ =
             emit_info(&format!("[BlockEra] Minecraft запускается с {}", path))
                 .await;
         command.arg(format!("-javaagent:{}=ely.by", path));
+        _offline_injector_resource = Some(resource_dir);
     }
 
     command

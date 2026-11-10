@@ -119,6 +119,7 @@ fn main() {
                         "unequip_skin",
                         "normalize_skin_texture",
                         "get_dragged_skin_data",
+                        "export_skin_png",
                     ])
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,

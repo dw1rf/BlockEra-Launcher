@@ -5,8 +5,7 @@ import {
 } from '@modrinth/ui'
 import { type Ref, ref } from 'vue'
 
-import { launcherText } from '@/helpers/launcher-language'
-import i18n from '@/i18n.config'
+import { launcherText, localizedError } from '@/helpers/launcher-language'
 
 export class AppNotificationManager extends AbstractWebNotificationManager {
 	private readonly state: Ref<WebNotification[]>
@@ -23,13 +22,7 @@ export class AppNotificationManager extends AbstractWebNotificationManager {
 			error && typeof error === 'object' && 'message' in error
 				? String(error.message)
 				: String(error)
-		let text = launcherText(original)
-		if (i18n.global.locale.value.startsWith('ru')) {
-			text = text
-				.replace(/^Error launching Minecraft:\s*/, 'Не удалось запустить Minecraft: ')
-				.replace(/^Minecraft authentication error:\s*/, 'Ошибка авторизации Minecraft: ')
-				.replace(/^User is not logged in.*$/, 'Выберите аккаунт для запуска игры.')
-		}
+		const text = localizedError(original)
 		this.addNotification({
 			title: launcherText('An error occurred'),
 			text,

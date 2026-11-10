@@ -261,3 +261,61 @@ impl CustomMinecraftSkin {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod offline_skin_tests {
+    use super::*;
+    use sha2::{Digest, Sha256};
+
+    #[tokio::test]
+    async fn painted_png_can_be_saved_and_selected_for_offline_account() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::migrate!().run(&pool).await.unwrap();
+        // Exercise the real offline account constructor as well as the skin SQL.
+        let credentials = crate::state::offline_auth("SkinFixture", &pool)
+            .await
+            .unwrap();
+        let user = credentials.offline_profile.id;
+        let mut pixels = vec![0_u8; 64 * 64 * 4];
+        pixels[0..4].copy_from_slice(&[125, 40, 220, 255]);
+        let mut png = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut png, 64, 64);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder.write_header().unwrap();
+            writer.write_image_data(&pixels).unwrap();
+        }
+        let key = format!("{:x}", Sha256::digest(&png));
+        for variant in
+            [MinecraftSkinVariant::Classic, MinecraftSkinVariant::Slim]
+        {
+            CustomMinecraftSkin::add(user, &key, &png, variant, None, &pool)
+                .await
+                .unwrap();
+            let skin = CustomMinecraftSkin {
+                texture_key: key.clone(),
+                variant,
+                cape_id: None,
+            };
+            skin.set_active(user, &pool).await.unwrap();
+            let active = CustomMinecraftSkin::get_active(user, &pool)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(active.texture_key, key);
+            assert_eq!(active.variant, variant);
+            assert_eq!(active.texture_blob(&pool).await.unwrap(), png);
+        }
+        assert!(
+            CustomMinecraftSkin::get_active(Uuid::new_v4(), &pool)
+                .await
+                .unwrap()
+                .is_none()
+        );
+    }
+}

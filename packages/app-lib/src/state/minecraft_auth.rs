@@ -302,12 +302,24 @@ pub(super) static PROFILE_CACHE: Mutex<
 > = Mutex::const_new(HashMap::with_hasher(BuildHasherDefault::new()));
 
 impl Credentials {
+    // Local and Ely.by identities are not Microsoft accounts. In particular,
+    // their placeholder/third-party tokens must never reach Mojang or OAuth.
+    // Unknown legacy account types keep the existing Microsoft validation path.
+    fn is_non_microsoft_account(&self) -> bool {
+        self.account_type.eq_ignore_ascii_case("pirate")
+            || self.account_type.eq_ignore_ascii_case("elyby")
+    }
+
     /// Refreshes the authentication tokens for this user if they are expired, or
     /// very close to expiration.
     async fn refresh(
         &mut self,
         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
     ) -> crate::Result<()> {
+        if self.is_non_microsoft_account() {
+            return Ok(());
+        }
+
         // Use a margin of 5 minutes to give e.g. Minecraft and potentially
         // other operations that depend on a fresh token 5 minutes to complete
         // from now, and deal with some classes of clock skew
@@ -354,6 +366,9 @@ impl Credentials {
 
     #[tracing::instrument(skip(self))]
     pub async fn online_profile(&self) -> Option<Arc<MinecraftProfile>> {
+        if self.is_non_microsoft_account() {
+            return None;
+        }
         let mut profile_cache = PROFILE_CACHE.lock().await;
 
         loop {
@@ -1618,4 +1633,73 @@ fn generate_oauth_challenge() -> String {
 
     let bytes: Vec<u8> = (0..64).map(|_| rng.r#gen::<u8>()).collect();
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+#[cfg(test)]
+mod account_provider_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn local_and_elyby_accounts_preserve_identity_without_mojang_cache() {
+        for account_type in ["pirate", "elyby", "microsoft"] {
+            let id = Uuid::new_v4();
+            let credentials = Credentials {
+                offline_profile: MinecraftProfile {
+                    id,
+                    name: "StoredIdentity".into(),
+                    ..MinecraftProfile::default()
+                },
+                access_token: "fixture-token".into(),
+                refresh_token: "fixture-refresh".into(),
+                expires: Utc::now() - Duration::days(1),
+                active: true,
+                account_type: account_type.into(),
+            };
+            let online = Arc::new(MinecraftProfile {
+                id,
+                name: "MicrosoftIdentity".into(),
+                fetch_time: Some(Instant::now()),
+                ..MinecraftProfile::default()
+            });
+            PROFILE_CACHE
+                .lock()
+                .await
+                .insert(id, ProfileCacheEntry::Hit(online));
+            // A fresh fixture prevents all network access, including in a
+            // regression. Non-Microsoft identities must not consult this cache.
+            let profile = credentials.maybe_online_profile().await;
+            let name = profile.name.clone();
+            let actual_id = profile.id;
+            PROFILE_CACHE.lock().await.remove(&id);
+            assert_eq!(actual_id, id);
+            assert_eq!(
+                name,
+                if account_type == "microsoft" {
+                    "MicrosoftIdentity"
+                } else {
+                    "StoredIdentity"
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn provider_guard_does_not_disable_unknown_or_microsoft_validation() {
+        let mut credentials = Credentials {
+            offline_profile: MinecraftProfile::default(),
+            access_token: "null".into(),
+            refresh_token: "null".into(),
+            expires: Utc::now(),
+            active: true,
+            account_type: "microsoft".into(),
+        };
+        // A broken Microsoft token must not silently convert to offline mode.
+        assert!(!credentials.is_non_microsoft_account());
+        credentials.account_type = "unknown".into();
+        assert!(!credentials.is_non_microsoft_account());
+        credentials.account_type = "Pirate".into();
+        assert!(credentials.is_non_microsoft_account());
+        credentials.account_type = "ElyBy".into();
+        assert!(credentials.is_non_microsoft_account());
+    }
 }

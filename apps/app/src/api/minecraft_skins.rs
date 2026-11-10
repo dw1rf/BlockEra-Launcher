@@ -17,6 +17,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
             unequip_skin,
             normalize_skin_texture,
             get_dragged_skin_data,
+            export_skin_png,
         ])
         .build()
 }
@@ -103,4 +104,51 @@ pub async fn normalize_skin_texture(texture: UrlOrBlob) -> Result<Bytes> {
 pub async fn get_dragged_skin_data(path: String) -> Result<Bytes> {
     let path = Path::new(&path);
     Ok(minecraft_skins::get_dragged_skin_data(path).await?)
+}
+
+/// Export a validated skin to the path selected in the native save dialog.
+#[tauri::command]
+pub async fn export_skin_png(
+    path: std::path::PathBuf,
+    texture_blob: Bytes,
+) -> Result<()> {
+    if texture_blob.len() > 2 * 1024 * 1024
+        || !path.is_absolute()
+        || !path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("png"))
+    {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Выберите файл PNG для сохранения скина (до 2 МБ).",
+        )
+        .into());
+    }
+    // Decode before touching the destination; corrupt input cannot truncate it.
+    minecraft_skins::normalize_skin_texture(&UrlOrBlob::Blob(
+        texture_blob.clone(),
+    ))
+    .await?;
+    // Export the authored pixels exactly; normalization is validation only.
+    tokio::fs::write(path, texture_blob).await?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod skin_export_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn invalid_skin_does_not_truncate_existing_export() {
+        let path = std::env::temp_dir()
+            .join(format!("blockera-skin-export-{}.png", uuid::Uuid::new_v4()));
+        tokio::fs::write(&path, b"existing export").await.unwrap();
+        let result =
+            export_skin_png(path.clone(), Bytes::from_static(b"not a PNG"))
+                .await;
+        assert!(result.is_err());
+        assert_eq!(tokio::fs::read(&path).await.unwrap(), b"existing export");
+        tokio::fs::remove_file(path).await.unwrap();
+    }
 }

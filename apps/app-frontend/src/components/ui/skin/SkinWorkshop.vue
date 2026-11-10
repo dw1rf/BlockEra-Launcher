@@ -28,6 +28,8 @@ import {
 } from '@/helpers/skin-paint'
 import {
 	add_and_equip_custom_skin,
+	export_skin_png,
+	skin_error_message,
 	determineModelType,
 	get_normalized_skin_texture,
 	normalize_skin_texture,
@@ -49,6 +51,7 @@ const texture = document.createElement('canvas')
 texture.width = texture.height = SKIN_SIZE
 const ctx = texture.getContext('2d', { willReadFrequently: true })!
 const atlas = useTemplateRef('atlas')
+const workshop = useTemplateRef('workshop')
 const upload = useTemplateRef('upload')
 const revision = ref(0)
 const variant = ref<SkinModel>('CLASSIC')
@@ -158,7 +161,10 @@ function restore(state: Snapshot) {
 	updated()
 }
 function history(direction: 'undo' | 'redo') {
-	if (busy.value || before) return
+	if (busy.value) return
+	// Commit the current gesture before undoing it. Further pointer moves are
+	// ignored until the user releases and starts a new stroke.
+	endStroke()
 	const from = direction === 'undo' ? undoStack : redoStack
 	const to = direction === 'undo' ? redoStack : undoStack
 	const item = from.value.at(-1)
@@ -241,6 +247,7 @@ function endStroke() {
 	if (before && strokeChanged) remember(before)
 	before = undefined
 	last = undefined
+	strokeChanged = false
 }
 function atlasPixel(event: PointerEvent): Pixel {
 	const bounds = atlas.value!.getBoundingClientRect()
@@ -342,34 +349,38 @@ async function importSkin(event: Event) {
 		}
 	})
 }
-function exportSkin() {
-	const link = document.createElement('a')
-	link.href = texture.toDataURL('image/png')
-	link.download = 'blockera-skin.png'
-	link.click()
+async function pngBytes() {
+	const blob = await new Promise<Blob>((resolve, reject) =>
+		texture.toBlob(
+			(result) => (result ? resolve(result) : reject(new Error(tr('save-error')))),
+			'image/png',
+		),
+	)
+	return new Uint8Array(await blob.arrayBuffer())
+}
+async function exportSkin() {
+	if (busy.value) return
+	saving.value = true
+	error.value = ''
+	try {
+		await export_skin_png(await pngBytes())
+	} catch (err) {
+		error.value = skin_error_message(err, tr('save-error'))
+	} finally {
+		saving.value = false
+	}
 }
 async function saveSkin() {
 	if (busy.value || !canApply.value) return
 	saving.value = true
 	error.value = ''
 	try {
-		const blob = await new Promise<Blob>((resolve, reject) =>
-			texture.toBlob(
-				(result) => (result ? resolve(result) : reject(new Error(tr('save-error')))),
-				'image/png',
-			),
-		)
-		await add_and_equip_custom_skin(
-			new Uint8Array(await blob.arrayBuffer()),
-			variant.value,
-			undefined,
-			props.accountId,
-		)
+		await add_and_equip_custom_skin(await pngBytes(), variant.value, undefined, props.accountId)
 		baseline.value = snapshot()
 		saved.value = true
 		emit('saved')
 	} catch (err) {
-		error.value = err instanceof Error ? err.message : tr('save-error')
+		error.value = skin_error_message(err, tr('save-error'))
 	} finally {
 		saving.value = false
 	}
@@ -382,15 +393,33 @@ function close() {
 }
 function shortcuts(event: KeyboardEvent) {
 	if (
+		event.defaultPrevented ||
+		event.isComposing ||
+		event.altKey ||
 		!(event.ctrlKey || event.metaKey) ||
-		event.target instanceof HTMLInputElement ||
-		event.target instanceof HTMLSelectElement
+		event
+			.composedPath()
+			.some(
+				(target) =>
+					target instanceof HTMLElement &&
+					(target.isContentEditable || target.closest('input, textarea, select, [role="textbox"]')),
+			)
 	)
 		return
 	const key = event.key.toLowerCase()
-	if (key !== 'z' && key !== 'y') return
+	const undoKey = event.code === 'KeyZ' || key === 'z'
+	const redoKey = event.code === 'KeyY' || key === 'y'
+	if (!undoKey && !redoKey) return
 	event.preventDefault()
-	history(key === 'y' || event.shiftKey ? 'redo' : 'undo')
+	history(redoKey || event.shiftKey ? 'redo' : 'undo')
+}
+function focusWorkshop(event: PointerEvent) {
+	if (!(event.target instanceof Element)) return
+	const control = event.target.closest(
+		'input, textarea, select, button, a, [contenteditable], [tabindex]',
+	)
+	if (control && control !== workshop.value) return
+	workshop.value?.focus({ preventScroll: true })
 }
 watch([mask, view], refreshAtlas, { flush: 'post' })
 watch(layer, (value) => {
@@ -398,6 +427,7 @@ watch(layer, (value) => {
 })
 onBeforeRouteLeave(mayLeave)
 onMounted(async () => {
+	workshop.value?.focus({ preventScroll: true })
 	try {
 		const skin = props.initialSkin
 		restore({
@@ -415,7 +445,13 @@ onMounted(async () => {
 </script>
 
 <template>
-	<main class="skin-workshop" @keydown="shortcuts">
+	<main
+		ref="workshop"
+		class="skin-workshop"
+		tabindex="-1"
+		@keydown="shortcuts"
+		@pointerdown.capture="focusWorkshop"
+	>
 		<header class="workshop-header">
 			<div class="workshop-title">
 				<button type="button" :disabled="saving" @click="close">← {{ tr('wardrobe') }}</button>

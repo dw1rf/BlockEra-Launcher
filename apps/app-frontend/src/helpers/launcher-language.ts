@@ -24,3 +24,27 @@ export function downloadMessage(message: string): string {
 	}
 	return message
 }
+
+/** Translate only recognized errors; callers retain the original for diagnostics. */
+export function localizedError(message: string): string {
+	const translated = launcherText(message)
+	if (!i18n.global.locale.value.startsWith('ru')) return translated
+	if (
+		/^(?:TypeError:\s*)?Cannot read properties of (?:null|undefined) \(reading ['"]hide['"]\)$/.test(
+			message,
+		)
+	) {
+		return 'Не удалось закрыть окно: оно уже недоступно. Откройте нужный раздел заново и повторите действие.'
+	}
+	if (message === '[AR] Network error: No local injector & remote unavailable') {
+		return 'Не удалось загрузить компонент для скинов: локальная копия отсутствует, а удалённый источник недоступен. Проверьте подключение и повторите загрузку.'
+	}
+	if (/^(?:I\/O\(std\):?\s*)?Failed to fetch player profile$/.test(message)) {
+		return 'Не удалось получить профиль Minecraft при входе Microsoft. Повторите вход; подробности доступны в исходной ошибке.'
+	}
+	// Translate known wrappers without discarding their concrete backend details.
+	return translated
+		.replace(/^Error launching Minecraft:\s*/, 'Не удалось запустить Minecraft: ')
+		.replace(/^Minecraft authentication error:\s*/, 'Ошибка авторизации Minecraft: ')
+		.replace(/^User is not logged in\.?$/, 'Выберите аккаунт для запуска игры.')
+}

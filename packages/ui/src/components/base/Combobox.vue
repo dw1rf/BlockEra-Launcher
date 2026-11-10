@@ -36,11 +36,11 @@
 			</div>
 		</span>
 
-		<Teleport to="#teleports">
+		<Teleport :to="teleportTarget">
 			<div
 				v-if="isOpen"
 				ref="dropdownRef"
-				class="fixed z-[9999] flex flex-col overflow-hidden rounded-[14px] bg-surface-4 !border-solid border-0 shadow-2xl"
+				class="pointer-events-auto fixed z-[9999] flex flex-col overflow-hidden rounded-[14px] bg-surface-4 !border-solid border-0 shadow-2xl"
 				:class="[
 					shouldRoundBottomCorners
 						? 'rounded-t-none !border-t-[1px] !border-t-surface-5'
@@ -196,6 +196,7 @@ const emit = defineEmits<{
 const slots = useSlots()
 
 const isOpen = ref(false)
+const teleportTarget = ref<string | HTMLElement>('#teleports')
 const searchQuery = ref('')
 const focusedIndex = ref(-1)
 const containerRef = ref<HTMLElement>()
@@ -337,6 +338,7 @@ async function updateDropdownPosition() {
 	if (!triggerRef.value || !dropdownRef.value) return
 
 	await nextTick()
+	if (!triggerRef.value || !dropdownRef.value) return
 
 	const triggerRect = triggerRef.value.getBoundingClientRect()
 	const dropdownRect = dropdownRef.value.getBoundingClientRect()
@@ -359,6 +361,10 @@ async function updateDropdownPosition() {
 async function openDropdown() {
 	if (props.disabled || isOpen.value) return
 
+	// A global popover portal may sit underneath the modal's backdrop. Keep
+	// dialog menus in their own stacking/focus scope, outside the scroll body.
+	teleportTarget.value =
+		containerRef.value?.closest<HTMLElement>('.modal-container') ?? '#teleports'
 	isOpen.value = true
 	searchQuery.value = ''
 
@@ -366,6 +372,7 @@ async function openDropdown() {
 
 	await nextTick()
 	await updateDropdownPosition()
+	if (!isOpen.value || !dropdownRef.value) return
 
 	setInitialFocus()
 	focusSearchInput()
@@ -545,6 +552,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+	isOpen.value = false
 	window.removeEventListener('resize', handleWindowResize)
 	stopPositionTracking()
 })

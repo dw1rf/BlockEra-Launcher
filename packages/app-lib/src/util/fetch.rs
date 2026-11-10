@@ -256,6 +256,100 @@ async fn wait_before_fetch_retry(attempt: usize, url: &str, error: String) {
 }
 
 #[cfg(target_os = "windows")]
+fn java_curl_command(
+    url: &str,
+    path: &std::path::Path,
+    best_effort: bool,
+) -> tokio::process::Command {
+    let mut command = tokio::process::Command::new("curl.exe");
+    command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    command.kill_on_drop(true).args([
+        "--fail",
+        "--location",
+        "--silent",
+        "--show-error",
+        "--http1.1",
+        "--proto",
+        "=https",
+        "--proto-redir",
+        "=https",
+        "--retry",
+        "5",
+        "--retry-delay",
+        "1",
+        "--connect-timeout",
+        "15",
+        "--speed-limit",
+        "1024",
+        "--speed-time",
+        "30",
+        "--max-time",
+        "600",
+        "--continue-at",
+        "-",
+    ]);
+    if best_effort {
+        // Schannel still validates the certificate and rejects known revocations.
+        // Only unavailable/missing CRL distribution points are tolerated.
+        command.arg("--ssl-revoke-best-effort");
+    }
+    command.arg("--output").arg(path).arg(url);
+    command
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn offline_revocation(stderr: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(stderr).to_ascii_lowercase();
+    text.contains("crypt_e_revocation_offline") || text.contains("0x80092013")
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn java_curl_error(code: Option<i32>, stderr: &[u8]) -> String {
+    // The numeric curl/Schannel codes are stable across Windows languages.
+    // Localized system messages may use ANSI/OEM bytes, so don't render the
+    // repeated, lossy-decoded process output as the user-facing error.
+    let reason = if offline_revocation(stderr) {
+        "Windows не смогла проверить отзыв сертификата: сервер проверки недоступен (0x80092013). Проверьте соединение и повторите загрузку."
+    } else if code == Some(2)
+        && String::from_utf8_lossy(stderr).contains("ssl-revoke-best-effort")
+    {
+        "Системная версия curl устарела и не поддерживает повторную проверку сертификата. Установите обновления Windows и повторите загрузку."
+    } else {
+        match code {
+            Some(5 | 6) => {
+                "Не удалось найти сервер загрузки. Проверьте интернет и настройки DNS или прокси."
+            }
+            Some(7) => {
+                "Не удалось подключиться к серверу загрузки. Проверьте интернет и настройки прокси."
+            }
+            Some(22) => {
+                "Сервер загрузки вернул ошибку HTTP. Повторите загрузку позже."
+            }
+            Some(23) => {
+                "Не удалось записать Java на диск. Проверьте свободное место и доступ к папке временных файлов."
+            }
+            Some(28) => {
+                "Сервер загрузки не ответил вовремя. Проверьте соединение и повторите загрузку."
+            }
+            Some(35) => {
+                "Не удалось установить защищённое соединение с сервером загрузки. Проверьте дату, время и настройки сети."
+            }
+            Some(60) => {
+                "Windows не доверяет сертификату сервера загрузки. Проверьте дату, время и обновления сертификатов Windows."
+            }
+            _ => {
+                "Загрузка прервана. Повторите попытку; подробности доступны в журнале лаунчера."
+            }
+        }
+    };
+    let status = code.map_or_else(
+        || "процесс завершён".to_owned(),
+        |code| format!("curl {code}"),
+    );
+    format!("Не удалось загрузить Java ({status}). {reason}")
+}
+
+#[cfg(target_os = "windows")]
 async fn fetch_java_with_curl(url: &str) -> crate::Result<Bytes> {
     let temp_path = tempfile::Builder::new()
         .prefix("blockera-java-")
@@ -271,6 +365,7 @@ async fn fetch_java_with_curl(url: &str) -> crate::Result<Bytes> {
     let worker = tokio::spawn(async move {
         use crate::download_control::DownloadState;
         let mut interrupted = false;
+        let mut best_effort_revocation = false;
         loop {
             if controls
                 .iter()
@@ -285,34 +380,11 @@ async fn fetch_java_with_curl(url: &str) -> crate::Result<Bytes> {
                 tokio::time::sleep(std::time::Duration::from_millis(25)).await;
                 continue;
             }
-            let mut command = tokio::process::Command::new("curl.exe");
-            command
-                .kill_on_drop(true)
-                .args([
-                    "--fail",
-                    "--location",
-                    "--silent",
-                    "--show-error",
-                    "--http1.1",
-                    "--retry",
-                    "5",
-                    "--retry-all-errors",
-                    "--retry-delay",
-                    "1",
-                    "--connect-timeout",
-                    "15",
-                    "--speed-limit",
-                    "1024",
-                    "--speed-time",
-                    "30",
-                    "--max-time",
-                    "600",
-                    "--continue-at",
-                    "-",
-                    "--output",
-                ])
-                .arg(&download_path)
-                .arg(&download_url);
+            let mut command = java_curl_command(
+                &download_url,
+                &download_path,
+                best_effort_revocation,
+            );
             let mut output = Box::pin(command.output());
             let finished = loop {
                 tokio::select! {
@@ -327,6 +399,15 @@ async fn fetch_java_with_curl(url: &str) -> crate::Result<Bytes> {
             // kill_on_drop terminates curl before resuming it with the existing partial file.
             drop(output);
             if let Some(output) = finished {
+                if !output.status.success()
+                    && !best_effort_revocation
+                    && offline_revocation(&output.stderr)
+                {
+                    // Retry this specific offline-CRL condition once, never a
+                    // revoked/untrusted certificate or an arbitrary TLS error.
+                    best_effort_revocation = true;
+                    continue;
+                }
                 if interrupted && !output.status.success() {
                     // Some mirrors do not implement HTTP Range; retry the current file from zero.
                     tokio::fs::write(&download_path, []).await?;
@@ -348,9 +429,10 @@ async fn fetch_java_with_curl(url: &str) -> crate::Result<Bytes> {
     let output = worker.await.map_err(std::io::Error::other)??;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(std::io::Error::other(format!(
-            "curl failed to download Java runtime: {stderr}"
+        tracing::debug!(status = ?output.status.code(), stderr = %String::from_utf8_lossy(&output.stderr), "Java download process failed");
+        return Err(std::io::Error::other(java_curl_error(
+            output.status.code(),
+            &output.stderr,
         ))
         .into());
     }
@@ -812,6 +894,80 @@ mod tests {
     use super::*;
     use chrono::{TimeDelta, Utc};
     use tokio::io::AsyncReadExt as _;
+
+    #[test]
+    fn java_download_offline_revocation_is_one_readable_error() {
+        let mut stderr =
+            b"curl: (35) schannel: CRYPT_E_REVOCATION_OFFLINE (0x80092013) - "
+                .to_vec();
+        stderr.extend_from_slice(&[0xcf, 0xf0, 0xee, 0xe2]);
+        let stderr = stderr.repeat(6);
+        let message = java_curl_error(Some(35), &stderr);
+        assert!(offline_revocation(&stderr));
+        assert_eq!(message.matches("0x80092013").count(), 1);
+        assert_eq!(message.matches("Не удалось загрузить Java").count(), 1);
+        assert!(!message.contains('\u{fffd}'));
+        assert!(message.chars().count() < 300);
+    }
+
+    #[test]
+    fn java_download_never_treats_revoked_or_untrusted_certificates_as_offline()
+    {
+        for stderr in [
+            &b"curl: (60) CERT_E_REVOKED (0x800B010C)"[..],
+            &b"curl: (60) SEC_E_UNTRUSTED_ROOT (0x80090325)"[..],
+            &b"curl: (35) SSL handshake failed"[..],
+        ] {
+            assert!(!offline_revocation(stderr));
+        }
+        assert!(
+            java_curl_error(Some(60), b"certificate failed")
+                .contains("не доверяет сертификату")
+        );
+        assert!(
+            java_curl_error(
+                Some(2),
+                b"unknown option --ssl-revoke-best-effort"
+            )
+            .contains("устарела")
+        );
+        assert!(
+            java_curl_error(Some(28), b"timeout")
+                .contains("не ответил вовремя")
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn java_download_curl_keeps_tls_validation_and_limits_revocation_fallback()
+    {
+        let path = std::path::Path::new(r"C:\Temp\runtime.zip");
+        let strict =
+            java_curl_command("https://cdn.azul.com/runtime.zip", path, false);
+        let fallback =
+            java_curl_command("https://cdn.azul.com/runtime.zip", path, true);
+        let args = |command: &tokio::process::Command| {
+            command
+                .as_std()
+                .get_args()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+        };
+        let strict = args(&strict);
+        let fallback = args(&fallback);
+        assert!(!strict.iter().any(|arg| arg == "--ssl-revoke-best-effort"));
+        assert!(fallback.iter().any(|arg| arg == "--ssl-revoke-best-effort"));
+        for args in [strict, fallback] {
+            assert!(!args.iter().any(|arg| matches!(
+                arg.as_str(),
+                "--insecure" | "-k" | "--ssl-no-revoke" | "--retry-all-errors"
+            )));
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair == ["--proto-redir", "=https"])
+            );
+        }
+    }
 
     #[test]
     fn parses_windows_proxy_server_formats() {

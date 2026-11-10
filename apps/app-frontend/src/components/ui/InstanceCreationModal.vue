@@ -1,6 +1,7 @@
 <template>
 	<ModalWrapper
 		ref="modal"
+		:on-hide="onModalHidden"
 		class="blockera-creation-modal"
 		header="Новая сборка BlockEra"
 		width="min(920px, calc(100vw - 40px))"
@@ -88,14 +89,22 @@
 						</div>
 						<div v-if="loader === 'horizon'" class="horizon-runtime">
 							<p>
-								Установленный Horizon запускается с локальным аккаунтом и без интернета. Для первой
-								загрузки ресурсов нужен Microsoft-аккаунт с Minecraft: Java Edition. Java
-								используется при подготовке ресурсов. Моды Fabric, Forge, NeoForge, Quilt и Blockera
-								Client не поддерживаются.
+								Horizon поддерживает локальный аккаунт. Интернет нужен для загрузки клиента и
+								ресурсов; установленная сборка запускается без интернета. Java используется только
+								при подготовке ресурсов. Моды Fabric, Forge, NeoForge, Quilt и Blockera Client не
+								поддерживаются.
 							</p>
-							<label class="field-control">
-								<span>Сборка Horizon{{ game_version ? ` · Minecraft ${game_version}` : '' }}</span>
+							<div
+								class="field-control"
+								@click.capture="onHorizonOptionClick"
+								@keypress.enter.capture="onHorizonOptionKeypress"
+							>
+								<label for="creation-horizon-version"
+									>Сборка Horizon{{ game_version ? ` · Minecraft ${game_version}` : '' }}</label
+								>
 								<multiselect
+									id="creation-horizon-version"
+									ref="horizonSelect"
 									v-model="horizon_version"
 									:options="horizon_versions"
 									label="name"
@@ -105,7 +114,7 @@
 									:allow-empty="false"
 									placeholder="Выберите сборку Horizon"
 								/>
-							</label>
+							</div>
 							<p v-if="horizon_error" role="alert" class="warning">{{ horizon_error }}</p>
 							<Button v-if="horizon_error" :disabled="horizon_loading" @click="loadHorizonVersions">
 								<UpdatedIcon /> Повторить загрузку
@@ -364,7 +373,7 @@ import {
 import { Button, Checkbox, Chips, injectNotificationManager } from '@modrinth/ui'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { open } from '@tauri-apps/plugin-dialog'
-import { computed, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import Multiselect from 'vue-multiselect'
 
 import CurseForgeProfileImportModal from '@/components/ui/CurseForgeProfileImportModal.vue'
@@ -379,7 +388,7 @@ import {
 import { instanceBackgroundFor } from '@/helpers/instance-backgrounds'
 import { get_game_versions, get_horizon_versions, get_loader_versions } from '@/helpers/metadata'
 import { create_profile_and_install_from_file } from '@/helpers/pack.js'
-import { create } from '@/helpers/profile'
+import { create, install } from '@/helpers/profile'
 import { get_loaders } from '@/helpers/tags'
 
 const { handleError } = injectNotificationManager()
@@ -387,6 +396,22 @@ const { handleError } = injectNotificationManager()
 const profile_name = ref('')
 const game_version = ref('')
 const loader = ref('vanilla')
+const horizonSelect = ref(null)
+
+function onHorizonOptionClick(event) {
+	const option = event.target?.closest?.('.multiselect__option')
+	if (!option || option.classList.contains('multiselect__option--disabled')) return
+	// vue-multiselect leaves an already selected, non-empty single option open.
+	// Run after its selection handler so both new and current options close.
+	void nextTick(() => horizonSelect.value?.deactivate())
+}
+
+function onHorizonOptionKeypress() {
+	if (horizonSelect.value?.isOpen) {
+		void nextTick(() => horizonSelect.value?.deactivate())
+	}
+}
+
 const horizon_versions = ref([])
 const horizon_version = ref(null)
 const horizon_loading = ref(false)
@@ -457,8 +482,12 @@ function loaderDescription(value) {
 	return descriptions[value] ?? 'Загрузчик модов'
 }
 
+let modalGeneration = 0
+
 defineExpose({
 	show: async () => {
+		if (!modal.value) return
+		const openingGeneration = ++modalGeneration
 		game_version.value = ''
 		specified_loader_version.value = ''
 		profile_name.value = ''
@@ -472,9 +501,9 @@ defineExpose({
 		isShowing.value = true
 		modal.value.show()
 
-		unlistener.value = await getCurrentWebview().onDragDropEvent(async (event) => {
+		const stopListening = await getCurrentWebview().onDragDropEvent(async (event) => {
 			// Only if modal is showing
-			if (!isShowing.value) return
+			if (!isShowing.value || openingGeneration !== modalGeneration) return
 			if (event.payload.type !== 'drop') return
 			if (creationType.value !== 'from file') return
 			hide()
@@ -486,30 +515,34 @@ defineExpose({
 			await importPackFile(paths[0], 'CreationModalFileDrop')
 		})
 
+		if (openingGeneration !== modalGeneration || !isShowing.value) stopListening()
+		else unlistener.value = stopListening
+
 		trackEvent('InstanceCreateStart', { source: 'CreationModal' })
 	},
 })
 
 const unlistener = ref(null)
-const hide = () => {
+const onModalHidden = () => {
+	modalGeneration++
 	isShowing.value = false
-	modal.value.hide()
+	horizonSelect.value?.deactivate()
 	if (unlistener.value) {
 		unlistener.value()
 		unlistener.value = null
 	}
+}
+
+const hide = () => {
+	onModalHidden()
+	modal.value?.hide()
 }
 
 const showCurseForgeProfileModal = () => {
 	curseforgeProfileModal.value?.show()
 }
 
-onUnmounted(() => {
-	if (unlistener.value) {
-		unlistener.value()
-		unlistener.value = null
-	}
-})
+onUnmounted(onModalHidden)
 
 const [
 	fabric_versions,
@@ -575,6 +608,7 @@ const check_valid = computed(() => {
 const create_instance = async () => {
 	if (creating.value || !check_valid.value) return
 	creating.value = true
+	const creationGeneration = modalGeneration
 	const loader_version_value =
 		loader.value === 'horizon'
 			? horizon_version.value.id
@@ -584,13 +618,18 @@ const create_instance = async () => {
 	const loaderVersion = loader.value === 'vanilla' ? null : (loader_version_value ?? 'stable')
 
 	try {
-		await create(
+		const path = await create(
 			profile_name.value,
 			game_version.value,
 			loader.value,
 			loader.value === 'vanilla' ? null : (loader_version_value ?? 'stable'),
 			null,
+			true,
 		)
+
+		// A closed/reopened or unmounted form must not be dismissed by an old request.
+		if (creationGeneration === modalGeneration) hide()
+		void install(path, false).catch(handleError)
 
 		trackEvent('InstanceCreate', {
 			profile_name: profile_name.value,
@@ -600,11 +639,10 @@ const create_instance = async () => {
 			has_icon: false,
 			source: 'CreationModal',
 		})
-		hide()
 	} catch (error) {
 		handleError(error)
 	} finally {
-		creating.value = false
+		if (creationGeneration === modalGeneration || !isShowing.value) creating.value = false
 	}
 }
 
@@ -1168,6 +1206,7 @@ async function retryFailedImports() {
 }
 
 .field-control > span,
+.field-control > label,
 .loader-version-row > span {
 	color: #c6cad3;
 	font-size: 0.7rem;

@@ -36,7 +36,7 @@ jobs:
         run: pnpm --filter @modrinth/app-frontend build
       - name: Debounced settings persistence regression tests
         working-directory: apps/app-frontend
-        run: pnpm exec vitest run src/composables/use-app-settings.test.ts
+        run: pnpm exec vitest run src/composables/use-app-settings.test.ts src/helpers/launcher-language.test.ts
       - name: Library and crash analysis regression tests
         working-directory: apps/app-frontend
         run: node --experimental-strip-types --test src/helpers/library.test.ts src/helpers/crash-diagnostics.test.ts
@@ -108,8 +108,20 @@ jobs:
       - name: World backup regression tests
         run: cargo test --locked -p theseus --lib api::worlds::tests -- --nocapture
 
+      - name: Account provider isolation regression tests
+        run: cargo test --locked -p theseus --lib account_provider_tests -- --nocapture
+
+      - name: Offline skin persistence regression tests
+        run: cargo test --locked -p theseus --lib offline_skin_tests -- --nocapture
+
+      - name: Java download diagnostics regression tests
+        run: cargo test --locked -p theseus --lib java_download_ -- --nocapture
+
       - name: Storage safety regression tests
         run: cargo test --locked -p theseus_gui api::storage::tests -- --nocapture
+
+      - name: PNG export regression tests
+        run: cargo test --locked -p theseus_gui skin_export_tests -- --nocapture
 
       - name: Build signed installer without publishing
         if: ${{ !(startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)) }}
@@ -142,6 +154,11 @@ jobs:
             - Улучшенные диалоги Horizon и перенос длинных сообщений статуса.
             - Исправлены ошибки строгой проверки TypeScript.
             - Для нативных модов Horizon закреплён проверенный MinGW GCC 15.3.
+            - Исправлены закрытие мастера сборки и выбор версии Horizon; загрузка доступна с локальным аккаунтом.
+            - Ctrl+Z в редакторе скина поддерживает русскую раскладку; экспорт PNG использует системное окно сохранения.
+            - Исправлено отображение выбора стартовой вкладки в настройках.
+            - Ely.by использует встроенный компонент входа вместо недоступного стороннего зеркала.
+            - Фоновая установка Java и Forge проходит без консольных окон; исправлена обработка недоступной проверки отзыва сертификатов Windows.
 
             Публикация выполняется только после CI-проверок и сборки установщика.
 

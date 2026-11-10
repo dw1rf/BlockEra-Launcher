@@ -15,6 +15,8 @@
 				class="vue-notification-wrapper"
 				@mouseenter="stopTimer(item)"
 				@mouseleave="setNotificationTimer(item)"
+				@focusin="stopTimer(item)"
+				@focusout="setNotificationTimer(item)"
 			>
 				<div class="flex w-full gap-2 overflow-hidden rounded-lg bg-bg-raised shadow-xl">
 					<div
@@ -27,7 +29,7 @@
 						}"
 					></div>
 					<div
-						class="grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-1 py-2 pl-1 pr-3"
+						class="notification-content grid min-w-0 w-full grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-1 py-2 pl-1 pr-3"
 					>
 						<div
 							class="flex items-center"
@@ -43,7 +45,10 @@
 							<XCircleIcon v-else-if="item.type === 'error'" class="h-6 w-6" />
 							<InfoIcon v-else class="h-6 w-6" />
 						</div>
-						<div class="m-0 text-wrap font-bold text-contrast" v-html="item.title"></div>
+						<div
+							class="notification-title m-0 text-wrap font-bold text-contrast"
+							v-html="item.title"
+						></div>
 						<div class="flex items-center gap-1">
 							<div v-if="item.count && item.count > 1" class="text-xs font-bold text-contrast">
 								x{{ item.count }}
@@ -66,11 +71,17 @@
 							</ButtonStyled>
 						</div>
 						<div></div>
-						<div class="col-span-2 text-sm text-primary" v-html="item.text"></div>
+						<div
+							class="notification-message col-span-2 text-sm text-primary"
+							tabindex="0"
+							role="region"
+							aria-label="Notification details"
+							v-html="item.text"
+						></div>
 						<template v-if="item.errorCode">
 							<div></div>
 							<div
-								class="m-0 text-wrap text-xs font-medium text-secondary"
+								class="notification-error-code m-0 text-wrap text-xs font-medium text-secondary"
 								v-html="item.errorCode"
 							></div>
 						</template>
@@ -168,6 +179,10 @@ withDefaults(
 	bottom: 1.5rem;
 	z-index: 200;
 	width: 450px;
+	max-width: calc(100vw - 1.5rem);
+	max-height: calc(100dvh - 5rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
 
 	&.location-right {
 		right: 1.5rem;
@@ -218,6 +233,31 @@ withDefaults(
 			bottom: calc(var(--size-mobile-navbar-height-expanded) + 10px) !important;
 		}
 	}
+}
+
+.notification-title {
+	min-width: 0;
+	max-height: 4.5rem;
+	overflow: auto;
+	overflow-wrap: anywhere;
+}
+.notification-message {
+	min-width: 0;
+	max-height: min(12rem, 30dvh);
+	overflow: auto;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+	overscroll-behavior: contain;
+	user-select: text;
+}
+.notification-message:focus-visible {
+	outline: 2px solid var(--color-brand);
+	outline-offset: -2px;
+}
+.notification-error-code {
+	max-height: 3rem;
+	overflow: auto;
+	overflow-wrap: anywhere;
 }
 
 .notifs-enter-active,

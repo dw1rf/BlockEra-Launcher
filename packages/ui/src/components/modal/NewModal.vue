@@ -29,10 +29,12 @@
 				<div class="modal-body flex flex-col bg-bg-raised rounded-2xl">
 					<div
 						v-if="!hideHeader"
-						data-tauri-drag-region
 						class="modal-header grid grid-cols-[minmax(0,1fr)_min-content] items-center gap-4 p-6 border-solid border-0 border-b-[1px] border-divider max-w-full"
 					>
-						<div class="flex text-wrap break-words items-center gap-3 min-w-0">
+						<div
+							data-tauri-drag-region
+							class="flex text-wrap break-words items-center gap-3 min-w-0"
+						>
 							<slot name="title">
 								<span v-if="header" class="text-lg font-extrabold text-contrast">
 									{{ header }}
@@ -43,8 +45,12 @@
 							<button
 								v-tooltip="'Закрыть'"
 								aria-label="Закрыть"
+								type="button"
+								data-tauri-drag-region-exclude
+								@pointerdown.stop
+								@mousedown.stop
 								:disabled="disableClose"
-								@click="hide"
+								@click.stop="hide"
 							>
 								<XIcon aria-hidden="true" />
 							</button>
@@ -59,8 +65,12 @@
 						<button
 							v-tooltip="'Закрыть'"
 							aria-label="Закрыть"
+							type="button"
+							data-tauri-drag-region-exclude
+							@pointerdown.stop
+							@mousedown.stop
 							:disabled="disableClose"
-							@click="hide"
+							@click.stop="hide"
 						>
 							<XIcon aria-hidden="true" />
 						</button>
@@ -330,7 +340,8 @@ onBeforeUnmount(() => {
 	left: 0;
 	width: 100%;
 	height: 100px;
-	z-index: var(--blockera-layer-modal-native, 91);
+	// Native dragging must never intercept the dialog header or its controls.
+	z-index: calc(var(--blockera-layer-modal, 92) - 1);
 
 	&.shown {
 		opacity: 1;

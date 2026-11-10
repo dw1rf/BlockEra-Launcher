@@ -60,13 +60,6 @@ async fn json(url: &str) -> crate::Result<Value> {
 /// Offer the current official nightly; the selected artifact's checksum pins its content.
 pub async fn versions() -> crate::Result<Vec<HorizonVersion>> {
     let local = installed_versions().await?;
-    if !local.is_empty()
-        && selected_player()
-            .await?
-            .is_some_and(|(_, kind)| offline_account(&kind))
-    {
-        return Ok(local);
-    }
     let remote = tokio::time::timeout(
         std::time::Duration::from_secs(if local.is_empty() { 20 } else { 3 }),
         async {
@@ -76,13 +69,23 @@ pub async fn versions() -> crate::Result<Vec<HorizonVersion>> {
     )
     .await;
     match remote {
-        Ok(Ok(version)) => Ok(vec![version]),
+        Ok(Ok(version)) => Ok(available_versions(version, local)),
         _ if !local.is_empty() => Ok(local),
         Ok(Err(err)) => Err(err),
         Err(_) => Err(error(
             "Не удалось загрузить версии Horizon. Для первой установки нужен интернет.",
         )),
     }
+}
+
+fn available_versions(
+    latest: HorizonVersion,
+    installed: Vec<HorizonVersion>,
+) -> Vec<HorizonVersion> {
+    let latest_id = latest.id.clone();
+    let mut versions = vec![latest];
+    versions.extend(installed.into_iter().filter(|v| v.id != latest_id));
+    versions
 }
 
 fn offline_account(kind: &str) -> bool {
@@ -296,7 +299,7 @@ fn binary(root: &Path, name: &str) -> PathBuf {
     root.join(format!("{name}{}", std::env::consts::EXE_SUFFIX))
 }
 
-/// Revalidate ownership with Mojang; alternate/offline accounts cannot prepare or start Horizon.
+/// Validate the selected Microsoft identity for an authenticated online launch.
 fn validate_account_type(account_type: &str) -> crate::Result<()> {
     if !account_type.eq_ignore_ascii_case("microsoft") {
         return Err(error(
@@ -432,15 +435,8 @@ pub async fn install(
     if !repairing && reuse_installed(profile).await? {
         return Ok(());
     }
-    if selected_player()
-        .await?
-        .is_none_or(|(_, kind)| offline_account(&kind))
-    {
-        return Err(error(
-            "Эта версия Horizon ещё не установлена. Для первой загрузки войдите в Microsoft-аккаунт; затем её можно запускать офлайн.",
-        ));
-    }
-    owner().await?;
+    // Release archives and pinned Mojang resources are public downloads.
+    // Installing them must not refresh or validate the selected player account.
     let root = home.join(".horizon");
     let marker = root.join("blockera-ready.json");
     let bar = init_or_edit_loading(
@@ -740,6 +736,28 @@ async fn launch_mode(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn available_versions_offer_latest_and_keep_cached_choices_without_duplicates()
+     {
+        let version = |id: &str| HorizonVersion {
+            id: id.to_owned(),
+            name: format!("Nightly {id}"),
+            game_version: "26.3".into(),
+            asset_name: "fixture.zip".into(),
+            download_url: "https://example.invalid/fixture.zip".into(),
+            sha256: "fixture".into(),
+        };
+        let versions = available_versions(
+            version("latest"),
+            vec![version("old"), version("latest")],
+        );
+        assert_eq!(
+            versions.iter().map(|v| v.id.as_str()).collect::<Vec<_>>(),
+            ["latest", "old"]
+        );
+        assert_eq!(available_versions(version("latest"), vec![]).len(), 1);
+    }
 
     #[test]
     fn local_accounts_use_offline_mode_and_only_microsoft_uses_online_auth() {

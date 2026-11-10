@@ -10,12 +10,19 @@ const ts = require('typescript')
 const { parse, compileScript } = require('@vue/compiler-sfc')
 const sharedRoot = new URL('../../../packages/ui/src/', import.meta.url)
 
-function evaluate(source, imports) {
+function evaluate(source, imports, globals = {}) {
 	const exports = {}
 	const code = ts.transpileModule(source, {
 		compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 	}).outputText
-	runInNewContext(code, { exports, require: (id) => imports[id] ?? {}, Error, Date, Intl })
+	runInNewContext(code, {
+		exports,
+		require: (id) => imports[id] ?? {},
+		Error,
+		Date,
+		Intl,
+		...globals,
+	})
 	return exports
 }
 
@@ -111,7 +118,6 @@ test('payment validation and network failures return false and stop loading', as
 	}
 })
 
-
 test('default window and hook settings save once when saveKey replaces their containers', async () => {
 	const settings = vue.ref({
 		extra_launch_args: [],
@@ -132,7 +138,9 @@ test('default window and hook settings save once when saveKey replaces their con
 		compileScript(descriptor, { id: 'default-settings-test' }).content,
 		{
 			vue,
-			'@modrinth/ui': { injectNotificationManager: () => ({ handleError: (error) => errors.push(error) }) },
+			'@modrinth/ui': {
+				injectNotificationManager: () => ({ handleError: (error) => errors.push(error) }),
+			},
 			'@/composables/use-app-settings': {
 				useAppSettings: async () => ({
 					settings,
@@ -143,7 +151,9 @@ test('default window and hook settings save once when saveKey replaces their con
 					},
 				}),
 			},
-			'@/composables/useMemorySlider': { default: async () => ({ maxMemory: 8192, snapPoints: [] }) },
+			'@/composables/useMemorySlider': {
+				default: async () => ({ maxMemory: 8192, snapPoints: [] }),
+			},
 		},
 	)
 	component.render = () => vue.h('div')
@@ -192,4 +202,124 @@ test('default window and hook settings save once when saveKey replaces their con
 	} finally {
 		app.unmount()
 	}
+})
+
+for (const insideModal of [true, false])
+	test(`combobox opens in its owning layer and selects an option (modal=${insideModal})`, async () => {
+		const source = readFileSync(new URL('components/base/Combobox.vue', sharedRoot), 'utf8')
+		const { descriptor } = parse(source)
+		const { default: component } = evaluate(
+			compileScript(descriptor, { id: 'combobox-layer-test' }).content,
+			{ vue, '@vueuse/core': { onClickOutside() {} } },
+			{
+				window: {
+					innerWidth: 1200,
+					innerHeight: 800,
+					addEventListener() {},
+					removeEventListener() {},
+				},
+				requestAnimationFrame: () => 1,
+				cancelAnimationFrame() {},
+			},
+		)
+		component.render = () => vue.h('div')
+		const renderer = vue.createRenderer({
+			createElement: () => ({}),
+			createText: () => ({}),
+			createComment: () => ({}),
+			insert() {},
+			remove() {},
+			setText() {},
+			setElementText() {},
+			patchProp() {},
+			parentNode: () => null,
+			nextSibling: () => null,
+		})
+		const selected = []
+		const errors = []
+		const options = [
+			{ value: 'home', label: 'Главная' },
+			{ value: 'library', label: 'Библиотека' },
+		]
+		const app = renderer.createApp(component, {
+			modelValue: 'home',
+			options,
+			'onUpdate:modelValue': (value) => selected.push(value),
+		})
+		app.config.errorHandler = (error) => errors.push(error)
+		app.mount({})
+		const state = app._instance.setupState
+		const modal = vue.markRaw({})
+		state.containerRef = {
+			closest: (selector) => {
+				assert.equal(selector, '.modal-container')
+				return insideModal ? modal : null
+			},
+		}
+		state.triggerRef = {
+			getBoundingClientRect: () => ({ top: 300, bottom: 340, left: 600, width: 160 }),
+			focus() {},
+		}
+		state.dropdownRef = { getBoundingClientRect: () => ({ height: 130, width: 160 }) }
+		try {
+			await state.openDropdown()
+			assert.equal(state.isOpen, true)
+			assert.equal(state.teleportTarget, insideModal ? modal : '#teleports')
+			assert.deepEqual(
+				[...state.filteredOptions].map((option) => option.label),
+				['Главная', 'Библиотека'],
+			)
+			assert.equal(state.dropdownStyle.top, '340px')
+			assert.equal(state.dropdownStyle.left, '600px')
+			state.handleDropdownKeydown({ key: 'ArrowDown', preventDefault() {} })
+			state.handleDropdownKeydown({ key: 'Enter', preventDefault() {} })
+			await vue.nextTick()
+			assert.deepEqual(selected, ['library'])
+			assert.equal(state.isOpen, false)
+			await state.openDropdown()
+			state.handleOptionClick(options[0], 0)
+			await vue.nextTick()
+			assert.deepEqual(selected, ['library', 'home'])
+			assert.equal(state.isOpen, false)
+			assert.deepEqual(errors, [])
+		} finally {
+			app.unmount()
+		}
+	})
+
+test('native drag overlay is below modal controls and modal combobox escapes the global popover layer', () => {
+	const globals = readFileSync(
+		new URL('../src/assets/stylesheets/global.scss', import.meta.url),
+		'utf8',
+	)
+	const variables = new Map(
+		[...globals.matchAll(/(--blockera-layer-[\w-]+):\s*(\d+)/g)].map((match) => [
+			match[1],
+			Number(match[2]),
+		]),
+	)
+	function layer(expression) {
+		const resolved = expression.replace(/var\((--[\w-]+),\s*(\d+)\)/g, (_, name, fallback) =>
+			String(variables.get(name) ?? Number(fallback)),
+		)
+		const subtraction = resolved.match(/^calc\((\d+)\s*-\s*(\d+)\)$/)
+		return subtraction ? Number(subtraction[1]) - Number(subtraction[2]) : Number(resolved)
+	}
+	const modal = readFileSync(new URL('components/modal/NewModal.vue', sharedRoot), 'utf8')
+	const overlayLayer = modal.match(/\.tauri-overlay\s*\{[\s\S]*?z-index:\s*([^;]+);/)[1]
+	assert.ok(
+		layer(overlayLayer) < variables.get('--blockera-layer-modal'),
+		'the native dragging overlay must not intercept close buttons in the top 100 pixels',
+	)
+	assert.ok(layer(overlayLayer) > variables.get('--blockera-layer-modal-backdrop'))
+	assert.ok(variables.get('--blockera-layer-popover') < variables.get('--blockera-layer-modal'))
+	const combobox = parse(
+		readFileSync(new URL('components/base/Combobox.vue', sharedRoot), 'utf8'),
+	).descriptor
+	assert.match(combobox.template.content, /<Teleport\s+:to="teleportTarget"/)
+	assert.match(
+		combobox.template.content,
+		/class="pointer-events-auto fixed/,
+		'popup must restore pointer events inherited from modal-container',
+	)
 })

@@ -15,7 +15,7 @@ import { ChatIcon } from '@/assets/icons'
 import ModalWrapper from '@/components/ui/modal/ModalWrapper.vue'
 import { trackEvent } from '@/helpers/analytics'
 import { login as login_flow, set_default_user } from '@/helpers/auth.js'
-import { launcherText } from '@/helpers/launcher-language'
+import { launcherText, localizedError } from '@/helpers/launcher-language'
 import { install } from '@/helpers/profile.js'
 import { cancel_directory_change } from '@/helpers/settings.ts'
 import { applyMigrationFix, restartApp } from '@/helpers/utils.js'
@@ -136,8 +136,9 @@ const hasDebugInfo = computed(
 		errorType.value === 'no_loader_version',
 )
 
-const debugInfo = computed(() => error.value.message ?? error.value ?? 'No error message.')
+const debugInfo = computed(() => error.value?.message ?? error.value ?? 'No error message.')
 
+const displayError = computed(() => localizedError(String(debugInfo.value)))
 const copied = ref(false)
 
 async function copyToClipboard(text) {
@@ -284,7 +285,11 @@ async function onApplyMigrationFix(eol) {
 					</div>
 				</template>
 				<template v-else>
-					{{ debugInfo }}
+					<pre class="error-details" tabindex="0">{{ displayError }}</pre>
+					<details v-if="displayError !== debugInfo">
+						<summary>{{ $t('blockera.ui.4c806c855ac8') }}</summary>
+						<pre class="error-details" tabindex="0">{{ debugInfo }}</pre>
+					</details>
 				</template>
 				<template v-if="hasDebugInfo">
 					<hr />
@@ -304,7 +309,7 @@ async function onApplyMigrationFix(eol) {
 				<ButtonStyled v-if="closable">
 					<button @click="errorModal.hide()"><XIcon /> {{ $t('blockera.ui.bbfa773e5a63') }}</button>
 				</ButtonStyled>
-				<ButtonStyled v-if="hasDebugInfo">
+				<ButtonStyled>
 					<button :disabled="copied" @click="copyToClipboard(debugInfo)">
 						<template v-if="copied">
 							<CheckIcon class="text-green" /> {{ $t('blockera.ui.b7c3ca0ee379') }}
@@ -329,7 +334,8 @@ async function onApplyMigrationFix(eol) {
 					</button>
 					<Collapsible :collapsed="errorCollapsed">
 						<pre
-							class="m-0 px-4 py-3 bg-bg rounded-none whitespace-pre-wrap break-words overflow-x-auto max-w-full"
+							class="error-details m-0 px-4 py-3 bg-bg rounded-none whitespace-pre-wrap break-words max-w-full"
+							tabindex="0"
 							>{{ debugInfo }}</pre
 						>
 					</Collapsible>
@@ -475,6 +481,17 @@ code {
 	display: flex;
 	flex-direction: column;
 	gap: var(--gap-md);
+}
+
+.error-details {
+	max-height: min(20rem, 45dvh);
+	max-width: 100%;
+	margin: 0;
+	overflow: auto;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	overscroll-behavior: contain;
+	user-select: text;
 }
 
 .markdown-body {
