@@ -5,6 +5,13 @@
  */
 import { invoke } from '@tauri-apps/api/core'
 
+/**
+ * @typedef {Object} LauncherCredential
+ * @property {{ id: string, name: string }} profile
+ * @property {string} account_type
+ * @property {boolean} active
+ */
+
 // Example function:
 // User goes to auth_url to complete flow, and when completed, authenticate_await_completion() returns the credentials
 // export async function authenticate() {
@@ -14,25 +21,25 @@ import { invoke } from '@tauri-apps/api/core'
 // }
 
 export async function offline_login(name) {
-  return await invoke('plugin:auth|offline_login', { name: name })
+	return await invoke('plugin:auth|offline_login', { name: name })
 }
 
 // This code is modified by AstralRinth
 export async function elyby_login(uuid, login, accessToken) {
-  return await invoke('plugin:auth|elyby_login', {
-    uuid,
-    login,
-    accessToken
-  })
+	return await invoke('plugin:auth|elyby_login', {
+		uuid,
+		login,
+		accessToken,
+	})
 }
 
 // This code is modified by AstralRinth
 export async function elyby_auth_authenticate(login, password, clientToken) {
-  return await invoke('plugin:auth|elyby_auth_authenticate', {
-    login,
-    password,
-    clientToken,
-  })
+	return await invoke('plugin:auth|elyby_auth_authenticate', {
+		login,
+		password,
+		clientToken,
+	})
 }
 
 /**
@@ -57,7 +64,7 @@ export async function login() {
 
 /**
  * Retrieves the default user
- * @return {Promise<UUID | undefined>}
+ * @return {Promise<string | null>}
  */
 export async function get_default_user() {
 	return await invoke('plugin:auth|get_default_user')
@@ -65,7 +72,7 @@ export async function get_default_user() {
 
 /**
  * Updates the default user
- * @param {UUID} user
+ * @param {string} user
  */
 export async function set_default_user(user) {
 	return await invoke('plugin:auth|set_default_user', { user })
@@ -73,7 +80,7 @@ export async function set_default_user(user) {
 
 /**
  * Remove a user account from the database
- * @param {UUID} user
+ * @param {string} user
  */
 export async function remove_user(user) {
 	return await invoke('plugin:auth|remove_user', { user })
@@ -81,7 +88,7 @@ export async function remove_user(user) {
 
 /**
  * Returns a list of users
- * @returns {Promise<Credential[]>}
+ * @returns {Promise<LauncherCredential[]>}
  */
 export async function users() {
 	return await invoke('plugin:auth|get_users')

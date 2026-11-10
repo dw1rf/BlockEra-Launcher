@@ -15,6 +15,7 @@ import { useRouter } from 'vue-router'
 import { trackEvent } from '@/helpers/analytics'
 import { process_listener } from '@/helpers/events'
 import { instanceBackgroundFor } from '@/helpers/instance-backgrounds'
+import { libraryPlaytime } from '@/helpers/library'
 import { get_by_profile_path } from '@/helpers/process'
 import { finish_install, kill, run } from '@/helpers/profile'
 import { openProfileFolder, showProfileInFolder } from '@/helpers/utils.js'
@@ -25,7 +26,9 @@ const { handleError } = injectNotificationManager()
 const selectedInstanceStore = useSelectedInstance()
 const formatRelativeTime = useRelativeTime()
 
+defineEmits(['favorite', 'organize'])
 const props = defineProps({
+	libraryMeta: { type: Object, default: null },
 	instance: {
 		type: Object,
 		default() {
@@ -254,7 +257,19 @@ onUnmounted(() => unlisten())
 					</ButtonStyled>
 				</div>
 			</div>
-			<div class="relative z-[1] flex flex-col gap-1">
+			<div class="relative z-[1] flex flex-col gap-1 min-w-0 flex-1">
+				<div v-if="libraryMeta" class="library-card-actions">
+					<button
+						type="button"
+						:aria-label="libraryMeta.favorite ? 'Убрать из избранного' : 'Добавить в избранное'"
+						:aria-pressed="!!libraryMeta.favorite"
+						:class="{ favorite: libraryMeta.favorite }"
+						@click.stop="$emit('favorite')"
+					>
+						{{ libraryMeta.favorite ? '★' : '☆' }}
+					</button>
+					<button type="button" @click.stop="$emit('organize')">Папка и теги</button>
+				</div>
 				<p class="m-0 text-md font-bold text-contrast leading-tight line-clamp-1">
 					{{ instance.name }}
 				</p>
@@ -264,12 +279,60 @@ onUnmounted(() => unlisten())
 						{{ instance.loader }} {{ instance.game_version }}
 					</span>
 				</div>
+				<template v-if="libraryMeta">
+					<small
+						>{{
+							libraryPlaytime(
+								(instance.recent_time_played ?? 0) + (instance.submitted_time_played ?? 0),
+							)
+						}}
+						в игре</small
+					>
+					<small class="library-world" :title="libraryMeta.world"
+						>Последний мир · {{ libraryMeta.world }}</small
+					>
+					<small v-if="libraryMeta.folder">Папка · {{ libraryMeta.folder }}</small>
+					<div v-if="libraryMeta.tags.length" class="library-tags">
+						<span v-for="tag in libraryMeta.tags" :key="tag">{{ tag }}</span>
+					</div>
+				</template>
 			</div>
 		</div>
 	</div>
 </template>
 
 <style scoped>
+.library-card-actions,
+.library-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+.library-card-actions button {
+	background: #ffffff0a;
+	color: var(--color-secondary);
+	border: 1px solid #ffffff1c;
+	border-radius: 0.4rem;
+	padding: 0.2rem 0.45rem;
+	cursor: pointer;
+	font-size: 0.75rem;
+}
+.library-card-actions button.favorite {
+	color: #e3b8ff;
+	border-color: #c18aef88;
+}
+.library-tags span {
+	background: #b371ec1c;
+	border-radius: 0.3rem;
+	padding: 0.15rem 0.4rem;
+	font-size: 0.7rem;
+}
+.library-world {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 20rem;
+}
+
 .instance-library-card {
 	position: relative;
 	isolation: isolate;

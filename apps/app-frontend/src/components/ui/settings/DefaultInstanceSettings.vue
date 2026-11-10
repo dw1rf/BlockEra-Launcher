@@ -21,8 +21,8 @@ watch(
 	(value) => void saveKey('force_fullscreen', value),
 )
 watch(
-	() => [settings.value.game_resolution.width, settings.value.game_resolution.height],
-	() => void saveKey('game_resolution', { ...settings.value.game_resolution }, 250),
+	[() => settings.value.game_resolution[0], () => settings.value.game_resolution[1]],
+	() => void saveKey('game_resolution', [...settings.value.game_resolution], 250),
 )
 watch(
 	() => settings.value.memory.maximum,
@@ -44,10 +44,10 @@ watch(envVars, (value) => {
 	void saveKey('custom_env_vars', parsed, 250)
 })
 watch(
-	() => [
-		settings.value.hooks.pre_launch,
-		settings.value.hooks.wrapper,
-		settings.value.hooks.post_exit,
+	[
+		() => settings.value.hooks.pre_launch || undefined,
+		() => settings.value.hooks.wrapper || undefined,
+		() => settings.value.hooks.post_exit || undefined,
 	],
 	() =>
 		void saveKey(
@@ -90,7 +90,7 @@ watch(
 					><span>Ширина</span
 					><input
 						id="width"
-						v-model="settings.game_resolution.width"
+						v-model.number="settings.game_resolution[0]"
 						:disabled="settings.force_fullscreen"
 						autocomplete="off"
 						type="number"
@@ -100,7 +100,7 @@ watch(
 					><span>Высота</span
 					><input
 						id="height"
-						v-model="settings.game_resolution.height"
+						v-model.number="settings.game_resolution[1]"
 						:disabled="settings.force_fullscreen"
 						autocomplete="off"
 						type="number"

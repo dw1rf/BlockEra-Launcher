@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type Stripe from 'stripe'
 import { PlusIcon, XIcon } from '@modrinth/assets'
 import { nextTick, ref, useTemplateRef } from 'vue'
 
@@ -57,13 +58,13 @@ defineExpose({
 			/>
 			<div class="input-group mt-auto pt-4">
 				<ButtonStyled color="brand">
-					<button :disabled="loading" @click="addPaymentMethod.submit()">
+					<button :disabled="loading" @click="addPaymentMethod?.submit()">
 						<PlusIcon />
 						{{ formatMessage(messages.paymentMethodAdd) }}
 					</button>
 				</ButtonStyled>
 				<ButtonStyled>
-					<button @click="modal.hide()">
+					<button @click="modal?.hide()">
 						<XIcon />
 						{{ formatMessage(commonMessages.cancelButton) }}
 					</button>

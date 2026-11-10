@@ -263,6 +263,14 @@ pub struct ProcessPayload {
     pub uuid: Uuid,
     pub event: ProcessPayloadType,
     pub message: String,
+    pub exit: Option<ProcessExit>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct ProcessExit {
+    pub code: Option<i32>,
+    pub success: bool,
+    pub user_requested_stop: bool,
 }
 
 #[derive(Serialize, Clone, Debug)]

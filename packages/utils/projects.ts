@@ -1,30 +1,30 @@
 // noinspection JSUnusedGlobalSymbols
 
-export const isApproved = (project) => {
+export const isApproved = (project: { status: string } | null | undefined) => {
 	return project && APPROVED_PROJECT_STATUSES.includes(project.status)
 }
 
-export const isListed = (project) => {
+export const isListed = (project: { status: string } | null | undefined) => {
 	return project && LISTED_PROJECT_STATUSES.includes(project.status)
 }
 
-export const isUnlisted = (project) => {
+export const isUnlisted = (project: { status: string } | null | undefined) => {
 	return project && UNLISTED_PROJECT_STATUSES.includes(project.status)
 }
 
-export const isPrivate = (project) => {
+export const isPrivate = (project: { status: string } | null | undefined) => {
 	return project && PRIVATE_PROJECT_STATUSES.includes(project.status)
 }
 
-export const isRejected = (project) => {
+export const isRejected = (project: { status: string } | null | undefined) => {
 	return project && REJECTED_PROJECT_STATUSES.includes(project.status)
 }
 
-export const isUnderReview = (project) => {
+export const isUnderReview = (project: { status: string } | null | undefined) => {
 	return project && UNDER_REVIEW_PROJECT_STATUSES.includes(project.status)
 }
 
-export const isDraft = (project) => {
+export const isDraft = (project: { status: string } | null | undefined) => {
 	return project && DRAFT_PROJECT_STATUSES.includes(project.status)
 }
 
@@ -57,7 +57,10 @@ export type PlatformTag = {
 	supported_project_types: DisplayProjectType[]
 }
 
-export function getVersionsToDisplay(project, allGameVersions: GameVersionTag[]) {
+export function getVersionsToDisplay(
+	project: { game_versions: string[] },
+	allGameVersions: GameVersionTag[],
+) {
 	return formatVersionsForDisplay(project.game_versions.slice(), allGameVersions)
 }
 
@@ -75,7 +78,7 @@ export function formatVersionsForDisplay(
 	)
 
 	{
-		const indices = allVersions.reduce((map, gameVersion, index) => {
+		const indices = allVersions.reduce<Record<string, number>>((map, gameVersion, index) => {
 			map[gameVersion.version] = index
 			return map
 		}, {})

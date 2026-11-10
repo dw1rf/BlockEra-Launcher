@@ -4,7 +4,7 @@
 		class="experimental-styles-within relative mx-auto mb-6 flex min-h-screen w-full max-w-[1280px] flex-col px-6"
 	>
 		<ServersUpgradeModalWrapper
-			v-if="isNuxt"
+			v-if="isNuxt && stripePublishableKey && siteUrl && products"
 			ref="upgradeModal"
 			:stripe-publishable-key
 			:site-url

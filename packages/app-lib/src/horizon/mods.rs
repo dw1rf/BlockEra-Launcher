@@ -12,12 +12,13 @@ use crate::{
 };
 use serde_json::{Value, json as value};
 use sha2::{Digest, Sha256};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
 const INDEX: &str = "https://horizon-rust.github.io/horizon-mods/index.json";
 const ICON_ROOT: &str = "https://horizon-rust.github.io/horizon-mods/icons/";
-const HELPER_VERSION: &str = "0.2.47";
+const HELPER_VERSION: &str = "0.2.58";
 const MANAGER: &str = ".horizon-manager";
 static MUTATION: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 static BUSY: std::sync::LazyLock<dashmap::DashSet<PathBuf>> =
@@ -102,8 +103,7 @@ pub async fn catalog(path: &str) -> crate::Result<Value> {
 fn registry_icon(project: &Value) -> Option<&str> {
     let id = project["id"].as_str().filter(|id| valid_id(id))?;
     let icon = project["icon"].as_str()?;
-    (icon.strip_prefix(ICON_ROOT)?.strip_suffix(".png")? == id)
-        .then_some(icon)
+    (icon.strip_prefix(ICON_ROOT)?.strip_suffix(".png")? == id).then_some(icon)
 }
 
 fn compatible(project: &Value, version: &Value, game: &str) -> bool {
@@ -151,6 +151,89 @@ async fn installed(home: &Path) -> crate::Result<Vec<Value>> {
                 "kind": if native {"native-mod"} else {"mod"}, "enabled": enabled(&settings, id),
                 "checksum": e["checksum"], "source": e["page"] }))
         }).collect())
+}
+
+async fn keep_native_versions(
+    home: &Path,
+    update_id: Option<&str>,
+) -> crate::Result<()> {
+    let path = home.join("mod-browser/chosen-versions.json");
+    let mut versions: std::collections::BTreeMap<String, String> =
+        match tokio::fs::read(&path).await {
+            Ok(bytes) => serde_json::from_slice(&bytes)?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                Default::default()
+            }
+            Err(e) => return Err(IOError::from(e).into()),
+        };
+    let previous = versions.clone();
+    if let Some(id) = update_id {
+        versions.remove(id);
+    } else {
+        // The player approved the installed versions. Prevent the CLI from
+        // substituting other packages while it tries to fit mods to the game.
+        for entry in installed(home).await? {
+            if entry["kind"] == "native-mod"
+                && entry["enabled"] == true
+                && let (Some(id), Some(version)) =
+                    (entry["id"].as_str(), entry["version"].as_str())
+            {
+                versions.insert(id.to_owned(), version.to_owned());
+            }
+        }
+    }
+    if versions != previous {
+        tokio::fs::create_dir_all(home.join("mod-browser"))
+            .await
+            .map_err(IOError::from)?;
+        write_json(&path, &value!(versions)).await?;
+    }
+    Ok(())
+}
+
+fn native_mod_revision(
+    home: &Path,
+    entry: &Value,
+    game: &str,
+) -> Option<String> {
+    let id = entry["id"].as_str()?;
+    let path = home.join(format!("horizon-native-mods/{id}.hnmod"));
+    let mut bundle =
+        zip::ZipArchive::new(std::fs::File::open(path).ok()?).ok()?;
+    let manifest = bundle.by_name("horizon-native.json").ok()?;
+    let mut bytes = Vec::new();
+    manifest.take(65_537).read_to_end(&mut bytes).ok()?;
+    if bytes.len() > 65_536 {
+        return None;
+    }
+    let manifest: Value = serde_json::from_slice(&bytes).ok()?;
+    let revision = manifest["horizon"].as_str()?;
+    (manifest["id"] == id
+        && manifest["game"] == game
+        && revision.len() == 40
+        && revision.bytes().all(|b| b.is_ascii_hexdigit()))
+    .then(|| revision.to_ascii_lowercase())
+}
+
+async fn shared_native_revision(
+    home: &Path,
+    game: &str,
+) -> crate::Result<Option<String>> {
+    let entries = installed(home).await?;
+    let home = home.to_owned();
+    let game = game.to_owned();
+    tokio::task::spawn_blocking(move || {
+        let mut revisions = entries
+            .iter()
+            .filter(|e| e["kind"] == "native-mod" && e["enabled"] == true)
+            .map(|e| native_mod_revision(&home, e, &game));
+        let revision = revisions.next()??;
+        revisions
+            .all(|other| other.as_ref() == Some(&revision))
+            .then_some(revision)
+    })
+    .await
+    .map_err(|e| error(e.to_string()))
 }
 
 async fn selected(home: &Path) -> crate::Result<Option<String>> {
@@ -363,10 +446,13 @@ fn base_version(name: &str) -> crate::Result<String> {
     ))
 }
 
-async fn bridge(home: &Path) -> crate::Result<String> {
+async fn bridge(home: &Path, revision: Option<&str>) -> crate::Result<String> {
     let original = home.join(".horizon");
     let version = read_json(&original.join("blockera-ready.json")).await?;
-    let base = base_version(version["name"].as_str().unwrap_or_default())?;
+    let base = match revision {
+        Some(revision) => revision.to_owned(),
+        None => base_version(version["name"].as_str().unwrap_or_default())?,
+    };
     let manager = home.join(MANAGER);
     let root = manager.join("versions").join(&base);
     let fingerprint = root.join("blockera-bridge.json");
@@ -393,7 +479,7 @@ async fn bridge(home: &Path) -> crate::Result<String> {
             .await?;
     }
     let settings = manager.join("settings.json");
-    if !settings.is_file() {
+    if revision.is_none() && !settings.is_file() {
         write_json(&settings, &value!({"selected": base, "auto_install": false, "auto_prune": false})).await?;
     }
     Ok(base)
@@ -427,6 +513,97 @@ async fn logged(mut cmd: Command, log: &Path) -> crate::Result<()> {
         )));
     }
     Ok(())
+}
+
+async fn build_native(
+    program: &Path,
+    home: &Path,
+    base: &str,
+    game: &str,
+    allow_version_mismatch: bool,
+    log: &Path,
+) -> crate::Result<()> {
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    {
+        // Install Rust without compiling, then migrate the complete C toolchain.
+        // Horizon prepends this managed MinGW directory to every build's PATH.
+        super::mingw::recover(home).await?;
+        let mut install = command(program, home);
+        install.args(["rust", "install"]);
+        logged(install, log).await?;
+        super::mingw::ensure(home).await?;
+    }
+    let build = |version: &str| {
+        let mut cmd = command(program, home);
+        #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+        let configured = super::mingw::configure(&mut cmd, home);
+        #[cfg(not(all(target_os = "windows", target_arch = "x86_64")))]
+        let configured: crate::Result<()> = Ok(());
+        cmd.arg("native-build")
+            .arg("--instance")
+            .arg("horizon")
+            .arg("--version")
+            .arg(version)
+            .arg("--trust-native-code");
+        if allow_version_mismatch {
+            cmd.arg("--allow-version-mismatch");
+        }
+        async move {
+            configured?;
+            logged(cmd, log).await
+        }
+    };
+    let first = build(base).await;
+    if !log_tail(log).await?.contains("E_TARGET_NOT_FOUND") {
+        return first;
+    }
+    let Some(revision) = shared_native_revision(home, game).await? else {
+        return first;
+    };
+    if base
+        .rsplit('-')
+        .next()
+        .is_some_and(|r| revision.starts_with(r))
+    {
+        return first;
+    }
+    // Some revisions advertise the same hook API but have different raw
+    // mixin targets. Reuse the prepared resources for this Minecraft version.
+    let current_lock =
+        read_json(&home.join(".horizon/research-lock.json")).await?;
+    let target_lock = json(&format!(
+        "https://raw.githubusercontent.com/horizon-rust/horizon/{revision}/research-lock.json"
+    ))
+    .await?;
+    if target_lock["minecraft"]["version"] != game
+        || ["manifest_sha1", "client_sha1", "server_sha1"]
+            .iter()
+            .any(|key| {
+                let checksum = &current_lock["minecraft"][*key];
+                !checksum.is_string()
+                    || checksum != &target_lock["minecraft"][*key]
+            })
+    {
+        return first;
+    }
+    let fallback = bridge(home, Some(&revision)).await?;
+    use tokio::io::AsyncWriteExt;
+    let mut file = tokio::fs::OpenOptions::new()
+        .append(true)
+        .open(log)
+        .await
+        .map_err(IOError::from)?;
+    file.write_all(
+        format!(
+            "\nПовтор сборки на ревизии модов Horizon {}.\n",
+            &revision[..7]
+        )
+        .as_bytes(),
+    )
+    .await
+    .map_err(IOError::from)?;
+    drop(file);
+    build(&fallback).await
 }
 
 async fn log_tail(log: &Path) -> crate::Result<String> {
@@ -509,27 +686,28 @@ pub async fn action(
     let result: crate::Result<()> = async {
         let program = helper().await?;
         emit_loading(&bar, 10.0, Some("Подготовка инструментов Horizon"))?;
-        let base = bridge(&home).await?;
+        let base = bridge(&home, None).await?;
         let log_dir = home.join("logs");
         tokio::fs::create_dir_all(&log_dir).await.map_err(IOError::from)?;
         let log = log_dir.join("horizon-mods.log");
         tokio::fs::write(&log, format!("Horizon {action} {id}\n")).await.map_err(IOError::from)?;
-        let mut cmd = command(&program, &home);
         if action == "build" {
+            keep_native_versions(&home, None).await?;
             tokio::fs::write(manager.join("native-dirty"), "").await.map_err(IOError::from)?;
-            cmd.arg("native-build").arg("--instance").arg("horizon").arg("--version").arg(&base).arg("--trust-native-code");
-            if allow_version_mismatch { cmd.arg("--allow-version-mismatch"); }
             emit_loading(&bar, 10.0, Some("Компиляция нативных модов. Прогресс доступен в журнале Horizon"))?;
+            build_native(&program, &home, &base, &profile.game_version, allow_version_mismatch, &log).await?;
+            tokio::fs::remove_file(manager.join("native-dirty")).await.map_err(IOError::from)?;
         } else {
             // Mark before an operation: a failed update must not silently run a stale native build.
             let native = installed(&home).await?.iter().any(|e| e["id"] == id && e["kind"] == "native-mod")
                 || (action == "install" && catalog(path).await?["projects"].as_array().is_some_and(|p| p.iter().any(|p| p["id"] == id && p["kind"] == "native-mod")));
             if native { tokio::fs::write(manager.join("native-dirty"), "").await.map_err(IOError::from)?; }
+            if action == "update" && native { keep_native_versions(&home, Some(id)).await?; }
+            let mut cmd = command(&program, &home);
             cmd.arg("mods").arg(action).arg(id).arg("--instance").arg("horizon");
             if action == "install" { cmd.arg("--source").arg("horizon"); }
+            logged(cmd, &log).await?;
         }
-        logged(cmd, &log).await?;
-        if action == "build" { tokio::fs::remove_file(manager.join("native-dirty")).await.map_err(IOError::from)?; }
         emit_loading(&bar, 90.0, Some("Готово"))?;
         Ok(())
     }.await;
@@ -580,6 +758,94 @@ mod tests {
             &value!({"game": "26.3"}),
             "26.3"
         ));
+    }
+
+    #[tokio::test]
+    async fn build_keeps_enabled_native_versions_until_an_explicit_update() {
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path();
+        let pins = home.join("mod-browser/chosen-versions.json");
+        tokio::fs::create_dir_all(pins.parent().unwrap())
+            .await
+            .unwrap();
+        write_json(&pins, &value!({"other": "2.0"})).await.unwrap();
+        write_json(
+            &home.join("mod-browser.json"),
+            &value!({"entries": [
+                {"source": "horizon", "slug": "zoom", "number": "1.0", "file": "horizon-native-mods/zoom.hnmod"},
+                {"source": "horizon", "slug": "hud", "number": "3.0", "file": "horizon-native-mods/hud.hnmod"}
+            ]}),
+        )
+        .await
+        .unwrap();
+        tokio::fs::write(
+            home.join("horizon-mods.txt"),
+            "mod.zoom:true\nmod.hud:false",
+        )
+        .await
+        .unwrap();
+
+        keep_native_versions(home, None).await.unwrap();
+        assert_eq!(
+            read_json(&pins).await.unwrap(),
+            value!({"other": "2.0", "zoom": "1.0"})
+        );
+        keep_native_versions(home, Some("zoom")).await.unwrap();
+        assert_eq!(read_json(&pins).await.unwrap(), value!({"other": "2.0"}));
+    }
+
+    #[tokio::test]
+    async fn fallback_requires_one_revision_shared_by_enabled_mods() {
+        use std::io::Write;
+
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path();
+        let packages = home.join("horizon-native-mods");
+        std::fs::create_dir(&packages).unwrap();
+        let first = "1".repeat(40);
+        let second = "2".repeat(40);
+        for (id, revision) in [("zoom", &first), ("hud", &second)] {
+            let mut bundle = zip::ZipWriter::new(
+                std::fs::File::create(packages.join(format!("{id}.hnmod")))
+                    .unwrap(),
+            );
+            bundle
+                .start_file(
+                    "horizon-native.json",
+                    zip::write::SimpleFileOptions::default(),
+                )
+                .unwrap();
+            write!(
+                bundle,
+                "{}",
+                value!({"id": id, "horizon": revision, "game": "26.3"})
+            )
+            .unwrap();
+            bundle.finish().unwrap();
+        }
+        write_json(
+            &home.join("mod-browser.json"),
+            &value!({"entries": [
+                {"source": "horizon", "slug": "zoom", "file": "horizon-native-mods/zoom.hnmod"},
+                {"source": "horizon", "slug": "hud", "file": "horizon-native-mods/hud.hnmod"}
+            ]}),
+        )
+        .await
+        .unwrap();
+        let settings = home.join("horizon-mods.txt");
+        tokio::fs::write(&settings, "mod.zoom:true\nmod.hud:false")
+            .await
+            .unwrap();
+        assert_eq!(
+            shared_native_revision(home, "26.3").await.unwrap(),
+            Some(first)
+        );
+        assert_eq!(shared_native_revision(home, "26.4").await.unwrap(), None);
+
+        tokio::fs::write(&settings, "mod.zoom:true\nmod.hud:true")
+            .await
+            .unwrap();
+        assert_eq!(shared_native_revision(home, "26.3").await.unwrap(), None);
     }
 
     #[tokio::test]

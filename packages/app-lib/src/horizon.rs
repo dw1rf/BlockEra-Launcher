@@ -15,6 +15,8 @@ use tokio::process::Command;
 
 const API: &str = "https://api.github.com/repos/horizon-rust/horizon/releases";
 
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+mod mingw;
 pub mod mods;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

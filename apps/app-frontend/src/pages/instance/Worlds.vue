@@ -656,18 +656,20 @@ onMounted(async () => {
 		}
 		await handleDefaultProfileUpdateEvent(worlds.value, instance.value.path, event)
 	})
-	unlistenBackups = await world_backup_listener((event) => {
-		if (event.profile !== instance.value.path) return
-		backingUp.value = event.state === 'started'
-		if (event.state === 'completed') {
-			backupStatus.value = `Резервная копия «${event.world}» создана.`
-			void refreshBackupList()
-		} else if (event.state === 'cancelled') {
-			backupStatus.value = 'Автобэкап отменён перед запуском игры.'
-		} else if (event.state === 'failed') {
-			backupStatus.value = event.error || 'Не удалось создать резервную копию.'
-		}
-	})
+	unlistenBackups = await world_backup_listener(
+		(event: { profile: string; state: string; world: string; error?: string }) => {
+			if (event.profile !== instance.value.path) return
+			backingUp.value = event.state === 'started'
+			if (event.state === 'completed') {
+				backupStatus.value = `Резервная копия «${event.world}» создана.`
+				void refreshBackupList()
+			} else if (event.state === 'cancelled') {
+				backupStatus.value = 'Автобэкап отменён перед запуском игры.'
+			} else if (event.state === 'failed') {
+				backupStatus.value = event.error || 'Не удалось создать резервную копию.'
+			}
+		},
+	)
 })
 
 const messages = defineMessages({

@@ -145,11 +145,11 @@ async function pollInstall() {
 	if (!installJobId.value) return
 	try {
 		installStatus.value = await get_catalog_install_status(installJobId.value)
-		if (installStatus.value.state === 'installed') {
+		if (installStatus.value?.state === 'installed') {
 			await refreshProfiles()
 			return
 		}
-		if (installStatus.value.state === 'error' || installStatus.value.state === 'cancelled') return
+		if (installStatus.value?.state === 'error' || installStatus.value?.state === 'cancelled') return
 		pollTimer = setTimeout(pollInstall, 750)
 	} catch (error) {
 		handleError(error)
@@ -247,7 +247,7 @@ onMounted(async () => {
 			return
 		}
 		project.value = await get_project(popularPack.projectId, 'stale_while_revalidate')
-		const versionId = project.value.versions.at(-1)
+		const versionId = project.value?.versions.at(-1)
 		latestVersion.value = versionId
 			? await get_version(versionId, 'stale_while_revalidate')
 			: undefined

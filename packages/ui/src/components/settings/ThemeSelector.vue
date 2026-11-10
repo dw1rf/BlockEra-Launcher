@@ -50,8 +50,10 @@ const colorTheme = defineMessages({
 	},
 })
 
-function asString(theme: T): string {
-	return theme
+function themeLabel(theme: T): string {
+	return Object.hasOwn(colorTheme, theme)
+		? formatMessage(colorTheme[theme as keyof typeof colorTheme])
+		: theme
 }
 
 function getPreviewClass(option: T): string {
@@ -79,7 +81,7 @@ function getPreviewClass(option: T): string {
 			<div class="label">
 				<RadioButtonCheckedIcon v-if="currentTheme === option" class="radio shrink-0" />
 				<RadioButtonIcon v-else class="radio shrink-0" />
-				{{ colorTheme[asString(option)] ? formatMessage(colorTheme[asString(option)]) : option }}
+				{{ themeLabel(option) }}
 				<SunIcon
 					v-if="'light' === option"
 					v-tooltip="formatMessage(colorTheme.preferredLight)"

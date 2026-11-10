@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { createStripeElements } from '@modrinth/utils'
 import { loadStripe, type Stripe as StripsJs, type StripeElements } from '@stripe/stripe-js'
+import type Stripe from 'stripe'
 import { ref } from 'vue'
 
 import ModalLoadingIndicator from '../modal/ModalLoadingIndicator.vue'
@@ -23,12 +24,12 @@ export type AddPaymentMethodProps = {
 const props = defineProps<AddPaymentMethodProps>()
 
 const elementsLoaded = ref<0 | 1 | 2>(0)
-const stripe = ref<StripsJs>()
+const stripe = ref<StripsJs | null>(null)
 const elements = ref<StripeElements>()
 const error = ref(false)
 
-function handleError(error: Error) {
-	props.onError(error)
+function handleError(cause: unknown) {
+	props.onError(cause instanceof Error ? cause : new Error(String(cause)))
 	error.value = true
 }
 
@@ -40,6 +41,7 @@ async function reload(paymentMethods: Stripe.PaymentMethod[]) {
 		const result = await props.createSetupIntent()
 
 		stripe.value = await loadStripe(props.publishableKey)
+		if (!stripe.value) throw new Error('Stripe could not be loaded')
 		const {
 			elements: newElements,
 			addressElement,
@@ -61,25 +63,27 @@ async function reload(paymentMethods: Stripe.PaymentMethod[]) {
 }
 
 async function submit(): Promise<boolean> {
-	emit('startLoading')
-
-	const result = await stripe.value.confirmSetup({
-		elements: elements.value,
-		confirmParams: {
-			return_url: props.returnUrl,
-		},
-	})
-
-	console.log(result)
-
-	const { error } = result
-
-	emit('stopLoading')
-	if (error && error.type !== 'validation_error') {
-		handleError(error.message)
+	if (!stripe.value || !elements.value) {
+		handleError(new Error('Payment form is not ready'))
 		return false
-	} else if (!error) {
+	}
+	emit('startLoading')
+	try {
+		const result = await stripe.value.confirmSetup({
+			elements: elements.value,
+			confirmParams: { return_url: props.returnUrl },
+		})
+		if (result.error) {
+			if (result.error.type !== 'validation_error')
+				handleError(result.error.message ?? 'Payment setup failed')
+			return false
+		}
 		return true
+	} catch (cause) {
+		handleError(cause)
+		return false
+	} finally {
+		emit('stopLoading')
 	}
 }
 

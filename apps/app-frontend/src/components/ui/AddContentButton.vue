@@ -22,7 +22,7 @@ const handleAddContentFromFile = async () => {
 	if (!newProject) return
 
 	for (const project of newProject) {
-		await add_project_from_path(props.instance.path, project.path ?? project).catch(handleError)
+		await add_project_from_path(props.instance.path, project).catch(handleError)
 	}
 }
 

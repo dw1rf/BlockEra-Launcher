@@ -1571,6 +1571,12 @@
   "blockera.horizon.build-failed": {
     "message": "Could not build the Horizon client. See the log above the tabs for details."
   },
+  "blockera.horizon.build-dependency-failed": {
+    "message": "The Horizon build stopped at the {dependency} dependency. See the log above the tabs for details."
+  },
+  "blockera.horizon.build-missing-target": {
+    "message": "The following mods require functions this Horizon revision lacks ({mods}). Find compatible versions in the catalog or disable the affected mods."
+  },
   "blockera.horizon.original-description": {
     "message": "Original"
   },

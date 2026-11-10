@@ -1571,6 +1571,12 @@
   "blockera.horizon.build-failed": {
     "message": "Не удалось собрать клиент Horizon. Причина указана в журнале над вкладками."
   },
+  "blockera.horizon.build-dependency-failed": {
+    "message": "Сборка Horizon остановилась на зависимости {dependency}. Подробности есть в журнале над вкладками."
+  },
+  "blockera.horizon.build-missing-target": {
+    "message": "Модам {mods} нужны функции, которых нет в этой ревизии Horizon. Подберите совместимые версии в каталоге или отключите эти моды в списке установленных."
+  },
   "blockera.horizon.original-description": {
     "message": "Оригинал"
   },

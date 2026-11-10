@@ -234,7 +234,7 @@ const messages = defineMessages({
 							</template>
 						</p>
 						<p class="m-0 text-sm text-secondary">
-							{{ formatRelativeTime(friend.created.toISOString()) }}
+							{{ formatRelativeTime(friend.created.toDate()) }}
 						</p>
 					</div>
 					<div class="flex gap-2">

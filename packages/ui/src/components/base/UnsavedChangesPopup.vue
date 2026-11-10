@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="T">
+<script setup lang="ts" generic="T extends object">
 import { HistoryIcon, SaveIcon, SpinnerIcon } from '@modrinth/assets'
 import { type Component, computed } from 'vue'
 
@@ -40,7 +40,7 @@ const props = withDefaults(
 
 const shown = computed(() => {
 	let changed = false
-	for (const key of Object.keys(props.modified)) {
+	for (const key of Object.keys(props.modified) as (keyof T)[]) {
 		if (props.original[key] !== props.modified[key]) {
 			changed = true
 		}

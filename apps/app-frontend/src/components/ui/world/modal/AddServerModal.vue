@@ -28,8 +28,8 @@ const props = defineProps<{
 
 const modal = ref()
 
-const name = ref()
-const address = ref()
+const name = ref('')
+const address = ref('')
 const resourcePack = ref<ServerPackStatus>('enabled')
 
 async function addServer(play: boolean) {
@@ -47,6 +47,7 @@ async function addServer(play: boolean) {
 		{
 			name: serverName,
 			type: 'server',
+			display_status: 'normal',
 			index,
 			address: address.value,
 			pack_status: resourcePackStatus,

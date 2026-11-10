@@ -44,11 +44,11 @@
 	</svg>
 </template>
 
-<script setup>
-import { computed, ref } from 'vue'
+<script setup lang="ts">
+import { computed, ref, type PropType } from 'vue'
 
 const pixelated = ref(false)
-const img = ref(null)
+const img = ref<HTMLImageElement | null>(null)
 
 const props = defineProps({
 	src: {
@@ -72,7 +72,7 @@ const props = defineProps({
 		default: false,
 	},
 	loading: {
-		type: String,
+		type: String as PropType<'eager' | 'lazy'>,
 		default: 'eager',
 	},
 	raised: {
@@ -85,7 +85,7 @@ const props = defineProps({
 	},
 })
 
-const LEGACY_PRESETS = {
+const LEGACY_PRESETS: Partial<Record<string, string>> = {
 	xxs: '1.25rem',
 	xs: '2.5rem',
 	sm: '3rem',
@@ -111,7 +111,7 @@ const tint = computed(() => {
 	}
 })
 
-function hash(str) {
+function hash(str: string) {
 	let hash = 0
 	for (let i = 0, len = str.length; i < len; i++) {
 		const chr = str.charCodeAt(i)

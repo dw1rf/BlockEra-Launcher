@@ -36,7 +36,7 @@ const needsToVerify = computed(
 
 const hasPermission = computed(() => {
 	const EDIT_DETAILS = 1 << 2
-	return (currentMember.value?.permissions & EDIT_DETAILS) === EDIT_DETAILS
+	return ((currentMember.value?.permissions ?? 0) & EDIT_DETAILS) === EDIT_DETAILS
 })
 
 function getInitialEnv() {

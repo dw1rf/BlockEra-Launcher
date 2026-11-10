@@ -1,5 +1,5 @@
 use crate::event::emit::{emit_process, emit_profile};
-use crate::event::{ProcessPayloadType, ProfilePayloadType};
+use crate::event::{ProcessExit, ProcessPayloadType, ProfilePayloadType};
 use crate::profile;
 use crate::util::io::IOError;
 use crate::util::offline_skin_server::OfflineSkinServer;
@@ -71,6 +71,7 @@ impl ProcessManager {
                 profile_path: profile_path.to_string(),
             },
             child: mc_proc,
+            user_requested_stop: false,
             rpc_server,
             _main_class_keep_alive: main_class_keep_alive,
             _offline_skin_server: offline_skin_server,
@@ -110,16 +111,19 @@ impl ProcessManager {
                 now.format("%Y-%m-%d %H:%M:%S")
             )
             .map_err(|e| IOError::with_path(e, &log_path))?;
+            writeln!(log_file, "# Session: {}", metadata.uuid)
+                .map_err(|e| IOError::with_path(e, &log_path))?;
             writeln!(log_file, "# Profile: {profile_path} \n")
                 .map_err(|e| IOError::with_path(e, &log_path))?;
             writeln!(log_file).map_err(|e| IOError::with_path(e, &log_path))?;
         }
 
+        let mut output_tasks = Vec::new();
         if let Some(stdout) = stdout {
             let log_path_clone = log_path.clone();
 
             let profile_path = metadata.profile_path.clone();
-            tokio::spawn(async move {
+            output_tasks.push(tokio::spawn(async move {
                 Process::process_output(
                     &profile_path,
                     stdout,
@@ -127,14 +131,14 @@ impl ProcessManager {
                     xml_logging,
                 )
                 .await;
-            });
+            }));
         }
 
         if let Some(stderr) = stderr {
             let log_path_clone = log_path.clone();
 
             let profile_path = metadata.profile_path.clone();
-            tokio::spawn(async move {
+            output_tasks.push(tokio::spawn(async move {
                 Process::process_output(
                     &profile_path,
                     stderr,
@@ -142,15 +146,8 @@ impl ProcessManager {
                     xml_logging,
                 )
                 .await;
-            });
+            }));
         }
-
-        tokio::spawn(Process::sequential_process_manager(
-            profile_path.to_string(),
-            post_exit_command,
-            metadata.uuid,
-            metadata.start_time,
-        ));
 
         self.processes.insert(process.metadata.uuid, process);
 
@@ -166,14 +163,24 @@ impl ProcessManager {
             .await;
         });
 
-        emit_process(
+        let launch_event = emit_process(
             profile_path,
             metadata.uuid,
             ProcessPayloadType::Launched,
             "Launched Minecraft",
+            None,
         )
-        .await?;
+        .await;
 
+        tokio::spawn(Process::sequential_process_manager(
+            profile_path.to_string(),
+            post_exit_command,
+            metadata.uuid,
+            metadata.start_time,
+            output_tasks,
+        ));
+
+        launch_event?;
         Ok(metadata)
     }
 
@@ -212,10 +219,23 @@ impl ProcessManager {
 
     pub async fn kill(&self, id: Uuid) -> crate::Result<()> {
         if let Some(mut process) = self.processes.get_mut(&id) {
-            process.child.kill().await?;
+            if process.child.try_wait()?.is_some() {
+                return Ok(());
+            }
+            process.user_requested_stop = true;
+            if let Err(error) = process.child.kill().await {
+                process.user_requested_stop = false;
+                return Err(error.into());
+            }
         }
 
         Ok(())
+    }
+
+    fn user_requested_stop(&self, id: Uuid) -> bool {
+        self.processes
+            .get(&id)
+            .is_some_and(|process| process.user_requested_stop)
     }
 
     fn remove(&self, id: Uuid) {
@@ -234,6 +254,7 @@ pub struct ProcessMetadata {
 struct Process {
     metadata: ProcessMetadata,
     child: Child,
+    user_requested_stop: bool,
     _main_class_keep_alive: TempDir,
     _offline_skin_server: Option<OfflineSkinServer>,
     rpc_server: RpcServer,
@@ -655,6 +676,7 @@ impl Process {
         post_exit_command: Option<String>,
         uuid: Uuid,
         session_started_at: DateTime<Utc>,
+        mut output_tasks: Vec<tokio::task::JoinHandle<()>>,
     ) -> crate::Result<()> {
         async fn update_playtime(
             last_updated_playtime: &mut DateTime<Utc>,
@@ -705,14 +727,25 @@ impl Process {
                 .await;
         }
 
-        state.process_manager.remove(uuid);
-        emit_process(
-            &profile_path,
-            uuid,
-            ProcessPayloadType::Finished,
-            "Exited process",
-        )
-        .await?;
+        let user_requested_stop =
+            state.process_manager.user_requested_stop(uuid);
+        // Drain the final stack trace before notifying the UI. A descendant may
+        // keep the pipes open, so this must not delay exit handling indefinitely.
+        if tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            for task in &mut output_tasks {
+                let _ = task.await;
+            }
+        })
+        .await
+        .is_err()
+        {
+            for task in &mut output_tasks {
+                if !task.is_finished() {
+                    task.abort();
+                    let _ = task.await;
+                }
+            }
+        }
 
         // Now fully complete- update playtime one last time
         update_playtime(&mut last_updated_playtime, &profile_path, true).await;
@@ -754,11 +787,27 @@ impl Process {
         if log_path.exists()
             && let Err(e) = Process::append_to_log_file(
                 &log_path,
-                &format!("\n# Process exited with status: {mc_exit_status}\n"),
+                &format!(
+                    "\n# Process exited with status: {mc_exit_status}\n# User requested stop: {user_requested_stop}\n"
+                ),
             )
         {
             tracing::warn!("Failed to write exit status to log file: {}", e);
         }
+
+        state.process_manager.remove(uuid);
+        emit_process(
+            &profile_path,
+            uuid,
+            ProcessPayloadType::Finished,
+            "Exited process",
+            Some(ProcessExit {
+                code: mc_exit_status.code(),
+                success: mc_exit_status.success(),
+                user_requested_stop,
+            }),
+        )
+        .await?;
 
         let _ = state.discord_rpc.clear_to_default(true).await;
 

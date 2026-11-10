@@ -6,16 +6,19 @@
 import { invoke } from '@tauri-apps/api/core'
 
 // Gets cached category tags
+/** @returns {Promise<import('@modrinth/ui').Tags['categories']>} */
 export async function get_categories() {
 	return await invoke('plugin:tags|tags_get_categories')
 }
 
 // Gets cached loaders tags
+/** @returns {Promise<import('@modrinth/utils').PlatformTag[]>} */
 export async function get_loaders() {
 	return await invoke('plugin:tags|tags_get_loaders')
 }
 
 // Gets cached game_versions tags
+/** @returns {Promise<import('@modrinth/ui').GameVersion[]>} */
 export async function get_game_versions() {
 	return await invoke('plugin:tags|tags_get_game_versions')
 }

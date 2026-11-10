@@ -165,6 +165,6 @@ export async function unequip_skin(): Promise<void> {
 }
 
 export async function get_dragged_skin_data(path: string): Promise<Uint8Array> {
-	const data = await invoke('plugin:minecraft-skins|get_dragged_skin_data', { path })
+	const data = await invoke<number[]>('plugin:minecraft-skins|get_dragged_skin_data', { path })
 	return new Uint8Array(data)
 }

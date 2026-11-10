@@ -1,5 +1,11 @@
 <template>
 	<Card class="log-card blockera-log-card">
+		<CrashDiagnosisCard
+			v-if="diagnosis"
+			:diagnosis="diagnosis"
+			:profile="instance.name || instance.path"
+			:log="selectedLogText"
+		/>
 		<div class="button-row">
 			<DropdownSelect
 				v-model="selectedLogIndex"
@@ -109,6 +115,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch
 import { useRoute } from 'vue-router'
 import { RecycleScroller } from 'vue-virtual-scroller'
 
+import CrashDiagnosisCard from '@/components/ui/CrashDiagnosisCard.vue'
+import { diagnoseCrash, redactDiagnosticReport } from '@/helpers/crash-diagnostics'
 import ShareModalWrapper from '@/components/ui/modal/ShareModalWrapper.vue'
 import { process_listener } from '@/helpers/events.js'
 import {
@@ -171,6 +179,10 @@ const logs = ref([])
 const logsColored = true
 
 const selectedLogIndex = ref(0)
+const selectedLogText = computed(() => logs.value[selectedLogIndex.value]?.stdout || '')
+const diagnosis = computed(() =>
+	logs.value[selectedLogIndex.value]?.live ? null : diagnoseCrash(selectedLogText.value),
+)
 const copied = ref(false)
 const sharing = ref(false)
 const shareError = ref('')
@@ -214,7 +226,7 @@ const processedLogs = computed(() => {
 	// (not just newline because of multiline messages)
 	const splitPattern = /\n(?=(?:#|\[\d\d:\d\d:\d\d\]))/
 
-	const lines = logs.value[selectedLogIndex.value]?.stdout.split(splitPattern) || []
+	const lines = logs.value[selectedLogIndex.value]?.stdout?.split(splitPattern) || []
 	const processed = []
 	let id = 0
 	for (let i = 0; i < lines.length; i++) {
@@ -289,7 +301,7 @@ async function getLogs() {
 		)
 		.map((log) => {
 			log.name = log.filename || 'Unknown'
-			log.stdout = 'Loading...'
+			log.stdout = null
 			return log
 		})
 }
@@ -297,6 +309,7 @@ async function getLogs() {
 async function setLogs() {
 	const [liveStd, allLogs] = await Promise.all([getLiveStdLog(), getLogs()])
 	logs.value = [liveStd, ...allLogs].filter(Boolean)
+	selectedLogIndex.value = !props.playing && allLogs.length ? 1 : 0
 }
 
 const copyLog = async () => {
@@ -311,13 +324,7 @@ const copyLog = async () => {
 	}
 }
 
-function redactLog(value) {
-	return value
-		.replace(/\b(?:Bearer\s+)?[A-Za-z0-9_-]{24,}\.[A-Za-z0-9._-]{10,}\b/gi, '[СКРЫТ ТОКЕН]')
-		.replace(/\b(?:access[_-]?token|token|password)\s*[:=]\s*[^\s,;]+/gi, '$1=[СКРЫТО]')
-		.replace(/\b(?:[A-Z]:\\Users\\|\/home\/|\/Users\/)[^\\/\s]+/gi, '[ПОЛЬЗОВАТЕЛЬСКИЙ ПУТЬ]')
-		.replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[IP-АДРЕС]')
-}
+const redactLog = redactDiagnosticReport
 
 const share = async () => {
 	const selected = logs.value[selectedLogIndex.value]
@@ -351,31 +358,28 @@ const share = async () => {
 	}
 }
 
-watch(selectedLogIndex, async (newIndex) => {
-	copied.value = false
-	userScrolled.value = false
-
-	if (logs.value.length > 1 && newIndex !== 0) {
-		logs.value[newIndex].stdout = 'Loading...'
+watch(
+	() => logs.value[selectedLogIndex.value],
+	async (selected) => {
+		copied.value = false
+		userScrolled.value = false
+		if (!selected || selected.live || (selected.stdout !== null && !selected.loadFailed)) return
+		selected.loadFailed = false
+		selected.stdout = 'Загрузка…'
 		try {
-			logs.value[newIndex].stdout = await get_output_by_filename(
+			const output = await get_output_by_filename(
 				props.instance.path,
-				logs.value[newIndex].log_type,
-				logs.value[newIndex].filename,
+				selected.log_type,
+				selected.filename,
 			)
+			selected.stdout = output
 		} catch (error) {
-			logs.value[newIndex].stdout =
-				'Не удалось загрузить лог. Выберите его ещё раз, чтобы повторить.'
+			selected.loadFailed = true
+			selected.stdout = 'Не удалось загрузить лог. Выберите его ещё раз, чтобы повторить.'
 			handleError(error)
 		}
-	}
-})
-
-if (logs.value.length > 1 && !props.playing) {
-	selectedLogIndex.value = 1
-} else {
-	selectedLogIndex.value = 0
-}
+	},
+)
 
 const deleteLog = async () => {
 	if (logs.value[selectedLogIndex.value] && selectedLogIndex.value !== 0) {
@@ -518,10 +522,13 @@ interval.value = setInterval(async () => {
 }, 250)
 
 let unlistenProcesses = () => {}
+let disposed = false
 
 onMounted(async () => {
 	void setLogs()
-	unlistenProcesses = await process_listener(async (event) => {
+	const stop = await process_listener(async (event) => {
+		if (disposed) return
+		if (event.profile_path_id !== props.instance.path) return
 		if (event.event === 'launched') {
 			currentLiveLog.value = ''
 			currentLiveLogCursor.value = 0
@@ -535,6 +542,8 @@ onMounted(async () => {
 			selectedLogIndex.value = 1
 		}
 	})
+	if (disposed) stop()
+	else unlistenProcesses = stop
 	logContainer.value?.$el.addEventListener('scroll', handleUserScroll)
 })
 
@@ -542,6 +551,7 @@ onBeforeUnmount(() => {
 	logContainer.value?.$el.removeEventListener('scroll', handleUserScroll)
 })
 onUnmounted(() => {
+	disposed = true
 	clearInterval(interval.value)
 	unlistenProcesses()
 })

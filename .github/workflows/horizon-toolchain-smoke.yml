@@ -1,0 +1,26 @@
+name: Horizon managed Windows toolchain smoke
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-gnu:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check pinned compiler and native dependencies
+        shell: pwsh
+        run: ./scripts/horizon-toolchain-smoke.ps1
+      - name: Upload compiler evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: horizon-toolchain-smoke-${{ github.sha }}
+          path: ${{ runner.temp }}/horizon-toolchain-smoke/evidence
+          if-no-files-found: warn
+          retention-days: 14

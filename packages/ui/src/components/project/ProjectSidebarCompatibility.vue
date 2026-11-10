@@ -111,6 +111,7 @@ const props = defineProps<{
 		actualProjectType: string
 		project_type: string
 		loaders: string[]
+		game_versions: string[]
 		client_side: EnvironmentValue
 		server_side: EnvironmentValue
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any

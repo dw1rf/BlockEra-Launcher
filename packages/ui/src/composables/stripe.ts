@@ -1,5 +1,10 @@
 import type { Labrinth } from '@modrinth/api-client'
-import { loadStripe, type Stripe as StripeJs, type StripeElements } from '@stripe/stripe-js'
+import {
+	loadStripe,
+	type Stripe as StripeJs,
+	type StripeElements,
+	type StripeElementsOptionsMode,
+} from '@stripe/stripe-js'
 import type { ContactOption } from '@stripe/stripe-js/dist/stripe-js/elements/address'
 import type Stripe from 'stripe'
 import { computed, type Ref, ref } from 'vue'
@@ -62,7 +67,7 @@ export const useStripe = (
 		return product.value?.prices.find((x) => x.currency_code === currency)
 	})
 
-	const createElements = (options) => {
+	const createElements = (options: StripeElementsOptionsMode) => {
 		const styles = getComputedStyle(document.body)
 
 		if (!stripe.value) {
@@ -377,8 +382,8 @@ export const useStripe = (
 		}
 	}
 
-	const hasPaymentMethod = computed(
-		() => selectedPaymentMethod.value || confirmationToken.value || noPaymentRequired.value,
+	const hasPaymentMethod = computed(() =>
+		Boolean(selectedPaymentMethod.value || confirmationToken.value || noPaymentRequired.value),
 	)
 
 	return {

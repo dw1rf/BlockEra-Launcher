@@ -57,6 +57,7 @@ import AccountsCard from '@/components/ui/AccountsCard.vue'
 import BlockEraUpdateCenter from '@/components/ui/BlockEraUpdateCenter.vue'
 import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
 import ErrorModal from '@/components/ui/ErrorModal.vue'
+import CrashDiagnostics from '@/components/ui/CrashDiagnostics.vue'
 import FriendsList from '@/components/ui/friends/FriendsList.vue'
 import IncompatibilityWarningModal from '@/components/ui/install_flow/IncompatibilityWarningModal.vue'
 import InstallConfirmModal from '@/components/ui/install_flow/InstallConfirmModal.vue'
@@ -1229,6 +1230,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload) // [AR Note] If delete this 
 	<URLConfirmModal ref="urlModal" />
 	<NotificationPanel has-sidebar />
 	<ErrorModal ref="errorModal" />
+	<CrashDiagnostics />
 	<ModInstallModal ref="modInstallModal" />
 	<IncompatibilityWarningModal ref="incompatibilityWarningModal" />
 	<InstallConfirmModal ref="installConfirmModal" />

@@ -2,16 +2,51 @@ name: Release BlockEra Launcher
 
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish release after every validation and installer build passes'
+        type: boolean
+        required: true
+        default: false
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release-windows:
+  native-toolchain-smoke:
+    uses: ./.github/workflows/horizon-toolchain-smoke.yml
+
+  frontend-validation:
     runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4.4.0
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Frontend workflow tests, strict types and production build
+        run: pnpm --filter @modrinth/app-frontend build
+      - name: Debounced settings persistence regression tests
+        working-directory: apps/app-frontend
+        run: pnpm exec vitest run src/composables/use-app-settings.test.ts
+      - name: Library and crash analysis regression tests
+        working-directory: apps/app-frontend
+        run: node --experimental-strip-types --test src/helpers/library.test.ts src/helpers/crash-diagnostics.test.ts
+
+  release-windows:
+    needs: [native-toolchain-smoke, frontend-validation]
+    runs-on: windows-latest
+    timeout-minutes: 100
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -64,7 +99,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and publish signed installer
+      - name: Horizon regression tests
+        run: cargo test --locked -p theseus --lib horizon:: -- --nocapture
+
+      - name: World backup regression tests
+        run: cargo test --locked -p theseus --lib api::worlds::tests -- --nocapture
+
+      - name: Storage safety regression tests
+        run: cargo test --locked -p theseus_gui api::storage::tests -- --nocapture
+
+      - name: Build signed installer without publishing
+        if: ${{ !(startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)) }}
+        uses: tauri-apps/tauri-action@v0.5.24
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          projectPath: apps/app
+          args: --bundles nsis --features updater
+
+      - name: Publish signed installer after all checks
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
         uses: tauri-apps/tauri-action@v0.5.24
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,10 +130,30 @@ jobs:
           tagName: v__VERSION__
           releaseName: BlockEra Launcher v__VERSION__
           releaseBody: |
-            Новая версия BlockEra Launcher.
+            BlockEra Launcher: улучшения библиотеки, диагностики и сборки Horizon.
+
+            - Избранное, папки и теги, поиск и сортировка сборок, время игры и последний мир.
+            - Понятная диагностика вылетов с оценкой уверенности и копированием отчёта.
+            - Размеры сборок, бэкапов и кэша; предварительный просмотр перед очисткой.
+            - Обновление модов через каталог вместо массового обновления в Центре обновлений.
+            - Улучшенные диалоги Horizon и перенос длинных сообщений статуса.
+            - Исправлены ошибки строгой проверки TypeScript.
+            - Для нативных модов Horizon закреплён проверенный MinGW GCC 15.3.
+
+            Публикация выполняется только после CI-проверок и сборки установщика.
 
             Скачайте NSIS setup.exe из списка файлов ниже. Лаунчер проверяет подпись обновления перед установкой.
           releaseDraft: false
           prerelease: false
           retryAttempts: 5
           args: --bundles nsis --features updater
+
+      - name: Upload validated installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: blockera-windows-${{ github.sha }}
+          path: |
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/nsis/*.sig
+          if-no-files-found: error
+          retention-days: 14

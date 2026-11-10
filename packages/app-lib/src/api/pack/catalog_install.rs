@@ -69,6 +69,25 @@ struct VerificationPlan {
 
 static INSTALL_JOBS: LazyLock<DashMap<String, JobControl>> =
     LazyLock::new(DashMap::new);
+static ARCHIVE_ACCESS: tokio::sync::RwLock<()> =
+    tokio::sync::RwLock::const_new(());
+
+/// Serializes cleanup with every catalog archive reader, including jobs that
+/// start after the caller's idle check.
+pub fn try_lock_cache_cleanup()
+-> Option<tokio::sync::RwLockWriteGuard<'static, ()>> {
+    ARCHIVE_ACCESS.try_write().ok()
+}
+
+/// Catalog jobs can read cached archives without emitting a loading bar.
+pub fn has_active_catalog_installs() -> bool {
+    INSTALL_JOBS.iter().any(|job| {
+        matches!(
+            job.status.read().state,
+            CatalogInstallState::Downloading | CatalogInstallState::Installing
+        )
+    })
+}
 
 fn input_error(message: impl Into<String>) -> crate::Error {
     crate::ErrorKind::InputError(message.into()).into()
@@ -424,6 +443,7 @@ async fn run_install(
     control: JobControl,
     job_dir: PathBuf,
 ) {
+    let _archive_guard = ARCHIVE_ACCESS.read().await;
     let result = async {
         let downloaded_path = download_pack(&pack, &control, &job_dir).await?;
         validate_catalog_mrpack(downloaded_path.clone(), pack.clone()).await?;
@@ -592,6 +612,7 @@ fn verification_plan_sync(path: &Path) -> crate::Result<VerificationPlan> {
 pub async fn verify_installed_catalog_pack(
     profile_path: &str,
 ) -> crate::Result<bool> {
+    let _archive_guard = ARCHIVE_ACCESS.read().await;
     let profile = profile::get(profile_path)
         .await?
         .ok_or_else(|| input_error("Profile was not found"))?;

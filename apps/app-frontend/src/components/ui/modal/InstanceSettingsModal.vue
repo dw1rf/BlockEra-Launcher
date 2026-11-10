@@ -94,7 +94,9 @@ const titleMessage = defineMessage({
 					.filter(
 						(tab) =>
 							instance.loader !== 'horizon' ||
-							![JavaSettings, HooksSettings, WindowSettings].includes(tab.content),
+							![JavaSettings, HooksSettings, WindowSettings].some(
+								(content) => content === tab.content,
+							),
 					)
 					.map((tab) => ({ ...tab, props }))
 			"

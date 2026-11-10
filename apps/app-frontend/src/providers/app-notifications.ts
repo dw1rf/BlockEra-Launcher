@@ -18,8 +18,11 @@ export class AppNotificationManager extends AbstractWebNotificationManager {
 		this.locationState = ref<NotificationPanelLocation>('right')
 	}
 
-	public override handleError = (error: Error): void => {
-		const original = typeof error === 'string' ? error : (error.message ?? String(error))
+	public override handleError = (error: unknown): void => {
+		const original =
+			error && typeof error === 'object' && 'message' in error
+				? String(error.message)
+				: String(error)
 		let text = launcherText(original)
 		if (i18n.global.locale.value.startsWith('ru')) {
 			text = text

@@ -60,7 +60,7 @@ const capes = ref<Cape[]>([])
 
 const accountsCard = inject('accountsCard') as Ref<typeof AccountsCard>
 const accountRevision = inject<Ref<number>>('accountRevision')
-const currentUser = ref(undefined)
+const currentUser = ref<Awaited<ReturnType<typeof users>>[number]>()
 const currentUserId = ref<string | undefined>(undefined)
 const workshop = ref<{ skin?: Skin; accountId?: string } | null>(null)
 
@@ -224,7 +224,7 @@ async function onWorkshopSaved() {
 async function loadCurrentUser() {
 	try {
 		const defaultId = await get_default_user()
-		currentUserId.value = defaultId
+		currentUserId.value = defaultId ?? undefined
 
 		const allAccounts = await users()
 		currentUser.value = allAccounts.find((acc) => acc.profile.id === defaultId)

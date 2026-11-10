@@ -98,7 +98,7 @@ async function setupDragDropListener() {
 
 				try {
 					const data = await get_dragged_skin_data(filePath)
-					await processData(data.buffer)
+					await processData(new Uint8Array(data).buffer)
 				} catch (error) {
 					addNotification({
 						title: 'Error processing file',

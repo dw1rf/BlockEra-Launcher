@@ -5,6 +5,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { ref, watch } from 'vue'
 
 import ConfirmModalWrapper from '@/components/ui/modal/ConfirmModalWrapper.vue'
+import StorageUsagePanel from '@/components/ui/settings/StorageUsagePanel.vue'
 import { useAppSettings } from '@/composables/use-app-settings'
 import { purge_cache_types } from '@/helpers/cache.js'
 
@@ -107,6 +108,8 @@ async function applyLauncherDir() {
 				>
 			</div>
 		</section>
+
+		<StorageUsagePanel />
 
 		<section class="settings-section settings-list">
 			<ConfirmModalWrapper

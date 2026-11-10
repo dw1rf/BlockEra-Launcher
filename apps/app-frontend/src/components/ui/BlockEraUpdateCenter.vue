@@ -11,7 +11,7 @@
 			@click="toggleCenter"
 		>
 			<DownloadIcon />
-			<span v-if="totalUpdates > 0">{{ totalUpdates }}</span>
+			<span v-if="updateState">1</span>
 		</button>
 	</div>
 	<Teleport to="#teleports">
@@ -66,6 +66,7 @@
 							<span>ЛАУНЧЕР</span>
 							<strong v-if="updateState">Доступна версия {{ availableUpdate?.version }}</strong>
 							<strong v-else-if="checkingState">Проверяем обновление…</strong>
+							<strong v-else-if="updateError">Установлена версия {{ currentVersion }}</strong>
 							<strong v-else>Установлена актуальная версия {{ currentVersion }}</strong>
 							<small v-if="availableUpdate?.body">{{ availableUpdate.body }}</small>
 						</div>
@@ -82,63 +83,15 @@
 						</button>
 					</div>
 					<p v-if="updateError" class="update-error">Проверка лаунчера: {{ updateError }}</p>
-					<div class="update-summary">
-						<strong>{{
-							loading
-								? 'Проверяем сборки…'
-								: instanceUpdates
-									? `Обновлений сборок: ${instanceUpdates}`
-									: 'Сборки актуальны'
-						}}</strong>
-						<span>Обновления устанавливаются только по вашей команде.</span>
-					</div>
-					<div class="update-instance-list">
-						<div v-for="item in pendingItems" :key="item.path" class="update-instance-row">
-							<div class="instance-copy">
-								<strong>{{ item.name }}</strong
-								><span>{{ item.gameVersion }} · {{ item.loader }}</span>
-							</div>
-							<span class="update-count">{{ item.updates }}</span>
-							<button type="button" :disabled="item.updating" @click="updateInstance(item)">
-								{{ item.updating ? 'Обновляем…' : 'Обновить' }}
-							</button>
-							<ul v-if="item.lastReport" class="instance-update-results">
-								<li
-									v-for="result in item.lastReport.items"
-									:key="result.path"
-									:class="`is-${result.status}`"
-								>
-									{{ result.name }} —
-									{{ result.status === 'success' ? 'готово' : (result.error ?? 'пропущено') }}
-								</li>
-							</ul>
-							<button
-								v-if="item.lastReport?.items.some((result) => result.status === 'error')"
-								type="button"
-								:disabled="item.updating"
-								@click="retryFailed(item)"
-							>
-								Повторить неудачные
-							</button>
-						</div>
-						<div v-if="!loading && pendingItems.length === 0" class="update-empty">
-							{{ items.length ? 'Все сборки актуальны.' : 'Сборки пока не созданы.' }}
-						</div>
-					</div>
 					<footer>
-						<button type="button" :disabled="loading || checkingState" @click="scan">
-							<RefreshCwIcon /> Проверить снова
-						</button>
 						<button
 							type="button"
-							class="update-all"
-							:disabled="instanceUpdates === 0 || updatingAll"
-							@click="updateAllInstances"
+							:disabled="checkingState || installState"
+							@click="checkLauncherUpdate"
 						>
-							{{ updatingAll ? 'Обновляем…' : 'Обновить всё' }}
+							<RefreshCwIcon /> Проверить снова
 						</button>
 					</footer>
-					<p v-if="lastError" class="update-error">{{ lastError }}</p>
 				</div>
 
 				<div v-else class="update-tab-panel release-notes-panel">
@@ -190,11 +143,9 @@
 <script setup lang="ts">
 import { DownloadIcon, RefreshCwIcon, XIcon } from '@modrinth/assets'
 import { getVersion } from '@tauri-apps/api/app'
-import { computed, type CSSProperties, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { type CSSProperties, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { releaseNotes } from '@/data/release-notes'
-import { type InstanceUpdateReport, runInstanceUpdate } from '@/helpers/instance-update'
-import { get_projects, list } from '@/helpers/profile'
 import {
 	availableUpdate,
 	checkingState,
@@ -206,17 +157,6 @@ import {
 	updateState,
 } from '@/helpers/update'
 
-type UpdateItem = {
-	path: string
-	name: string
-	gameVersion: string
-	loader: string
-	updates: number
-	updating: boolean
-	lastReport?: InstanceUpdateReport
-}
-type Profile = Awaited<ReturnType<typeof list>>[number]
-
 const root = ref<HTMLElement>()
 const trigger = ref<HTMLButtonElement>()
 const panel = ref<HTMLElement>()
@@ -224,52 +164,7 @@ const open = ref(false)
 const openedFromTrigger = ref(false)
 const popoverStyle = ref<CSSProperties>({})
 const activeTab = ref<'updates' | 'notes'>('updates')
-const loading = ref(false)
-const updatingAll = ref(false)
-const items = ref<UpdateItem[]>([])
-const lastError = ref('')
 const currentVersion = ref('')
-const instanceUpdates = computed(() => items.value.reduce((total, item) => total + item.updates, 0))
-const pendingItems = computed(() => items.value.filter((item) => item.updates > 0))
-const totalUpdates = computed(() => instanceUpdates.value + (updateState.value ? 1 : 0))
-
-async function scan() {
-	loading.value = true
-	lastError.value = ''
-	const launcherCheck = checkLauncherUpdate()
-	try {
-		const profiles = await list()
-		const failures: string[] = []
-		items.value = await Promise.all(
-			profiles.map(async (profile: Profile) => {
-				let updates = 0
-				try {
-					const projects = await get_projects(profile.path, 'stale_while_revalidate_skip_offline')
-					updates = Object.values(
-						(projects ?? {}) as Record<string, { update_version_id?: string }>,
-					).filter((project) => project?.update_version_id).length
-				} catch (error) {
-					failures.push(`${profile.name}: ${formatUpdaterError(error)}`)
-				}
-				return {
-					path: profile.path,
-					name: profile.name,
-					gameVersion: profile.game_version,
-					loader: profile.loader,
-					updates,
-					updating: false,
-					lastReport: undefined,
-				}
-			}),
-		)
-		lastError.value = failures.join('\n')
-	} catch (error) {
-		lastError.value = `Проверка не удалась: ${formatUpdaterError(error)}`
-	} finally {
-		await launcherCheck
-		loading.value = false
-	}
-}
 
 async function installUpdate() {
 	try {
@@ -277,48 +172,6 @@ async function installUpdate() {
 	} catch (error) {
 		if (!updateError.value) updateError.value = formatUpdaterError(error)
 	}
-}
-
-async function updateInstance(item: UpdateItem) {
-	item.updating = true
-	lastError.value = ''
-	try {
-		item.lastReport = await runInstanceUpdate(item.path)
-		if (item.lastReport.remainingUpdates !== null) item.updates = item.lastReport.remainingUpdates
-		if (!item.lastReport.success) {
-			const failed = item.lastReport.items.filter((result) => result.status === 'error')
-			throw new Error(
-				failed.map((result) => `${result.name}: ${result.error}`).join('; ') ||
-					'Проверка после обновления не пройдена',
-			)
-		}
-	} catch (error) {
-		lastError.value = `${item.name}: ${error instanceof Error ? error.message : String(error)}`
-	} finally {
-		item.updating = false
-	}
-}
-
-async function retryFailed(item: UpdateItem) {
-	const onlyPaths = item.lastReport?.items
-		.filter((result) => result.status === 'error')
-		.map((result) => result.path)
-	if (!onlyPaths?.length) return
-	item.updating = true
-	try {
-		item.lastReport = await runInstanceUpdate(item.path, { onlyPaths })
-		if (item.lastReport.remainingUpdates !== null) item.updates = item.lastReport.remainingUpdates
-	} catch (error) {
-		lastError.value = `${item.name}: ${formatUpdaterError(error)}`
-	} finally {
-		item.updating = false
-	}
-}
-
-async function updateAllInstances() {
-	updatingAll.value = true
-	for (const item of items.value.filter((entry) => entry.updates > 0)) await updateInstance(item)
-	updatingAll.value = false
 }
 
 function positionPopover() {
@@ -402,7 +255,7 @@ onMounted(async () => {
 		open.value = true
 		localStorage.setItem(seenKey, currentVersion.value)
 	}
-	void scan()
+	void checkLauncherUpdate()
 })
 
 onBeforeUnmount(() => {
@@ -473,8 +326,7 @@ onBeforeUnmount(() => {
 	backdrop-filter: blur(var(--blockera-glass-blur-strong, 22px)) saturate(135%);
 	outline: none;
 }
-.update-center-popover > header,
-.update-tab-panel > footer {
+.update-center-popover > header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -552,8 +404,7 @@ onBeforeUnmount(() => {
 	border: 1px solid rgba(255, 255, 255, 0.07);
 	border-radius: 12px;
 }
-.launcher-update.available,
-.update-summary {
+.launcher-update.available {
 	background: linear-gradient(135deg, rgba(141, 57, 231, 0.24), rgba(89, 31, 158, 0.1));
 	border-color: rgba(190, 111, 255, 0.32);
 }
@@ -604,74 +455,10 @@ onBeforeUnmount(() => {
 		transform: rotate(360deg);
 	}
 }
-.update-summary {
-	margin: 11px 0 9px;
-	padding: 12px;
-	display: flex;
-	flex-direction: column;
-	border: 1px solid rgba(178, 95, 255, 0.17);
-	border-radius: 12px;
-}
-.update-summary strong {
-	font-size: 13px;
-}
-.update-summary span {
-	margin-top: 3px;
-	color: #9298a6;
-	font-size: 10px;
-}
-.update-instance-list,
 .release-notes-panel {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
-}
-.update-instance-row {
-	padding: 10px;
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto auto;
-	align-items: center;
-	gap: 8px;
-	background: rgba(255, 255, 255, 0.03);
-	border-radius: 11px;
-}
-.instance-copy {
-	min-width: 0;
-	display: flex;
-	flex-direction: column;
-}
-.instance-copy strong,
-.instance-copy span {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.instance-copy strong {
-	font-size: 12px;
-}
-.instance-copy span {
-	margin-top: 2px;
-	color: #838a99;
-	font-size: 10px;
-	text-transform: capitalize;
-}
-.update-count {
-	min-width: 24px;
-	padding: 5px;
-	color: #e4c9ff;
-	text-align: center;
-	background: rgba(143, 60, 226, 0.18);
-	border-radius: 8px;
-	font-size: 10px;
-	font-weight: 850;
-}
-.update-instance-row > button {
-	padding: 7px 9px;
-	color: #dcbcff;
-	background: rgba(145, 59, 230, 0.14);
-	border-radius: 8px;
-	font-size: 10px;
-	font-weight: 750;
 }
 .update-tab-panel > footer {
 	margin-top: 11px;
@@ -689,10 +476,6 @@ onBeforeUnmount(() => {
 .update-tab-panel > footer svg {
 	width: 14px;
 }
-.update-tab-panel > footer .update-all {
-	color: white;
-	background: linear-gradient(135deg, #9139ed, #6721c8);
-}
 .update-center-popover button:disabled {
 	opacity: 0.5;
 	cursor: wait;
@@ -706,11 +489,6 @@ onBeforeUnmount(() => {
 	font-size: 10px;
 	white-space: pre-wrap;
 	word-break: break-word;
-}
-.update-empty {
-	padding: 22px;
-	color: #858c9a;
-	text-align: center;
 }
 .release-note {
 	padding: 12px;

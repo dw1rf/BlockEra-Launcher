@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Archon } from '@modrinth/api-client'
+import { type Archon, withJWTRetry } from '@modrinth/api-client'
 import {
 	ChevronRightIcon,
 	LoaderCircleIcon,
@@ -161,7 +161,8 @@ type ServerListingProps = {
 
 const props = defineProps<ServerListingProps>()
 
-const { archon, kyros, labrinth } = injectModrinthClient()
+const client = injectModrinthClient()
+const { archon, labrinth } = client
 
 const showGameLabel = computed(() => !!props.game)
 const showLoaderLabel = computed(() => !!props.loader)
@@ -205,13 +206,36 @@ const { data: image } = useQuery({
 		if (!props.server_id || props.status !== 'available') return undefined
 
 		try {
-			const auth = await archon.servers_v0.getFilesystemAuth(props.server_id)
+			const serverId = props.server_id
+			let auth = await archon.servers_v0.getFilesystemAuth(serverId)
+			const refreshAuth = async () => {
+				auth = await archon.servers_v0.getFilesystemAuth(serverId)
+			}
+			const nodeOptions = () => ({
+				api: `https://${auth.url.replace('v0/fs', '')}`,
+				version: 'v0',
+				headers: { Authorization: `Bearer ${auth.token}` },
+				skipAuth: true,
+			})
+			const uploadIcon = (path: string, file: File) =>
+				withJWTRetry(
+					() =>
+						client.upload<void>('/fs/create', {
+							...nodeOptions(),
+							file,
+							params: { path, type: 'file' },
+						}).promise,
+					refreshAuth,
+				)
 
 			try {
-				const blob = await kyros.files_v0.downloadFile(
-					auth.url,
-					auth.token,
-					'/server-icon-original.png',
+				const blob = await withJWTRetry(
+					() =>
+						client.request<Blob>('/fs/download', {
+							...nodeOptions(),
+							params: { path: '/server-icon-original.png' },
+						}),
+					refreshAuth,
 				)
 
 				return await processImageBlob(blob, 512)
@@ -225,17 +249,12 @@ const { data: image } = useQuery({
 					const scaledBlob = await dataURLToBlob(scaledDataUrl)
 					const scaledFile = new File([scaledBlob], 'server-icon.png', { type: 'image/png' })
 
-					await kyros.files_v0.uploadFile(auth.url, auth.token, '/server-icon.png', scaledFile)
+					await uploadIcon('/server-icon.png', scaledFile)
 
 					const originalFile = new File([blob], 'server-icon-original.png', {
 						type: 'image/png',
 					})
-					await kyros.files_v0.uploadFile(
-						auth.url,
-						auth.token,
-						'/server-icon-original.png',
-						originalFile,
-					)
+					await uploadIcon('/server-icon-original.png', originalFile)
 
 					return scaledDataUrl
 				}

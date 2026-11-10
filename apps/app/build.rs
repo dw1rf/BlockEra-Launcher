@@ -303,6 +303,14 @@ fn main() {
                     .default_permission(
                         DefaultPermissionRule::AllowAllCommands,
                     ),
+            )
+            .plugin(
+                "storage",
+                InlinedPlugin::new()
+                    .commands(&["storage_scan", "storage_cleanup"])
+                    .default_permission(
+                        DefaultPermissionRule::AllowAllCommands,
+                    ),
             ),
     )
     .expect("Failed to run tauri-build");

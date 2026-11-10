@@ -780,11 +780,11 @@ onBeforeUnmount(() => {
 
 .download-message {
 	max-width: 100%;
-	overflow: hidden;
 	color: #9da3b1;
 	font-size: 0.68rem;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 
 .profile-button {

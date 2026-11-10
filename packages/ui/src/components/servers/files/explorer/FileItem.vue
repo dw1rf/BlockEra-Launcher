@@ -89,7 +89,7 @@ import TeleportOverflowMenu from './TeleportOverflowMenu.vue'
 
 interface FileItemProps {
 	name: string
-	type: 'directory' | 'file'
+	type: 'directory' | 'file' | 'symlink'
 	size?: number
 	count?: number
 	modified: number
@@ -143,7 +143,7 @@ const menuOptions = computed(() => [
 		action: () => emit('extract', { name: props.name, type: props.type, path: props.path }),
 	},
 	{
-		divider: true,
+		divider: true as const,
 		shown: isZip.value,
 	},
 	{

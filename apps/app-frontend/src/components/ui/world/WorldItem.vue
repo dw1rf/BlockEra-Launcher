@@ -268,7 +268,7 @@ const messages = defineMessages({
 						<template v-if="world.last_played">
 							{{
 								formatMessage(commonMessages.playedLabel, {
-									time: formatRelativeTime(dayjs(world.last_played).toISOString()),
+									time: formatRelativeTime(dayjs(world.last_played).toDate()),
 								})
 							}}
 						</template>

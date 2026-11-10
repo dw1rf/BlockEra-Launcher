@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ClipboardCopyIcon, ExternalIcon, GlobeIcon, SearchIcon, XIcon } from '@modrinth/assets'
-import type { Category, GameVersion, Platform, ProjectType, SortType, Tags } from '@modrinth/ui'
+import type { ProjectType, SortType, Tags } from '@modrinth/ui'
 import {
 	Button,
 	Checkbox,
@@ -20,7 +20,6 @@ import type { LocationQuery } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
 
 import ContextMenu from '@/components/ui/ContextMenu.vue'
-import type Instance from '@/components/ui/Instance.vue'
 import InstanceIndicator from '@/components/ui/InstanceIndicator.vue'
 import NavTabs from '@/components/ui/NavTabs.vue'
 import SearchCard from '@/components/ui/SearchCard.vue'
@@ -43,10 +42,27 @@ const projectTypes = computed(() => {
 	return [route.params.projectType as ProjectType]
 })
 
+type Category = Tags['categories'][number] & { formatted_name?: string }
+
 const [categories, loaders, availableGameVersions] = await Promise.all([
-	get_categories().catch(handleError).then(ref),
-	get_loaders().catch(handleError).then(ref),
-	get_game_versions().catch(handleError).then(ref),
+	get_categories()
+		.then((items) => ref(items))
+		.catch((error) => {
+			handleError(error)
+			return ref<Category[]>([])
+		}),
+	get_loaders()
+		.then((items) => ref(items))
+		.catch((error) => {
+			handleError(error)
+			return ref<Tags['loaders']>([])
+		}),
+	get_game_versions()
+		.then((items) => ref(items))
+		.catch((error) => {
+			handleError(error)
+			return ref<Tags['gameVersions']>([])
+		}),
 ])
 
 const categoryLabels: Record<string, string> = {
@@ -113,9 +129,9 @@ const localizedCategories = computed(() =>
 )
 
 const tags: Ref<Tags> = computed(() => ({
-	gameVersions: availableGameVersions.value as GameVersion[],
-	loaders: loaders.value as Platform[],
-	categories: localizedCategories.value as Category[],
+	gameVersions: availableGameVersions.value,
+	loaders: loaders.value,
+	categories: localizedCategories.value,
 }))
 
 function filterLabel(filter: { id: string; formatted_name: string }) {
@@ -188,7 +204,7 @@ type InstanceProject = {
 const instance: Ref<Instance | null> = ref(null)
 const instanceProjects: Ref<InstanceProject[] | null> = ref(null)
 const instanceHideInstalled = ref(false)
-const newlyInstalled = ref([])
+const newlyInstalled = ref<string[]>([])
 
 const PERSISTENT_QUERY_PARAMS = ['i', 'ai']
 
@@ -322,6 +338,10 @@ watch(projectType, () => {
 
 type SearchResult = {
 	project_id: string
+	project_type: string
+	slug: string
+	display_categories: string[]
+	installed?: boolean
 }
 
 type SearchResults = {
@@ -540,7 +560,7 @@ const selectableProjectTypes = computed(() => {
 
 	if (instance.value) {
 		if (
-			availableGameVersions.value.findIndex((x) => x.version === instance.value.game_version) <=
+			availableGameVersions.value.findIndex((x) => x.version === instance.value?.game_version) <=
 			availableGameVersions.value.findIndex((x) => x.version === '1.13')
 		) {
 			dataPacks = true
@@ -606,7 +626,7 @@ const messages = defineMessages({
 	},
 })
 
-const options = ref(null)
+const options = ref<InstanceType<typeof ContextMenu> | null>(null)
 const browseTitle = computed(
 	() =>
 		(
@@ -619,8 +639,8 @@ const browseTitle = computed(
 			}) as Record<string, string>
 		)[String(projectType.value)] ?? 'Контент',
 )
-const handleRightClick = (event, result) => {
-	options.value.showMenu(event, result, [
+const handleRightClick = (event: MouseEvent, result: SearchResult) => {
+	options.value?.showMenu(event, result, [
 		{
 			name: 'open_link',
 		},
@@ -629,7 +649,7 @@ const handleRightClick = (event, result) => {
 		},
 	])
 }
-const handleOptionsClick = (args) => {
+const handleOptionsClick = (args: { option: string; item: SearchResult }) => {
 	switch (args.option) {
 		case 'open_link':
 			openUrl(`https://modrinth.com/${args.item.project_type}/${args.item.slug}`)
@@ -648,7 +668,7 @@ void refreshSearch()
 <template>
 	<main ref="searchWrapper" class="browse-page">
 		<template v-if="instance">
-			<InstanceIndicator :instance="instance" />
+			<InstanceIndicator :instance="instance ?? undefined" />
 			<h1 class="m-0 mb-1 text-xl">Установка контента в сборку</h1>
 		</template>
 		<section class="browse-hero">
@@ -768,15 +788,15 @@ void refreshSearch()
 						<span>{{ searchError }}</span>
 						<Button @click="refreshSearch">{{ $t('blockera.ui.042c862e4467') }}</Button>
 					</section>
-					<section v-else-if="offline && results.total_hits === 0" class="offline">
+					<section v-else-if="offline && results?.total_hits === 0" class="offline">
 						Каталог недоступен без сети. Проверьте подключение к интернету и повторите попытку.
 					</section>
 					<section v-else class="project-list display-mode--list instance-results" role="list">
 						<SearchCard
-							v-for="result in results.hits"
+							v-for="result in results?.hits ?? []"
 							:key="result?.project_id"
 							:project="result"
-							:instance="instance"
+							:instance="instance ?? undefined"
 							:categories="[
 								...localizedCategories.filter(
 									(cat) =>
@@ -786,7 +806,7 @@ void refreshSearch()
 								...loaders.filter(
 									(loader) =>
 										result?.display_categories.includes(loader.name) &&
-										loader.supported_project_types?.includes(projectType),
+										loader.supported_project_types?.includes(String(projectType)),
 								),
 							]"
 							:installed="result.installed || newlyInstalled.includes(result.project_id)"

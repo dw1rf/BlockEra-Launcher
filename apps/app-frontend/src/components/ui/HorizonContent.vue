@@ -130,6 +130,22 @@ function readVersionMismatch(message: string) {
 	return mods.length ? { base: match[2], mods } : null
 }
 
+function buildErrorMessage(message: string) {
+	const dependency = message.match(/failed to run custom build command for `([^ `]+) /i)?.[1]
+	if (dependency) {
+		return t('blockera.horizon.build-dependency-failed', { dependency })
+	}
+	const missingTargets = new Set(
+		[...message.matchAll(/^([a-z0-9_]+) \([^\r\n]+\): E_TARGET_NOT_FOUND:/gim)].map(
+			([, id]) => installed(id)?.name ?? id,
+		),
+	)
+	if (missingTargets.size) {
+		return t('blockera.horizon.build-missing-target', { mods: [...missingTargets].join(', ') })
+	}
+	return t('blockera.horizon.build-failed')
+}
+
 function openInstalled() {
 	tab.value = 'installed'
 	filter.value = 'all'
@@ -194,7 +210,7 @@ async function act(action: string, mod?: Mod) {
 			versionMismatch.value && action === 'build'
 				? ''
 				: action === 'build'
-					? t('blockera.horizon.build-failed')
+					? buildErrorMessage(message)
 					: message
 	} finally {
 		if (timer) clearInterval(timer)
@@ -454,50 +470,62 @@ onUnmounted(() => {
 				<pre v-if="showLog" aria-live="polite">{{ log }}</pre>
 			</div>
 		</Teleport>
-		<div
-			v-if="confirmBuild"
-			class="confirm-panel"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="native-confirm-title"
-		>
-			<h3 id="native-confirm-title">Сборка клиента с нативными модами</h3>
-			<p v-if="retryMismatch" class="compatibility-note">{{ t('blockera.horizon.retry-note') }}</p>
-			<p>
-				Нативные моды — Rust-код с доступом к вашему компьютеру. Проверьте их исходники. Horizon
-				загрузит отдельный Rust и инструменты сборки; первый билд занимает 20–30 минут и несколько
-				ГБ на диске.
-			</p>
-			<ul>
-				<li v-for="mod in nativeMods" :key="mod.id">
-					{{ mod.name }} {{ mod.version }}
-					<button @click="openSource(mod.source)">Исходный код</button>
-				</li>
-			</ul>
-			<label><input v-model="trusted" type="checkbox" /> Я доверяю коду перечисленных модов</label>
-			<div class="mod-actions">
-				<button @click="confirmBuild = false">{{ $t('blockera.ui.77dfd2135f4d') }}</button
-				><button class="primary" :disabled="!trusted || disabled" @click="act('build')">
-					Доверяю — собрать клиент
-				</button>
+		<Teleport to="body">
+			<div v-if="confirmBuild || removeTarget" class="confirm-overlay">
+				<div
+					v-if="confirmBuild"
+					class="confirm-panel"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="native-confirm-title"
+				>
+					<h3 id="native-confirm-title">Сборка клиента с нативными модами</h3>
+					<p v-if="retryMismatch" class="compatibility-note">
+						{{ t('blockera.horizon.retry-note') }}
+					</p>
+					<p>
+						Нативные моды — Rust-код с доступом к вашему компьютеру. Проверьте их исходники. Horizon
+						загрузит отдельный Rust и инструменты сборки; первый билд занимает 20–30 минут и
+						несколько ГБ на диске.
+					</p>
+					<ul class="native-confirm-mods">
+						<li v-for="mod in nativeMods" :key="mod.id">
+							{{ mod.name }} {{ mod.version }}
+							<button @click="openSource(mod.source)">Исходный код</button>
+						</li>
+					</ul>
+					<label
+						><input v-model="trusted" type="checkbox" /> Я доверяю коду перечисленных модов</label
+					>
+					<div class="mod-actions">
+						<button @click="confirmBuild = false">{{ $t('blockera.ui.77dfd2135f4d') }}</button
+						><button class="primary" :disabled="!trusted || disabled" @click="act('build')">
+							Доверяю — собрать клиент
+						</button>
+					</div>
+				</div>
+				<div
+					v-if="removeTarget"
+					class="confirm-panel"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="remove-mod-title"
+				>
+					<h3 id="remove-mod-title">
+						{{ $t('blockera.ui.e963907dac5c') }} {{ removeTarget.name }}?
+					</h3>
+					<p>
+						Миры и настройки сборки сохранятся. Для нативных модов потребуется пересборка клиента.
+					</p>
+					<div class="mod-actions">
+						<button @click="removeTarget = null">{{ $t('blockera.ui.77dfd2135f4d') }}</button
+						><button :disabled="disabled" @click="act('remove', removeTarget ?? undefined)">
+							Удалить мод
+						</button>
+					</div>
+				</div>
 			</div>
-		</div>
-		<div
-			v-if="removeTarget"
-			class="confirm-panel"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="remove-mod-title"
-		>
-			<h3 id="remove-mod-title">{{ $t('blockera.ui.e963907dac5c') }} {{ removeTarget.name }}?</h3>
-			<p>Миры и настройки сборки сохранятся. Для нативных модов потребуется пересборка клиента.</p>
-			<div class="mod-actions">
-				<button @click="removeTarget = null">{{ $t('blockera.ui.77dfd2135f4d') }}</button
-				><button :disabled="disabled" @click="act('remove', removeTarget ?? undefined)">
-					Удалить мод
-				</button>
-			</div>
-		</div>
+		</Teleport>
 	</section>
 </template>
 
@@ -734,22 +762,38 @@ nav {
 	white-space: pre-wrap;
 	font-size: 0.72rem;
 }
-.confirm-panel {
+.confirm-overlay {
 	position: fixed;
 	z-index: 1100;
-	left: 50%;
-	top: 50%;
-	transform: translate(-50%, -50%);
-	width: min(600px, calc(100vw - 40px));
-	max-height: calc(100vh - 80px);
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 20px;
+	background: #030510c9;
+	overscroll-behavior: contain;
+}
+.confirm-panel {
+	box-sizing: border-box;
+	width: min(600px, 100%);
+	min-width: 0;
+	max-height: calc(100dvh - 40px);
 	overflow: auto;
+	overscroll-behavior: contain;
 	padding: 1.5rem;
 	border-radius: 1rem;
 	background: #151321;
 	border: 1px solid #bd82f4;
-	box-shadow: 0 0 0 100vmax #030510c9;
 	display: grid;
 	gap: 1rem;
+	overflow-wrap: anywhere;
+}
+.native-confirm-mods {
+	min-height: 0;
+	max-height: min(35dvh, 18rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	margin: 0;
+	padding-left: 1.3rem;
 }
 .confirm-panel label {
 	display: flex;

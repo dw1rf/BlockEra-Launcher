@@ -8,6 +8,13 @@ const { formatMessage } = useVIntl()
 defineProps<{
 	method: Stripe.PaymentMethod
 }>()
+function paymentLabel(key: string): string {
+	return formatMessage(
+		Object.hasOwn(paymentMethodMessages, key)
+			? paymentMethodMessages[key as keyof typeof paymentMethodMessages]
+			: paymentMethodMessages.unknown,
+	)
+}
 </script>
 
 <template>
@@ -16,18 +23,13 @@ defineProps<{
 		<span v-if="method.type === 'card' && 'card' in method && method.card">
 			{{
 				formatMessage(commonMessages.paymentMethodCardDisplay, {
-					card_brand:
-						formatMessage(paymentMethodMessages[method.card.brand]) ??
-						formatMessage(paymentMethodMessages.unknown),
+					card_brand: paymentLabel(method.card.brand),
 					last_four: method.card.last4,
 				})
 			}}
 		</span>
 		<template v-else>
-			{{
-				formatMessage(paymentMethodMessages[method.type]) ??
-				formatMessage(paymentMethodMessages.unknown)
-			}}
+			{{ paymentLabel(method.type) }}
 		</template>
 
 		<span v-if="method.type === 'cashapp' && 'cashapp' in method && method.cashapp">

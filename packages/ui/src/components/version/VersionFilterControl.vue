@@ -203,11 +203,11 @@ defineExpose({
 	selectedPlatforms,
 })
 
-function getArrayOrString(x: string | string[]): string[] {
+function getArrayOrString(x: string | (string | null)[]): string[] {
 	if (typeof x === 'string') {
 		return [x]
 	} else {
-		return x
+		return x.filter((value): value is string => value !== null)
 	}
 }
 </script>

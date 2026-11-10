@@ -5,14 +5,17 @@ import { computed, ref, watch } from 'vue'
 import { edit } from '@/helpers/profile'
 import { get } from '@/helpers/settings.ts'
 
-import type { AppSettings, Hooks, InstanceSettingsTabProps } from '../../../helpers/types'
+import type { Hooks, InstanceSettingsTabProps } from '../../../helpers/types'
 
 const { handleError } = injectNotificationManager()
 const { formatMessage } = useVIntl()
 
 const props = defineProps<InstanceSettingsTabProps>()
 
-const globalSettings = (await get().catch(handleError)) as AppSettings
+const globalSettings = await get().catch((error: unknown) => {
+	handleError(error)
+	throw error
+})
 
 const overrideHooks = ref(
 	!!props.instance.hooks.pre_launch ||

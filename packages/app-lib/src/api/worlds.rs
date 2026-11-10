@@ -1069,7 +1069,7 @@ fn indexed_backup_from_file(
 ) -> Option<WorldBackup> {
     static BACKUP_NAME: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(
-            r"^(?<date>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_(?<world>.+?)(?: \(\d+\))?\.zip$",
+            r"^(?<date>\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?<millis>-\d{3})?)_(?<world>.+?)(?: \(\d+\))?\.zip$",
         )
         .expect("valid backup filename regex")
     });
@@ -1077,9 +1077,15 @@ fn indexed_backup_from_file(
     let captures = BACKUP_NAME.captures(&id)?;
     let world = captures.name("world")?.as_str().to_string();
     let metadata = std::fs::metadata(&path).ok()?;
+    // Live snapshots use milliseconds; older archives contain whole seconds.
+    let date_format = if captures.name("millis").is_some() {
+        "%Y-%m-%d_%H-%M-%S-%3f"
+    } else {
+        "%Y-%m-%d_%H-%M-%S"
+    };
     let created_at = chrono::NaiveDateTime::parse_from_str(
         captures.name("date")?.as_str(),
-        "%Y-%m-%d_%H-%M-%S",
+        date_format,
     )
     .ok()
     .and_then(|value| Local.from_local_datetime(&value).single())
@@ -2028,7 +2034,7 @@ mod backup_tests {
         validate_world_identifier, world_changed_during_session,
         write_backup_archive_sync,
     };
-    use chrono::{TimeDelta, Utc};
+    use chrono::{Local, NaiveDateTime, TimeDelta, TimeZone, Timelike, Utc};
     use std::io::{Read, Write};
     use std::sync::atomic::AtomicBool;
 
@@ -2056,6 +2062,61 @@ mod backup_tests {
         assert_eq!(backup.profile, "industrial-era");
         assert_eq!(backup.size, 2 * 1024 * 1024 * 1024);
         assert_eq!(backup.reason, WorldBackupReason::Manual);
+    }
+
+    #[test]
+    fn backup_index_recognizes_writer_timestamps_and_unicode_worlds() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        for (filename, world, millis) in [
+            ("2026-11-10_18-11-00-451_Новый мир.zip", "Новый мир", 451),
+            (
+                "2026-11-10_18-11-00-007_World_name (2).zip",
+                "World_name",
+                7,
+            ),
+            ("2026-11-10_18-11-00-000_World.zip", "World", 0),
+            ("2026-11-10_18-11-00_Старый мир.zip", "Старый мир", 0),
+        ] {
+            let path = temp.path().join(filename);
+            std::fs::write(&path, b"fixture").expect("write fixture");
+            let backup = indexed_backup_from_file(path, "profile")
+                .unwrap_or_else(|| panic!("failed to index {filename}"));
+            let expected = NaiveDateTime::parse_from_str(
+                "2026-11-10_18-11-00",
+                "%Y-%m-%d_%H-%M-%S",
+            )
+            .unwrap()
+            .with_nanosecond(millis * 1_000_000)
+            .unwrap();
+            assert_eq!(backup.world, world);
+            assert_eq!(
+                backup.created_at,
+                Local
+                    .from_local_datetime(&expected)
+                    .single()
+                    .expect("unambiguous fixture date")
+                    .with_timezone(&Utc)
+            );
+            assert_eq!(backup.created_at.timestamp_subsec_millis(), millis);
+        }
+    }
+
+    #[test]
+    fn backup_index_ignores_incomplete_archives_and_invalid_fractions() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        for filename in [
+            ".2026-11-10_18-11-00-451_Новый мир.zip.id.part",
+            "2026-11-10_18-11-00-451_World.zip.part",
+            "2026-11-10_18-11-00-45_World.zip",
+            "2026-11-10_18-11-00-4512_World.zip",
+        ] {
+            let path = temp.path().join(filename);
+            std::fs::write(&path, b"fixture").expect("write fixture");
+            assert!(
+                indexed_backup_from_file(path, "profile").is_none(),
+                "{filename}"
+            );
+        }
     }
 
     #[test]

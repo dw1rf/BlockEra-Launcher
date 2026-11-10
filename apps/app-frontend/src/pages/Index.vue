@@ -163,11 +163,18 @@ async function refreshPlaying() {
 	playing.value = processes.length > 0
 }
 
+function isGameLoadingBar(value: unknown): value is LoadingBar {
+	if (!value || typeof value !== 'object') return false
+	if (!('bar_type' in value) || value.bar_type === undefined) return true
+	const kind = value.bar_type
+	return (
+		!!kind && typeof kind === 'object' && (!('type' in kind) || kind.type !== 'launcher_update')
+	)
+}
+
 async function refreshDownloads() {
 	const bars = (await progress_bars_list().catch(handleError)) ?? {}
-	loadingBars.value = Object.values(bars).filter(
-		(bar: LoadingBar) => bar?.bar_type?.type !== 'launcher_update',
-	) as LoadingBar[]
+	loadingBars.value = Object.values(bars).filter(isGameLoadingBar)
 }
 
 async function refreshPlayerLook() {
