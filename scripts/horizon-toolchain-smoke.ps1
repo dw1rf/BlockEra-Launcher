@@ -24,6 +24,8 @@ $evidence = Join-Path $work 'evidence'
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
 Copy-Item -LiteralPath $pinPath -Destination (Join-Path $evidence 'mingw.json')
 Start-Transcript -Path (Join-Path $evidence 'smoke.log') | Out-Null
+# Like Horizon's outside_configs(), avoid the launcher's MSVC-only Cargo flags.
+Push-Location -LiteralPath $work
 
 function Invoke-Checked {
 	param([string]$Program, [string[]]$Arguments)
@@ -135,5 +137,6 @@ fn main() {
 	Invoke-Checked $program @()
 	Write-Host 'PASS: pinned GCC C/C++ -O0/-O2/-O3 and Rust GNU hidapi/mimalloc build, link and runtime.'
 } finally {
+	Pop-Location
 	Stop-Transcript | Out-Null
 }
