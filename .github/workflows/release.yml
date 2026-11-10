@@ -99,6 +99,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare frontend assets for Tauri regression tests
+        run: pnpm turbo run build --filter=@modrinth/app-frontend
+
       - name: Horizon regression tests
         run: 'cargo test --locked -p theseus --lib horizon:: -- --nocapture'
 
