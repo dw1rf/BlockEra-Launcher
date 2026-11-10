@@ -39,7 +39,7 @@ export function localizedError(message: string): string {
 	if (message === '[AR] Network error: No local injector & remote unavailable') {
 		return 'Не удалось загрузить компонент для скинов: локальная копия отсутствует, а удалённый источник недоступен. Проверьте подключение и повторите загрузку.'
 	}
-	if (/^(?:I\/O\(std\):?\s*)?Failed to fetch player profile$/.test(message)) {
+	if (/^(?:I\/O\s*\(std\)(?:\s+error)?:?\s*)?Failed to fetch player profile$/.test(message)) {
 		return 'Не удалось получить профиль Minecraft при входе Microsoft. Повторите вход; подробности доступны в исходной ошибке.'
 	}
 	// Translate known wrappers without discarding their concrete backend details.

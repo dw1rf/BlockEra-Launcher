@@ -87,8 +87,8 @@ test('creation modal opens, selects Horizon releases and cleans up on header dis
 	})
 	const component = exports.default
 	const setup = component.setup
-	component.setup = async (...args) => {
-		state = await setup(...args)
+	component.setup = async (props, context) => {
+		state = await setup(props, context)
 		return state
 	}
 	component.render = function () {

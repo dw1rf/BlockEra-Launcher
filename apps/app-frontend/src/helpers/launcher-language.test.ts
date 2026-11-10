@@ -41,6 +41,7 @@ describe('localized error summaries', () => {
 		)
 		const injector = '[AR] Network error: No local injector & remote unavailable'
 		expect(localizedError(injector)).toContain('локальная копия отсутствует')
+		expect(localizedError('I/O (std) error: Failed to fetch player profile')).toContain('при входе Microsoft')
 		i18n.global.locale.value = 'en-US'
 		expect(localizedError(injector)).toBe(injector)
 		const original = "Cannot read properties of null (reading 'hide')"
